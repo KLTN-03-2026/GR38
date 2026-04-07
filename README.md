@@ -9,6 +9,15 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 
 ---
 
+## 👨‍💻 Thành viên thực hiện
+
+* Nguyễn Tấn Hoài Anh
+* Nguyễn Toàn Chung
+* Lương Công Phúc
+* Nguyễn Ngọc Hậu
+* Trần Thanh Phương
+
+---
 ## 🎯 Mục tiêu
 
 * Hỗ trợ sinh viên học lịch sử hiệu quả hơn
@@ -40,10 +49,10 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 
 ## ✨ Tính năng chính
 
-* 🤖 Hỏi đáp lịch sử bằng AI (Gemini)
-* 📝 Tạo câu hỏi trắc nghiệm, thẻ ghi nhớ tự động
-* 📊 Theo dõi tiến trình học tập
-* 🔍 Tìm kiếm thông tin nhanh
+* Hỏi đáp lịch sử bằng AI (Gemini)
+* Tạo câu hỏi trắc nghiệm, thẻ ghi nhớ tự động
+* Theo dõi tiến trình học tập
+* Tìm kiếm thông tin nhanh
 
 ---
 
@@ -64,14 +73,6 @@ cd backend
 npm install
 ```
 
-👉 Tạo file `.env`:
-
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection
-GEMINI_API_KEY=your_gemini_api_key
-```
-
 Chạy server:
 
 ```bash
@@ -87,19 +88,6 @@ cd frontend/ai-history-learning
 npm install
 npm run dev
 ```
-
----
-
-## 🔑 Cấu hình Gemini API
-
-1. Truy cập Google AI Studio
-2. Tạo API Key
-3. Thêm vào file `.env`:
-
-```env
-GEMINI_API_KEY=your_api_key
-```
-
 ---
 
 ## 📂 Cấu trúc thư mục
@@ -123,18 +111,40 @@ GR38/
 ```
 
 ---
-
-## 👨‍💻 Thành viên thực hiện
-
-* Nguyễn Tấn Hoài Anh
-* Nguyễn Toàn Chung
-* Lương Công Phúc
-* Nguyễn Ngọc Hậu
-* Trần Thanh Phương
-
+## Quy trình làm việc với Git
+### Các bước push code 
+ 
+#### Bước 1 — Cập nhật dev mới nhất trước khi làm
+ 
+```bash
+git checkout dev
+git pull origin dev
+```
+#### Bước 2 — Tạo nhánh mới từ dev
+```bash
+git checkout -b ten_tinh_nang
+```
+#### Bước 3 — Code và commit thường xuyên
+ 
+```bash
+git add .
+git commit -m "mô tả những gì đã làm"
+```
+#### Bước 4 — Push nhánh lên remote
+ 
+```bash
+git push origin ten_tinh_nang
+```
+### Quy tắc chung
+ 
+- ❌ **KHÔNG push thẳng lên `main` hoặc `dev`**
+- ❌ **KHÔNG commit file `.env`** (đã có trong `.gitignore`)
+- ✅ **Pull dev mới nhất** trước khi bắt đầu làm
+- ✅ **Commit nhỏ, thường xuyên** — không để dồn quá nhiều thay đổi
+- ✅ **Mỗi tính năng một nhánh** riêng
+- ✅ **Review code** trước khi merge
 ---
-
-## 📌 Định hướng phát triển
+## Định hướng phát triển
 
 * Tích hợp voice (AI nói chuyện)
 * Cá nhân hóa lộ trình học

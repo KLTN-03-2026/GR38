@@ -1,18 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
-@import "tailwindcss";
- 
-@theme {
-  --font-display: 'Urbansit', sans-serif;
-  --breakpoint-3xl: 1920px;
-  --color-primary: #FF9324;
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@layer base{
-  html {
-    font-family: var(--font-display);
-  }
-
-  body {
-    background-color: #fcfbfc;
-  }
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }

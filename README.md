@@ -1,159 +1,70 @@
-# Hệ thống hỗ trợ ôn tập lịch sử Việt Nam tích hợp AI
+# Getting Started with Create React App
 
-## 📌 Giới thiệu
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-**AI History Learning Assistant** là hệ thống hỗ trợ học tập và ôn luyện **Lịch sử Việt Nam** tích hợp trí tuệ nhân tạo.
-Hệ thống giúp người học tra cứu kiến thức, luyện tập qua câu hỏi trắc nghiệm và nhận giải thích chi tiết từ AI.
+## Available Scripts
 
-Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)**.
+In the project directory, you can run:
 
----
+### `npm start`
 
-## 👨‍💻 Thành viên thực hiện
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-* Nguyễn Tấn Hoài Anh
-* Nguyễn Toàn Chung
-* Lương Công Phúc
-* Nguyễn Ngọc Hậu
-* Trần Thanh Phương
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
 
----
-## 🎯 Mục tiêu
+### `npm test`
 
-* Hỗ trợ sinh viên học lịch sử hiệu quả hơn
-* Ứng dụng AI vào giáo dục
-* Tự động hóa việc tạo câu hỏi và giải thích
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
----
+### `npm run build`
 
-## 🚀 Công nghệ sử dụng
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-### 🔹 Frontend
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-* ReactJS + Vite
-* HTML, CSS, JavaScript
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-### 🔹 Backend
+### `npm run eject`
 
-* Node.js + Express
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-### 🔹 Database
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-* MongoDB
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-### 🔹 AI
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-* Google Gemini API
+## Learn More
 
----
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-## ✨ Tính năng chính
+To learn React, check out the [React documentation](https://reactjs.org/).
 
-* Hỏi đáp lịch sử bằng AI (Gemini)
-* Tạo câu hỏi trắc nghiệm, thẻ ghi nhớ tự động
-* Theo dõi tiến trình học tập
-* Tìm kiếm thông tin nhanh
+### Code Splitting
 
----
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-## ⚙️ Cài đặt & chạy dự án
+### Analyzing the Bundle Size
 
-### 1. Clone repository
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-```bash
-git clone https://github.com/KLTN-03-2026/GR38.git
-```
+### Making a Progressive Web App
 
----
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
 
-### 2. Cài đặt Backend
+### Advanced Configuration
 
-```bash
-cd backend
-npm install
-```
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-Chạy server:
+### Deployment
 
-```bash
-npm start
-```
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
----
+### `npm run build` fails to minify
 
-### 3. Cài đặt Frontend
-
-```bash
-cd frontend/ai-history-learning
-npm install
-npm run dev
-```
----
-
-## 📂 Cấu trúc thư mục
-
-```
-GR38/
-│
-├── backend/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   └── server.js
-│
-├── frontend/
-│   └── ai-history-learning/
-│       ├── src/
-│       ├── public/
-│       └── vite.config.js
-│
-└── README.md
-```
-
----
-## Quy trình làm việc với Git
-### Các bước push code 
- 
-#### Bước 1 — Cập nhật dev mới nhất trước khi làm
- 
-```bash
-git checkout dev
-git pull origin dev
-```
-#### Bước 2 — Tạo nhánh mới từ dev
-```bash
-git checkout -b ten_tinh_nang
-```
-#### Bước 3 — Code và commit thường xuyên
- 
-```bash
-git add .
-git commit -m "mô tả những gì đã làm"
-```
-#### Bước 4 — Push nhánh lên remote
- 
-```bash
-git push origin ten_tinh_nang
-```
-### Quy tắc chung
- 
-- ❌ **KHÔNG push thẳng lên `main` hoặc `dev`**
-- ❌ **KHÔNG commit file `.env`** (đã có trong `.gitignore`)
-- ✅ **Pull dev mới nhất** trước khi bắt đầu làm
-- ✅ **Commit nhỏ, thường xuyên** — không để dồn quá nhiều thay đổi
-- ✅ **Mỗi tính năng một nhánh** riêng
-- ✅ **Review code** trước khi merge
----
-## Định hướng phát triển
-
-* Tích hợp voice (AI nói chuyện)
-* Cá nhân hóa lộ trình học
-* Hệ thống thi thử thông minh
-
----
-
-## Ghi chú
-
-Đây là sản phẩm trong quá trình học tập, có thể còn hạn chế và sẽ tiếp tục được cải thiện.
-
----
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)

@@ -6,7 +6,9 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url'
 import connectDB from './config/db.js'
-import errorHanler from './middleware/errorHandler.js'
+import errorHandler from './middleware/errorHandler.js'
+
+import authRouter from './router/authRouter.js'
 
 // ES6 module: Cách thay thế cho __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +39,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 //Router
-app.use(errorHanler);
+app.use('/api/auth', authRouter)
+app.use(errorHandler);
 
 // 404 handler
 app.use((req, res) => {

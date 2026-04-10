@@ -1,6 +1,6 @@
 # Hệ thống hỗ trợ ôn tập lịch sử Việt Nam tích hợp AI
 
-## 📌 Giới thiệu
+## 1. Giới thiệu
 
 **AI History Learning Assistant** là hệ thống hỗ trợ học tập và ôn luyện **Lịch sử Việt Nam** tích hợp trí tuệ nhân tạo.
 Hệ thống giúp người học tra cứu kiến thức, luyện tập qua câu hỏi trắc nghiệm và nhận giải thích chi tiết từ AI.
@@ -9,7 +9,7 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 
 ---
 
-## 👨‍💻 Thành viên thực hiện
+## 2. Thành viên thực hiện
 
 * Nguyễn Tấn Hoài Anh
 * Nguyễn Toàn Chung
@@ -18,7 +18,7 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 * Trần Thanh Phương
 
 ---
-## 🎯 Mục tiêu
+## 3. Mục tiêu
 
 * Hỗ trợ sinh viên học lịch sử hiệu quả hơn
 * Ứng dụng AI vào giáo dục
@@ -26,7 +26,7 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 
 ---
 
-## 🚀 Công nghệ sử dụng
+## 4. Công nghệ sử dụng
 
 ### 🔹 Frontend
 
@@ -47,7 +47,7 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 
 ---
 
-## ✨ Tính năng chính
+## 5. Tính năng chính
 
 * Hỏi đáp lịch sử bằng AI (Gemini)
 * Tạo câu hỏi trắc nghiệm, thẻ ghi nhớ tự động
@@ -56,7 +56,7 @@ Dự án được phát triển phục vụ **Khóa luận tốt nghiệp (KLTN)
 
 ---
 
-## ⚙️ Cài đặt & chạy dự án
+## 6. Cài đặt & chạy dự án
 
 ### 1. Clone repository
 
@@ -74,23 +74,17 @@ npm install
 ```
 
 Chạy server:
-
 ```bash
-npm start
+npm run dev
 ```
-
----
-
-### 3. Cài đặt Frontend
-
+### 3. Cài đặt 
 ```bash
 cd frontend/ai-history-learning
 npm install
 npm run dev
 ```
----
 
-## 📂 Cấu trúc thư mục
+## 7. Cấu trúc thư mục
 
 ```
 GR38/
@@ -111,7 +105,8 @@ GR38/
 ```
 
 ---
-## Quy trình làm việc với Git
+
+## 8. Quy trình làm việc với Git
 ### Các bước push code 
  
 #### Bước 1 — Cập nhật dev mới nhất trước khi làm
@@ -144,16 +139,15 @@ git push origin ten_tinh_nang
 - ✅ **Mỗi tính năng một nhánh** riêng
 - ✅ **Review code** trước khi merge
 ---
-## Định hướng phát triển
 
+## 9. Định hướng phát triển
 * Tích hợp voice (AI nói chuyện)
 * Cá nhân hóa lộ trình học
 * Hệ thống thi thử thông minh
 
 ---
 
-## Ghi chú
-
-Đây là sản phẩm trong quá trình học tập, có thể còn hạn chế và sẽ tiếp tục được cải thiện.
-
+## 10. Ghi chú
+- Đây là phiên bản **sơ bộ** của hệ thống trong giai đoạn phát triển.
+- Dự án sẽ tiếp tục được cải thiện và hoàn thiện trong quá trình thực hiện khóa luận tốt nghiệp.
 ---

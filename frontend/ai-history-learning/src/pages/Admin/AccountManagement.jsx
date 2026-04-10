@@ -1,6 +1,4 @@
 import React from "react";
-import Sidebar from "./Sidebar";
-import Header from "./Header";
 import { Search, Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 const AccountManagement = () => {

@@ -1,4 +1,5 @@
 import React from "react";
+import LogoHS from "../../assets/logohs.png";
 import {
   FileText,
   BookOpen,
@@ -168,8 +169,12 @@ const AdminDashboard = () => {
                 className="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 text-slate-400">
-                    <Users size={18} />
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-100 shadow-sm">
+                    <img
+                      src={LogoHS}
+                      alt="Student"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-slate-900">

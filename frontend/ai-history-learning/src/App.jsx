@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
-import AdminDashboard from "./components/AdminDashboard";
-import AccountManagement from "./components/AccountManagement";
-import ReportManagement from "./components/ReportManagement";
+import Sidebar from "./components/Layout/Sidebar";
+import Header from "./components/Layout/Header";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AccountManagement from "./pages/Admin/AccountManagement";
+import ReportManagement from "./pages/Admin/ReportManagement";
 
 function App() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("accounts");
 
   return (
     <div className="flex min-h-screen bg-[#FAFAFA] font-sans">

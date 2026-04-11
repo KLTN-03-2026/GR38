@@ -9,6 +9,8 @@ import connectDB from './config/db.js'
 import errorHandler from './middleware/errorHandler.js'
 
 import authRouter from './router/authRouter.js'
+import documentRouter from './router/documentRouter.js'
+
 
 // ES6 module: Cách thay thế cho __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +42,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //Router
 app.use('/api/auth', authRouter)
+app.use('/api/documents', documentRouter)
 app.use(errorHandler);
 
 // 404 handler

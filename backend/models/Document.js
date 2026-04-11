@@ -31,7 +31,7 @@ const documentSchema = new mongoose.Schema(
     chunks: [
       {
         content: {
-          type: Sting,
+          type: String,
           required: true,
         },
         pageNumber: {

@@ -10,6 +10,7 @@ import errorHandler from './middleware/errorHandler.js'
 
 import authRouter from './router/authRouter.js'
 import documentRouter from './router/documentRouter.js'
+import flashcardRouter from './router/flashcardRouter.js';
 
 
 // ES6 module: Cách thay thế cho __dirname
@@ -43,6 +44,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 //Router
 app.use('/api/auth', authRouter)
 app.use('/api/documents', documentRouter)
+app.use('/api/flashcards', flashcardRouter)
+
+
 app.use(errorHandler);
 
 // 404 handler

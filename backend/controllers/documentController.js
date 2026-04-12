@@ -6,6 +6,7 @@ import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import fs from "fs/promises";
 import flashcard from "../models/Flashcard.js";
+import { count, error } from "console";
 
 //@desc Upload PDF document
 // @route POST /api/documents/upload
@@ -30,35 +31,34 @@ export const uploadsDocument = async (req, res, next) => {
         statusCode: 400,
       });
     }
-      //Xây dựng đường dẫn file đã tải lên
-      const baseUrl = `http://localhost:${process.env.PORT || 8000}`;
-      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+    //Xây dựng đường dẫn file đã tải lên
+    const baseUrl = `http://localhost:${process.env.PORT || 8000}`;
+    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
-      //Tạo document mới trong MongoDB
-      const document = new Document({
-        userId: req.user._id,
-        title,
-        fileName: req.file.originalname,
-        filePath: fileUrl, //Lưu trữ URL thay vì đường dẫn vật lý
-        fileSize: req.file.size,
-        status: "Xử lý",
-      });
+    //Tạo document mới trong MongoDB
+    const document = new Document({
+      userId: req.user._id,
+      title,
+      fileName: req.file.originalname,
+      filePath: fileUrl, //Lưu trữ URL thay vì đường dẫn vật lý
+      fileSize: req.file.size,
+      status: "Xử lý",
+    });
 
-      await document.save();
+    await document.save();
 
-      //Quá trình xử lý PDF có thể mất thời gian, nên chúng ta sẽ trả về phản hồi ngay và xử lý PDF trong nền
-      processPDF(document.id, req.file.path).catch((err) => {
-        console.error("Lỗi xử lý PDF:", err);
-        //Cập nhật trạng thái lỗi cho document
-      });
+    //Quá trình xử lý PDF có thể mất thời gian, nên chúng ta sẽ trả về phản hồi ngay và xử lý PDF trong nền
+    processPDF(document.id, req.file.path).catch((err) => {
+      console.error("Lỗi xử lý PDF:", err);
+      //Cập nhật trạng thái lỗi cho document
+    });
 
-      res.status(201).json({
-        success: true,
-        data: document,
-        messeage:
-          "Tài liệu đang được xử lý. Vui lòng kiểm tra lại sau vài phút.",
-        statusCode: 201,
-      });
+    res.status(201).json({
+      success: true,
+      data: document,
+      messeage: "Tài liệu đang được xử lý. Vui lòng kiểm tra lại sau vài phút.",
+      statusCode: 201,
+    });
   } catch (error) {
     // Xóa file đã tải lên nếu có lỗi
     if (req.file) {
@@ -80,12 +80,12 @@ const processPDF = async (documentId, filePath) => {
     //Cập nhật document với các chunk đã tạo
     await Document.findByIdAndUpdate(documentId, {
       extractedText: text,
-      chunks,
+      chunks: chunks,
       status: "Đã xử lý",
     });
-    console.log(`Document ${documentId} đã được xử lý thành công.`);
+    console.log(`Tài liệu ${documentId} đã được xử lý thành công.`);
   } catch (error) {
-    console.error("Lỗi xử lý PDF:", error);
+    console.error(`Lỗi xử lý tài liệu ${documentId}:`, error);
     await Document.findByIdAndUpdate(documentId, {
       status: "Lỗi xử lý",
     });
@@ -98,48 +98,48 @@ const processPDF = async (documentId, filePath) => {
 export const getDocuments = async (req, res, next) => {
   try {
     const documents = await Document.aggregate([
-        {
-            $match: {userId: new mongoose.Types.ObjectId(req.user._id)}   
+      {
+        $match: { userId: new mongoose.Types.ObjectId(req.user._id) },
+      },
+      {
+        $lookup: {
+          from: "flashcards",
+          localField: "_id",
+          foreignField: "documentId",
+          as: "flashcardSets",
         },
-        {
-            $lookup : {
-                from: 'flashcards',
-                localField: '_id',
-                foreignField: 'documentId',
-                as: 'flashcardSets' 
-            }
+      },
+      {
+        $lookup: {
+          from: "quizzes",
+          localField: "_id",
+          foreignField: "documentId",
+          as: "quizzes",
         },
-        {
-            $lookup : {
-                from: 'quizzes',
-                localField: '_id',
-                foreignField: 'documentId',
-                as: 'quizzes' 
-            }
+      },
+      {
+        $addFields: {
+          flashcardCount: { $size: "$flashcardSets" },
+          quizCount: { $size: "$quizzes" },
         },
-        {
-            $addFields: {
-                flashcardCount: { $size: 'flashcardSets' },
-                quizCount: { $size: 'quizzes' }
-            }
+      },
+      {
+        $project: {
+          extractedText: 0,
+          chunks: 0,
+          flashcardSets: 0,
+          quizzes: 0,
         },
-        {
-            $project: {
-                extractedText: 0,
-                chunks: 0,
-                flashcardSets: 0,
-                quizzes: 0
-            }
-        },
-        {
-            $sort: { upLoadDate: -1}
-        }
+      },
+      {
+        $sort: { upLoadDate: -1 },
+      },
     ]);
 
     res.status(200).json({
-        success: true,
-        count: documents.length,
-        data: documents
+      success: true,
+      count: documents.length,
+      data: documents,
     });
   } catch (error) {
     next(error);
@@ -151,7 +151,39 @@ export const getDocuments = async (req, res, next) => {
 // @access Private
 export const getDocument = async (req, res, next) => {
   try {
-  } catch (error) {}
+    const document = await Document.findOne({
+      _id: req.params.id,
+      userId: req.user._id
+    });
+
+    if(!document) {
+      return res.status(404).json({
+        success: false,
+        error:'Không tìm thấy tài liệu',
+        statusCode: 404
+      });
+    }
+
+    //Tính số lượng flashcard và quizzes liên quan
+    const flashcardCount = await Flashcard.countDocuments({ documentId: document._id, userId: req.user._id});
+    const quizCount = await Quiz.countDocuments({ documentId: document._id, userId: req.user._id});
+    
+    //Cập nhật truy cập lần cuối
+    document.lastAccessed = Date.now();
+    await document.save();
+
+    //Kết hợp dữ liệu tài liệu với số liệu thống kê
+    const documentData = document.toObject();
+    documentData.flashcardCount = flashcardCount;
+    documentData.quizCount = quizCount;
+
+    res.status(200).json({
+      succes: true,
+      data: documentData
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 //@desc Delete document
@@ -159,13 +191,31 @@ export const getDocument = async (req, res, next) => {
 // @access Private
 export const deleteDocument = async (req, res, next) => {
   try {
-  } catch (error) {}
-};
+    const document = await Document.findOne({
+      _id: req.params.id,
+      userId: req.user._id
+    });
 
-//@desc Update document title
-// @route Put /api/documents/:id
-// @access Private
-export const updateDocument = async (req, res, next) => {
-  try {
-  } catch (error) {}
+    if(!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy tài liệu',
+        statusCode: 404 
+      });
+    }
+
+    //Xóa file khỏi hệ thống tập tin
+    await fs.unlink(document.filePath).catch(()=>{});
+
+    //Xóa Document
+    await document.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Xóa tài liệu thành công'
+    });
+
+  } catch (error) {
+    next(error);
+  }
 };

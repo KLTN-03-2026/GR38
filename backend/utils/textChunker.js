@@ -120,7 +120,7 @@ export const findRelevantChunks = (chunks, query, maxChunks = 3) => {
   // Các từ dừng (stop words) phổ biến cần loại trừ
   const stopWords = new Set([
     'và', 'hoặc', 'nhưng', 'của', 'là', 'các', 'những', 'một', 'thì', 'mà',
-    'để', 'với', 'cho', 'trong', 'trên', 'dưới', 'tại', 'bởi', 'này', 'kia'
+    'để', 'với', 'cho', 'trong', 'trên', 'dưới', 'tại', 'bởi', 'này', 'kia','năm', 'tháng', 'ngày', 'sự', 'việc'
   ]);
 
   // Trích xuất và làm sạch các từ trong câu truy vấn

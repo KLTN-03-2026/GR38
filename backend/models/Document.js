@@ -31,7 +31,7 @@ const documentSchema = new mongoose.Schema(
     chunks: [
       {
         content: {
-          type: Sting,
+          type: String,
           required: true,
         },
         pageNumber: {
@@ -54,7 +54,7 @@ const documentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Xử lý", "Sẵn sàng", "Thất bại"],
+      enum: ["Xử lý", "Đã xử lý", "Lỗi xử lý"],
       default: "Xử lý",
     },
   },

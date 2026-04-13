@@ -29,7 +29,7 @@ const flashcardSchema = new mongoose.Schema({
                 default: 0
             },
             isStarred: {
-                type: Booolean,
+                type: Boolean,
                 default: false
             },
         },

@@ -93,8 +93,6 @@ function LoginPage() {
 
       {/* Form */}
       <div className="relative z-10 w-full max-w-[360px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-7 mx-4 shadow-xl">
-
-        {/* Logo + Title */}
         <div className="flex flex-col items-center mb-5">
           <img
             src="/Logo.jpg"
@@ -104,8 +102,6 @@ function LoginPage() {
           <h1 className="text-base font-semibold text-gray-800">Lịch sử Việt Nam</h1>
           <p className="text-xs text-gray-400 mt-1">Nhập thông tin Email và Mật khẩu</p>
         </div>
-
-        {/* Email */}
         <label className="block text-sm text-gray-500 mb-1.5">Email</label>
         <input
           type="email"

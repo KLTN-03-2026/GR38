@@ -1,4 +1,4 @@
-import flashcard from "../models/Flashcard";
+import Flashcard from "../models/Flashcard.js";
 
 //@desc Tải tất cả flashcard của tài liệu
 // @route GET /api/flashcards/:documentId
@@ -92,8 +92,39 @@ export const reviewFlashcard = async (req, res, next) => {
 // @access Private
 export const toggleStarFlashcard = async (req, res, next) => {
     try{
+        const flashcardSet =await Flashcard.findOne({
+            'cards._id': req.params.cardId,
+            userId: req.user._id
+        });
 
-    }catch(error) {
+        if(!flashcardSet) {
+            return res.status(404).json({
+                success: false,
+                error: 'Không tìm thấy bộ hoặc thẻ flashcard',
+                statusCode: 404
+            });
+        }
+
+        const cardIndex= flashcardSet.cards.findIndex(card => card._id.toString() === req.params.cards);
+        
+        if (cardIndex === -1){
+            return res.status(404).json({
+                success: false,
+                error: 'Không tìm được thẻ trong bộ flashcard '
+            }); 
+        }
+        
+        //ToggleStar
+        flashcardSet.cards(cardIndex).isStarred = !flashcardSet.cards[cardIndex].isStarred;
+
+        await flashcardSet.save();
+
+        res.status(200).json({
+            success: true,
+            dât: flashcardSet,
+            message: `Flashcard ${flashcardSet.cards[cardIndex].isStarred ?'starred' : 'unstarred'}`
+        });
+    }catch(error) { 
         next(error);
     }
 };
@@ -103,7 +134,25 @@ export const toggleStarFlashcard = async (req, res, next) => {
 // @access Private
 export const deleteFlashcardSet = async (req, res, next) => {
     try{
+        const flashcardSet = await Flashcard.findOne({
+            _id: req.params.id,
+            userId: req.user._id
+        });
 
+        if(!flashcardSet) {
+            return res.status(404).json({
+                success: flase,
+                error: 'Không tìm thấy bộ flahscard',
+                statusCode: 404
+            });
+        }
+
+        await flashcardSet.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: 'Đã xóa bộ flashcard thành công'
+        });
     }catch(error) {
         next(error);
     }

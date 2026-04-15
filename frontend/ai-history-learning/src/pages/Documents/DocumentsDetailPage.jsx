@@ -285,7 +285,7 @@ export default function DocumentsDetailPage() {
           )}
 
           {/* ── Tab: Chat ── */}
-          {activeTab === "Chat" && (
+          {activeTab === "Chat với AI " && (
             <div className="ddp-coming-soon">
               <div style={{ width: 52, height: 52, background: "#F3F4F6", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="24" height="24" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, Calendar, User } from "lucide-react";
+import { ArrowLeft, User } from "lucide-react";
 import Swal from "sweetalert2";
 
 const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {

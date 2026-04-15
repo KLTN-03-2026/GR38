@@ -10,7 +10,7 @@ export const getFlashcards = async (req, res, next) => {
             documentId: req.params.documentId
         })
         
-        .populates('docunmentId', 'title fileName')
+        .populate('documentId', 'title fileName')
         .sort({ createAt: -1});
 
         res.status(200).json({
@@ -30,33 +30,33 @@ export const getFlashcards = async (req, res, next) => {
 export const getAllFlashcardSets = async (req, res, next) => {
     try{
         const flashcardSets = await Flashcard.find({ userId: req.user._id})
-            .populates('documentId', 'title')
+            .populate('documentId', 'title')
             .sort({ createAt: -1 });
     
         res.status(200).json({
             success: true,
             count: flashcardSets.length,
-            data: f=flashcardSets,
+            data: flashcardSets,
         });
     }catch(error) {
         next(error);
     }
 };
 
-//@desc Thẻ flashcard xem lại
+//@desc Đánh dấu đã xem lại flashcard
 // @route POST /api/flashcards/:cardId/review
 // @access Private
 export const reviewFlashcard = async (req, res, next) => {
     try{
         const flashcardSet = await Flashcard.findOne({
-            'card.id': req.params.cardId,
+            'cards._id': req.params.cardId,
             userId: req.user._id
         });
 
         if(!flashcardSet) {
             return res.status(404).json({
                 success: false,
-                error: 'Không tìm thấy bộ hay thẻ flashcard',
+                error: 'Không tìm thấy bộ hoặc thẻ flashcard',
                 statusCode: 404
             });
         }
@@ -72,8 +72,8 @@ export const reviewFlashcard = async (req, res, next) => {
         }
 
         //Cập nhật thông tin xem lại
-        flashcardSet.card(cardIndex).lastReviewd = new Date();
-        flashcardSet.card(cardIndex).reviewCout += 1;
+        flashcardSet.cards[cardIndex].lastReviewed = new Date();
+        flashcardSet.cards[cardIndex].reviewCount += 1;
 
         await flashcardSet.save();
 
@@ -87,7 +87,7 @@ export const reviewFlashcard = async (req, res, next) => {
     }
 };
 
-//@desc Chọn flashcard yêu thích/dấu sao
+//@desc Đánh dấu yêu thích flashcard
 // @route PUT /api/flashcards/:cardId/star
 // @access Private
 export const toggleStarFlashcard = async (req, res, next) => {
@@ -105,7 +105,7 @@ export const toggleStarFlashcard = async (req, res, next) => {
             });
         }
 
-        const cardIndex= flashcardSet.cards.findIndex(card => card._id.toString() === req.params.cards);
+        const cardIndex= flashcardSet.cards.findIndex(card => card._id.toString() === req.params.cardId);
         
         if (cardIndex === -1){
             return res.status(404).json({
@@ -115,13 +115,13 @@ export const toggleStarFlashcard = async (req, res, next) => {
         }
         
         //ToggleStar
-        flashcardSet.cards(cardIndex).isStarred = !flashcardSet.cards[cardIndex].isStarred;
+        flashcardSet.cards[cardIndex].isStarred = !flashcardSet.cards[cardIndex].isStarred;
 
         await flashcardSet.save();
 
         res.status(200).json({
             success: true,
-            dât: flashcardSet,
+            data: flashcardSet,
             message: `Flashcard ${flashcardSet.cards[cardIndex].isStarred ?'starred' : 'unstarred'}`
         });
     }catch(error) { 
@@ -141,8 +141,8 @@ export const deleteFlashcardSet = async (req, res, next) => {
 
         if(!flashcardSet) {
             return res.status(404).json({
-                success: flase,
-                error: 'Không tìm thấy bộ flahscard',
+                success: false,
+                error: 'Không tìm thấy bộ flashcard',
                 statusCode: 404
             });
         }

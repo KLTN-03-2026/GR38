@@ -54,9 +54,12 @@ ${text.substring(0, 15000)}`;
         } else if (line.startsWith("A:")) {
           answer = line.substring(2).trim();
         } else if (line.startsWith("D:")) {
-          const diff = line.substring(2).trim().toLowerCase();
-          if (["Dể", "Trung Bình", "Khó"].includes(diff)) {
-            difficulty = diff;
+          const diffLower = line.substring(2).trim().toLowerCase();
+          // Kiểm tra xem có nằm trong 3 độ khó chuẩn hay không
+          if (["dễ", "trung bình", "khó"].includes(diffLower)) {
+            if (diffLower === "dễ") difficulty = "Dễ";
+            if (diffLower === "trung bình") difficulty = "Trung bình";
+            if (diffLower === "khó") difficulty = "Khó";
           }
         }
       }
@@ -89,7 +92,7 @@ O3: [Lựa chọn 3]
 O4: [Lựa chọn 4]
 C: [Đáp án đúng - viết y hệt như văn bản của lựa chọn ở trên]
 E: [Giải thích ngắn gọn tại sao đúng]
-D: [Độ khó: Dể, Trung bình, hoặc Khó]
+D: [Độ khó: Dễ, Trung bình, hoặc Khó]
 
 Phân tách các câu hỏi bằng "---"
 
@@ -126,9 +129,11 @@ ${text.substring(0, 15000)}`;
         } else if (trimmed.startsWith("E:")) {
           explanation = trimmed.substring(2).trim();
         } else if (trimmed.startsWith("D:")) {
-          const diff = trimmed.substring(2).trim().toLowerCase();
-          if (["Dể", "Trung Bình", "Khó"].includes(diff)) {
-            difficulty = diff;
+          const diffLower = trimmed.substring(2).trim().toLowerCase();
+          if (["dễ", "trung bình", "khó"].includes(diffLower)) {
+            if (diffLower === "dễ") difficulty = "Dễ";
+            if (diffLower === "trung bình") difficulty = "Trung bình";
+            if (diffLower === "khó") difficulty = "Khó";
           }
         }
       }

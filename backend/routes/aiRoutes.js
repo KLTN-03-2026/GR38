@@ -1,6 +1,6 @@
 import express from 'express'
 import {
-    generateFlashcard,
+    generateFlashcards,
     generateQuiz,
     generateSummary,
     chat,
@@ -13,11 +13,11 @@ const router = express.Router();
 
 router.use(protect);
 
-router.post('/generate-flashcard', generateFlashcard);
+router.post('/generate-flashcards', generateFlashcards);
 router.post('/generate-quiz', generateQuiz);
-router.post('./generate-summary', generateSummary);
-router.post('./chat', chat);
-router.post('/expain-concept', explainConcept);
-router.get('./chat-history/:documentId', getChatHistory);
+router.post('/generate-summary', generateSummary);
+router.post('/chat', chat);
+router.post('/explain-concept', explainConcept);
+router.get('/chat-history/:documentId', getChatHistory);
 
 export default router;

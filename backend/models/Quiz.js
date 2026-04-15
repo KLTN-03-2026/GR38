@@ -34,9 +34,9 @@ const quizSchema = new mongoose.Schema({
             type: String,
             default: ''
         },
-        diffiulty: {
+        difficulty: {
             type: String,
-            enum: ['Dể', 'Trung bình', 'Khó'],
+            enum: ['Dễ', 'Trung bình', 'Khó'],
             default: 'Trung bình'
         }
     }],

@@ -532,7 +532,6 @@ const inputStyle = {
   boxSizing: "border-box",
   background: "#fff",
 };
-
 const backdropStyle = {
   position: "fixed",
   inset: 0,
@@ -542,7 +541,6 @@ const backdropStyle = {
   justifyContent: "center",
   background: "rgba(0,0,0,0.45)",
 };
-
 const modalStyle = {
   background: "#fff",
   borderRadius: 14,

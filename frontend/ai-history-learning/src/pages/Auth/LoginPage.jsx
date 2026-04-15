@@ -40,7 +40,7 @@ function LoginPage() {
         confirmButtonColor: "#f97316",
       });
       localStorage.setItem("user", JSON.stringify(user));
-      navigate(user.role === "admin" ? "/admin" : role === "teacher" ? "/teacher" : "/home");
+      navigate(user.role === "admin" ? "/admin" : role === "teacher" ? "/teacher" : "/dashboard");
     } else {
       Swal.fire({
         icon: "error",

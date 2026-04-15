@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft,  } from "lucide-react";
+import { ArrowLeft, CheckCircle, Trash2, XCircle } from "lucide-react";
 
 const ReportDetail = ({ report, onBack }) => {
   // Dữ liệu mẫu nếu không có props truyền vào

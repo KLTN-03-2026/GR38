@@ -1,48 +1,17 @@
 const usersMock = [
   {
     id: 1,
+    username: "admin",
+    password: "123456",
     email: "admin@gmail.com",
-    pass: "Admin@123",
-    role: "admin",
-    name: "Admin",
-    avatar: null,
+    role:"teacher"
   },
   {
     id: 2,
-    email: "giaovien@gmail.com",
-    pass: "Giaovien@123",
-    role: "teacher",
-    name: "Nguyễn Văn A",
-    avatar: null,
-    subject: "Lịch sử Việt Nam",
-  },
-  {
-    id: 3,
-    email: "giaovien2@gmail.com",
-    pass: "Giaovien@123",
-    role: "teacher",
-    name: "Trần Thị B",
-    avatar: null,
-    subject: "Lịch sử Thế giới",
-  },
-  {
-    id: 4,
-    email: "hocsinh@gmail.com",
-    pass: "HocSinh@123",
-    role: "student",
-    name: "Học Sinh A",
-    avatar: null,
-    class: "10A1",
-  },
-  {
-    id: 5,
-    email: "hocsinh2@gmail.com",
-    pass: "HocSinh@123",
-    role: "student",
-    name: "Học Sinh B",
-    avatar: null,
-    class: "10A2",
-  },
+    username: "user1",
+    password: "123456",
+    email: "user1@gmail.com"
+  }
 ];
 
 export default usersMock;

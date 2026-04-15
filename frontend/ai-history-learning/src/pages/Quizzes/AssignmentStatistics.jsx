@@ -255,4 +255,101 @@ export default function AssignmentStatistics() {
       )}
     </div>
   );
+
 }
+
+// ── Shared style tokens ──────────────────────────────────────────────────────
+const selectStyle = {
+  height: 38,
+  padding: "0 12px",
+  border: "1px solid #E5E7EB",
+  borderRadius: 8,
+  fontSize: 13,
+  color: "#374151",
+  background: "#fff",
+  outline: "none",
+  cursor: "pointer",
+};
+
+const btnPrimary = {
+  height: 38,
+  padding: "0 16px",
+  background: "#F26739",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  fontSize: 13,
+  fontWeight: 500,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+};
+
+const btnSecondary = {
+  height: 38,
+  padding: "0 16px",
+  background: "#fff",
+  color: "#374151",
+  border: "1px solid #E5E7EB",
+  borderRadius: 8,
+  fontSize: 13,
+  fontWeight: 500,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+};
+
+const iconBtn = () => ({
+  width: 30, height: 30,
+  border: "1px solid #E5E7EB",
+  borderRadius: 6,
+  background: "transparent",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  transition: "all 0.15s",
+  padding: 0,
+});
+
+const labelStyle = {
+  display: "block",
+  fontSize: 12,
+  fontWeight: 500,
+  color: "#6B7280",
+  marginBottom: 5,
+};
+
+const inputStyle = {
+  width: "100%",
+  height: 38,
+  padding: "0 12px",
+  border: "1px solid #E5E7EB",
+  borderRadius: 8,
+  fontSize: 13,
+  color: "#111827",
+  outline: "none",
+  boxSizing: "border-box",
+  background: "#fff",
+};
+const backdropStyle = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 50,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "rgba(0,0,0,0.45)",
+};
+const modalStyle = {
+  background: "#fff",
+  borderRadius: 14,
+  border: "1px solid #E5E7EB",
+  padding: 24,
+  width: "100%",
+  maxWidth: 440,
+  boxSizing: "border-box",
+};
+

@@ -1,6 +1,13 @@
 import mongoose from "mongoose";
 
 const flashcardSchema = new mongoose.Schema({
+
+    documentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Document',
+        required: true
+    },
+
     teacherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

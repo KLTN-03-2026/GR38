@@ -87,7 +87,7 @@ const processPDF = async (documentId, filePath) => {
   } catch (error) {
     console.error(`Lỗi xử lý tài liệu ${documentId}:`, error);
     await Document.findByIdAndUpdate(documentId, {
-      status: "false",
+      status: "failed",
     });
   }
 };
@@ -169,10 +169,8 @@ export const getDocument = async (req, res, next) => {
         query.userId = req.user._id;
     }
 
-    const document = await Document.findOne({
-      _id: req.params.id,
-      
-    });
+   if (req.user.role === 'Learner') query.status = "ready";
+    const document = await Document.findOne(query);
 
     if(!document) {
       return res.status(404).json({

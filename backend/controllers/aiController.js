@@ -23,7 +23,7 @@ export const generateFlashcards = async (req, res, next) => {
     const document = await Document.findOne({
       _id: documentId,
       userId: req.user._id,
-      status: 'Đã xử lý'
+      status: 'ready'
     });
 
     if (!document) {
@@ -42,7 +42,7 @@ export const generateFlashcards = async (req, res, next) => {
 
     //Lưu flashcard vào database
     const flashcardSet = await Flashcard.create({
-      userId: req.user._id,
+      teacherId: req.user._id,
       documentId: document._id,
       cards: cards.map(card => ({
         question: card.question,
@@ -82,7 +82,7 @@ export const generateQuiz = async (req, res, next) => {
     const document = await Document.findOne({
       _id: documentId,
       userId: req.user._id,
-      status: 'Đã xử lý'
+      status: 'ready'
     });
 
     if (!document) {
@@ -98,10 +98,26 @@ export const generateQuiz = async (req, res, next) => {
       document.extractedText, 
       parseInt(numQuestions)
     );
+   questions.forEach(q => {
+        // Xóa khoảng trắng thừa ở đầu và cuối của đáp án đúng
+        q.correctAnswer = q.correctAnswer.trim();
+        // Xóa khoảng trắng thừa ở tất cả các lựa chọn
+        q.options = q.options.map(opt => opt.trim());
+        // Nếu AI lỡ trả về "A", "B", "C", "D"
+        if (["A", "B", "C", "D"].includes(q.correctAnswer) && q.options.length === 4) {
+             const indexMap = { "A": 0, "B": 1, "C": 2, "D": 3 };
+             q.correctAnswer = q.options[indexMap[q.correctAnswer]];
+        }
 
+        // Bảo hiểm không crash Server nếu đáp án đúng không nằm trong lựa chọn (dù đã cố gắng sửa ở trên)
+        if (!q.options.includes(q.correctAnswer)) {
+            const fallbackOption = q.options.find(opt => opt.includes(q.correctAnswer) || q.correctAnswer.includes(opt));
+            q.correctAnswer = fallbackOption || q.options[0]; 
+        }
+    });
     //Lưu quiz vào database
     const quizSet = await Quiz.create({
-      userId: req.user._id,
+      teacherId: req.user._id,
       documentId: document._id,
       title: title ||`${document.title} - Quiz`,
       questions: questions,
@@ -138,8 +154,7 @@ export const generateSummary = async (req, res, next) => {
 
     const document = await Document.findOne({
       _id: documentId,
-      userId: req.user._id,
-      status: 'Đã xử lý'
+      status: 'ready'
     });
 
     if (!document) {
@@ -184,8 +199,7 @@ export const chat = async (req, res, next) => {
 
     const document = await Document.findOne({
       _id: documentId,
-      userId: req.user._id,
-      status: 'Đã xử lý'
+      status: 'ready'
     });
 
     if(!document) {
@@ -267,8 +281,7 @@ export const explainConcept = async (req, res, next) => {
 
     const document = await Document.findOne({
       _id: documentId,
-      userId: req.user._id,
-      status: 'Đã xử lý'
+      status: 'ready'
     });
 
     if (!document) {

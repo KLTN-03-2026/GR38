@@ -3,11 +3,11 @@ import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import usersMock from "../../data/UserMock";
 
-// Map role -> route và nhãn hiển thị
+// CHỈ CẬP NHẬT ĐIỀU HƯỚNG TẠI ĐÂY
 const ROLE_CONFIG = {
   admin:   { path: "/admin",   label: "Quản trị viên" },
   teacher: { path: "/teacher", label: "Giáo viên" },
-  student: { path: "/student", label: "Học sinh" },
+  learner: { path: "/learner", label: "Học sinh" }, // Đã khớp với App.js
 };
 
 function LoginPage() {
@@ -24,7 +24,6 @@ function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     const err = {};
     if (!input.email) err.email = "Vui lòng nhập email";
     if (!input.pass)  err.pass  = "Vui lòng nhập mật khẩu";
@@ -38,31 +37,30 @@ function LoginPage() {
 
     setTimeout(async () => {
       if (found) {
-        // Lưu toàn bộ thông tin user vào localStorage
+        // Lưu thông tin user
         localStorage.setItem("user", JSON.stringify({
-          id:    found.id,
-          name:  found.name,
-          email: found.email,
-          role:  found.role,
+          id:      found.id,
+          name:    found.name,
+          email:   found.email,
+          role:    found.role,
           ...(found.subject && { subject: found.subject }),
           ...(found.class   && { class:   found.class }),
         }));
+
+        // Lưu role để App.js kiểm tra PrivateRoute
+        localStorage.setItem("role", found.role);
 
         const roleLabel = ROLE_CONFIG[found.role]?.label ?? found.role;
 
         await Swal.fire({
           icon: "success",
           title: "ĐĂNG NHẬP THÀNH CÔNG",
-          html: `Xin chào <b>${found.name}</b><br/>
-                 <span style="font-size:13px;color:#6b7280">
-                   Vai trò: ${roleLabel}
-                 </span>`,
+          html: `Xin chào <b>${found.name}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
           confirmButtonColor: "#f97316",
           timer: 1800,
           timerProgressBar: true,
         });
 
-        // Điều hướng theo role
         const path = ROLE_CONFIG[found.role]?.path;
         if (path) navigate(path);
       } else {
@@ -88,10 +86,8 @@ function LoginPage() {
         backgroundRepeat: "no-repeat",
       }}
     >
-      {/* Overlay */}
       <div className="absolute inset-0 bg-black/40" />
 
-      {/* Form */}
       <div className="relative z-10 w-full max-w-[360px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-7 mx-4 shadow-xl">
         <div className="flex flex-col items-center mb-5">
           <img
@@ -102,6 +98,7 @@ function LoginPage() {
           <h1 className="text-base font-semibold text-gray-800">Lịch sử Việt Nam</h1>
           <p className="text-xs text-gray-400 mt-1">Nhập thông tin Email và Mật khẩu</p>
         </div>
+
         <label className="block text-sm text-gray-500 mb-1.5">Email</label>
         <input
           type="email"
@@ -116,11 +113,8 @@ function LoginPage() {
               : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
             }`}
         />
-        {errors.email && (
-          <p className="text-xs text-red-500 mb-3">{errors.email}</p>
-        )}
+        {errors.email && <p className="text-xs text-red-500 mb-3">{errors.email}</p>}
 
-        {/* Password */}
         <div className="flex justify-between items-center mb-1.5">
           <label className="text-sm text-gray-500">Mật khẩu</label>
           <button
@@ -143,25 +137,14 @@ function LoginPage() {
               : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
             }`}
         />
-        {errors.pass && (
-          <p className="text-xs text-red-500 mb-3">{errors.pass}</p>
-        )}
+        {errors.pass && <p className="text-xs text-red-500 mb-3">{errors.pass}</p>}
 
-        {/* Submit */}
         <button
           onClick={handleLogin}
           disabled={loading}
           className="w-full mt-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-3"
         >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Đang xử lý...
-            </span>
-          ) : "Đăng nhập"}
+          {loading ? "Đang xử lý..." : "Đăng nhập"}
         </button>
 
         <p className="text-center text-sm text-gray-500">

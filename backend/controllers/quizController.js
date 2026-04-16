@@ -1,4 +1,5 @@
 import Quiz from '../models/Quiz.js';
+import QuizResult from '../models/QuizResult.js';
 
 //@desc Lấy danh sách quiz cho một tài liệu
 //@route GET /api/quizzes/:documentId
@@ -28,10 +29,10 @@ export const getQuizzes = async (req, res, next) => {
 //@access Private
 export const getQuizById = async (req, res, next) => {
     try {
-        const quiz = await Quiz.findOne({
-            _id: req.params.id,
-            userId: req.user._id
-        }).populate('documentId', 'title fileName');
+        const quiz = await Quiz.findById(
+            req.params.id
+        )
+        .populate('documentId', 'title fileName');
         
         if (!quiz) {
             return res.status(404).json({
@@ -55,20 +56,21 @@ export const getQuizById = async (req, res, next) => {
 //@access Private
 export const submitQuiz = async (req, res, next) => {
     try {
-        const { answers } = req.body;
+        const userAnswers = Array.isArray(req.body.userAnswers)
+            ? req.body.userAnswers
+            : Array.isArray(req.body.answers)
+                ? req.body.answers
+                : [];
 
-        if(!Array.isArray(answers)) {
+        if (!userAnswers.length) {
             return res.status(400).json({
                 success: false,
-                error: 'Vui lòng cung cấp câu trả lời dưới dạng mảng',
+                error: 'Vui lòng cung cấp userAnswers dưới dạng mảng',
                 statusCode: 400
             });
         }
 
-        const quiz = await Quiz.findOne({
-            _id: req.params.id,
-            userId: req.user._id
-        });
+        const quiz = await Quiz.findById(req.params.id);
 
         if (!quiz) {
             return res.status(404).json({
@@ -78,55 +80,54 @@ export const submitQuiz = async (req, res, next) => {
             });
         }
 
-        if(quiz.completedAt) {
-            return res.status(400).json({
-                success: false,
-                error: 'Quiz đã được nộp trước đó',
-                statusCode: 400
-            });
-        }
+        const answerMap = new Map(
+            userAnswers
+                .filter((answer) => answer && answer.questionId)
+                .map((answer) => [String(answer.questionId), answer.selectedAnswer ?? null])
+        );
 
-        //Xử lý câu trả lời và tính điểm
         let correctCount = 0;
-        const userAnswers = [];
+        const totalQuestions = Array.isArray(quiz.questions) ? quiz.questions.length : 0;
 
-        answers.forEach((answer) => {
-            const { questionIndex, selectedAnswer } = answer;
+        const details = (quiz.questions || []).map((question) => {
+            const questionId = String(question._id);
+            const selectedAnswer = answerMap.has(questionId) ? answerMap.get(questionId) : null;
+            const isCorrect = selectedAnswer === question.correctAnswer;
 
-            if(questionIndex < quiz.questions.length ) {
-                const question = quiz.questions[questionIndex];
-                const isCorrect = selectedAnswer === question.correctAnswer ;
-
-                if(isCorrect) correctCount++;
-
-                userAnswers.push({
-                    questionIndex,
-                    selectedAnswer,
-                    isCorrect,
-                    answereAt: new Date()
-                });
+            if (isCorrect) {
+                correctCount += 1;
             }
+
+            return {
+                questionId: question._id,
+                question: question.question,
+                selectedAnswer,
+                correctAnswer: question.correctAnswer,
+                explanation: question.explanation,
+                isCorrect
+            };
         });
 
-        //Tính điểm
-        const score = Math.round((correctCount / quiz.totalQuestions) * 100);
-
-        //Cập nhật quiz với kết quả
-        quiz.userAnswers = userAnswers;
-        quiz.score = score;
-        quiz.completedAt = new Date();
-        
-        await quiz.save();
+        const quizResult = await QuizResult.create({
+            userId: req.user._id,
+            quizId: quiz._id,
+            score: correctCount,
+            totalQuestions,
+            answers: details.map((item) => ({
+                questionId: item.questionId,
+                selectedAnswer: item.selectedAnswer,
+                isCorrect: item.isCorrect
+            }))
+        });
 
         res.status(200).json({
             success: true,
             data: {
-                quizId: quiz._id,
-                score,
+                quizResultId: quizResult._id,
+                score: correctCount,
                 correctCount,
-                totalQuestions: quiz.totalQuestions,
-                percentage: score,
-                userAnswers
+                totalQuestions,
+                details
             },
             message: 'Quiz đã được nộp thành công'
         });
@@ -140,54 +141,76 @@ export const submitQuiz = async (req, res, next) => {
 //@access Private
 export const getQuizResults = async (req, res, next) => {
     try {
-        const quiz = await Quiz.findOne({
-            _id: req.params.id,
+        const result = await QuizResult.findOne({
+            quizId: req.params.id,
             userId: req.user._id
-        }).populate('documentId', 'title');
+        })
+        .sort({ createdAt: -1 })
+        .populate({
+            path: 'quizId',
+            populate: {
+                path: 'teacherId',
+                select: 'fullName email'
+            }
+        });
 
-        if (!quiz) {
+        if (!result) {
             return res.status(404).json({
                 success: false,
-                error: 'Không tìm thấy Quiz',
+                error: 'Chưa có kết quả nộp bài cho Quiz này',
                 statusCode: 404
             });
         }
 
-        if (!quiz.completedAt) {
-            return res.status(400).json({
-                success: false,
-                error: 'Quiz chưa được nộp',
-                statusCode: 400
+        const quiz = result.quizId;
+
+        if (!quiz) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Đề thi gốc không còn tồn tại', 
+                statusCode: 404 
             });
         }
 
-        //Xây dựng kết quả chi tiết
-        const detailedResults = quiz.questions.map((question, index) => {
-            const userAnswer = quiz.userAnswers.find(a => a.questionIndex === index);
+        const detailedResults = result.answers.map((answer) => {
+            const question = quiz.questions.id(answer.questionId) || quiz.questions.find((item) => String(item._id) === String(answer.questionId));
+
+            if (!question) {
+                return {
+                    questionId: answer.questionId,
+                    question: null,
+                    options: [],
+                    correctAnswer: null,
+                    selectedAnswer: answer.selectedAnswer,
+                    isCorrect: answer.isCorrect,
+                    explanation: null
+                };
+            }
             
             return {
-                questionsIndex: index,
+                questionId: question._id,
                 question: question.question,
                 options: question.options,
                 correctAnswer: question.correctAnswer,
-                selectedAnswer: userAnswer ?.selectedAnswer || null,
-                isCorrect: userAnswer ?.isCorrect || false,
-                explanation : question.explanation
+                selectedAnswer: answer.selectedAnswer,
+                isCorrect: answer.isCorrect,
+                explanation: question.explanation
             };
         });
 
         res.status(200).json({
             success: true,
             data: {
+                quizResultId: result._id,
                 quiz: {
                     _id: quiz._id,
                     title: quiz.title,
-                    document: quiz.documentId,
-                    score: quiz.score,
-                    totalQuestions: quiz.totalQuestions,
-                    completedAt: quiz.completedAt
+                    teacher: quiz.teacherId
                 },
-                result: detailedResults
+                score: result.score,
+                totalQuestions: result.totalQuestions,
+                submittedAt: result.createdAt,
+                details: detailedResults
             }
         });
     } catch (error) {
@@ -201,20 +224,28 @@ export const getQuizResults = async (req, res, next) => {
 export const deleteQuiz = async (req, res, next) => {
     try {
 
-        const quiz = await Quiz.findOne({
-            _id: req.params.id,
-            userId: req.user._id
-        });
+        const quiz = await Quiz.findById(req.params.id);
 
         if (!quiz) {
-            return res.status(404).json({
-                success: false,
-                error: 'Không tìm thấy Quiz',
-                statusCode: 404
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Không tìm thấy Quiz', 
+                statusCode: 404 
+            });
+        }
+
+        // Chỉ người tạo (teacherId) hoặc Admin mới được xóa
+        if (quiz.teacherId.toString() !== req.user._id.toString() && req.user.role !== 'Admin') {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'Không có quyền xóa', 
+                statusCode: 403 
             });
         }
 
         await quiz.deleteOne();
+        // (Tùy chọn) Xóa luôn các QuizResult liên quan để nhẹ Database
+        await QuizResult.deleteMany({ quizId: req.params.id }); 
 
         res.status(200).json({
             success: true,

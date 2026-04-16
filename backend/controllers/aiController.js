@@ -126,7 +126,42 @@ export const generateQuiz = async (req, res, next) => {
 //@access Private
 export const generateSummary = async (req, res, next) => {
   try {
+    const { documentId } = req.body;
 
+    if (!documentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp documentId',
+        statusCode: 400
+      });
+    }
+
+    const document = await Document.findOne({
+      _id: documentId,
+      userId: req.user._id,
+      status: 'Đã xử lý'
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy tài liệu hoặc chưa được xử lý',
+        statusCode: 404
+      });
+    }
+
+    //Tạo tóm tắt bằng Gemini
+    const summary = await geminiService.generateSummary(document.extractedText);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        documentId: document._id,
+        title: document.title,
+        summary
+      },
+      message: 'Tóm tắt đã được tạo thành công',
+    });
   } catch (error) {
     next(error);
   }
@@ -137,7 +172,79 @@ export const generateSummary = async (req, res, next) => {
 //@access Private
 export const chat = async (req, res, next) => {
   try {
+    const { documentId, question } = req.body;
 
+    if (!documentId || !question) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp documentId và question',
+        statusCode: 400
+      });
+    }
+
+    const document = await Document.findOne({
+      _id: documentId,
+      userId: req.user._id,
+      status: 'Đã xử lý'
+    });
+
+    if(!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy tài liệu hoặc chưa được xử lý',
+        statusCode: 404
+      });
+    }
+
+    //Tìm các đoạn văn liên quan
+    const relevantChunks = findRelevantChunks(document.chunks, question, 3);//3 là số đoạn văn liên quan tối đa
+    const chunkIndices = relevantChunks.map(c => c.chunkIndex);
+
+    //Lấy hoặc tạo lịch sử chat
+    let chatHistory = await ChatHistory.findOne({
+      userId: req.user._id,
+      documentId: document._id
+    });
+
+    if (!chatHistory) {
+      chatHistory = await ChatHistory.create({
+        userId: req.user._id,
+        documentId: document._id,
+        messages: []
+      });
+    }
+
+    //Tạo câu trả lời bằng Gemini
+    const answer = await geminiService.chatWithContext(question, relevantChunks);
+
+    //Lưu tin nhắn vào lịch sử chat
+    chatHistory.messages.push(
+      {
+        role: 'user',
+        content: question,
+        timestamp: new Date(),
+        relevantChunks: []
+      },
+      {
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date(),
+        relevantChunks: chunkIndices
+      }
+    );
+
+    await chatHistory.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        question,
+        answer,
+        relevantChunks: chunkIndices,
+        chatHistoryId: chatHistory._id
+      },
+      message: 'Câu trả lời đã được tạo thành công',
+    });
   } catch (error) {
     next(error);
   }
@@ -148,7 +255,46 @@ export const chat = async (req, res, next) => {
 //@access Private
 export const explainConcept = async (req, res, next) => {
   try {
+    const { documentId, concept } = req.body;
 
+    if (!documentId || !concept) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp documentId và concept',
+        statusCode: 400
+      });
+    }
+
+    const document = await Document.findOne({
+      _id: documentId,
+      userId: req.user._id,
+      status: 'Đã xử lý'
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy tài liệu hoặc chưa được xử lý',
+        statusCode: 404
+      });
+    }
+
+    //Tìm các đoạn văn liên quan
+    const relevantChunks = findRelevantChunks(document.chunks, concept, 3);//3 là số đoạn văn liên quan tối đa
+    const context = relevantChunks.map(c => c.content).join('\n\n');
+
+    //Tạo giải thích bằng Gemini
+    const explanation = await geminiService.explainConcept(concept, context);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        concept,
+        explanation,
+        relevantChunks: relevantChunks.map(c => c.chunkIndex)
+      },
+      message: 'Giải thích đã được tạo thành công',
+    });
   } catch (error) {
     next(error);
   }
@@ -159,7 +305,34 @@ export const explainConcept = async (req, res, next) => {
 //@access Private
 export const getChatHistory = async (req, res, next) => {
   try {
+    const { documentId } = req.params;
 
+    if(!documentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp documentId',
+        statusCode: 400
+      });
+    }
+
+    const chatHistory = await ChatHistory.findOne({
+      userId: req.user._id,
+      documentId: documentId
+    }).select('messages'); // Chỉ trả về tin nhắn
+
+    if (!chatHistory) {
+      return res.status(200).json({
+        success: true,
+        data: [], //Trả về mảng rỗng nếu không có lịch sử chat
+        message: 'Không tìm thấy lịch sử chat cho tài liệu này'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: chatHistory.messages,
+      message: 'Lịch sử chat đã được lấy thành công'
+    });
   } catch (error) {
     next(error);
   }

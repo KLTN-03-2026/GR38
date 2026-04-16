@@ -44,18 +44,18 @@ const documentSchema = new mongoose.Schema(
         },
       },
     ],
-    uploadDate: {
-      type: Date,
-      default: Date.now,
-    },
+    // uploadDate: {
+    //   type: Date,
+    //   default: Date.now,
+    // },
     lastAccessed: {
       type: Date,
       default: Date.now,
     },
     status: {
       type: String,
-      enum: ["Xử lý", "Đã xử lý", "Lỗi xử lý"],
-      default: "Xử lý",
+      enum: ["processing", "ready", "failed"],
+      default: "processing",
     },
   },
   {
@@ -64,7 +64,7 @@ const documentSchema = new mongoose.Schema(
 );
 
 //Index for faster queries
-documentSchema.index({userId: 1, uploadDate: -1});
+documentSchema.index({userId: 1, createdAt: -1});
 
 const Document = mongoose.model('Document', documentSchema);
 

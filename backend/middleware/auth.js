@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { USER_ROLES } from "../models/User.js";
 
 // Thay đổi ở file: backend/middleware/auth.js
 const protect = async (req, res, next) => {
@@ -53,4 +54,29 @@ const protect = async (req, res, next) => {
     });
   }
 };
+
+export const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: "Không có thông tin người dùng",
+        statusCode: 401,
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: "Bạn không có quyền truy cập chức năng này",
+        statusCode: 403,
+      });
+    }
+
+    next();
+  };
+};
+
+export { USER_ROLES };
+
 export default protect;

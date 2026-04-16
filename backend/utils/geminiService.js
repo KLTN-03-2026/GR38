@@ -227,19 +227,20 @@ Câu trả lời:`;
  * @returns {Promise<string>} Câu trả lời đã được tạo
  */
 export const explainConcept = async (concept, context) => {
-  const prompt = `Bạn là một giáo viên Lịch sử Việt Nam tận tâm và uyên bác.
+  const prompt = `Bạn là một hệ thống AI hỗ trợ ôn tập Lịch sử Việt Nam.
 Nhiệm vụ của bạn là giải thích khái niệm hoặc sự kiện: "${concept}".
 
 Hãy dựa HOÀN TOÀN vào ngữ cảnh (Context) được cung cấp dưới đây để giải thích. 
-Yêu cầu:
-1. Trình bày rõ ràng, dễ hiểu, phù hợp cho học sinh ôn tập.
-2. Cấu trúc câu trả lời mạch lạc (sử dụng gạch đầu dòng nếu cần).
-3. In đậm các mốc thời gian, tên nhân vật lịch sử hoặc địa danh quan trọng.
-4. NẾU ngữ cảnh không chứa đủ thông tin để giải thích, hãy trả lời trung thực là: "Tài liệu hiện tại không đủ thông tin để giải thích chi tiết về vấn đề này." Tuyệt đối không tự bịa đặt thêm dữ kiện lịch sử.
+
+YÊU CẦU BẮT BUỘC (CẦN TUÂN THỦ NGHIÊM NGẶT):
+1. ĐI THẲNG VÀO VẤN ĐỀ: Trả lời ngắn gọn, súc tích, khách quan. 
+2. KHÔNG DÙNG TỪ NGỮ THỪA: Tuyệt đối KHÔNG có câu chào hỏi, KHÔNG có lời dẫn dắt (vd: "Chào các em", "Hôm nay chúng ta tìm hiểu"), KHÔNG có câu kết luận thừa (vd: "Hy vọng điều này giúp ích").
+3. Trình bày rõ ràng, mạch lạc (sử dụng gạch đầu dòng nếu cần).
+4. In đậm (**text**) các mốc thời gian, tên nhân vật lịch sử hoặc địa danh quan trọng.
+5. NẾU ngữ cảnh không chứa đủ thông tin, chỉ trả lời đúng 1 câu: "Tài liệu hiện tại không đủ thông tin để giải thích chi tiết về vấn đề này." Tuyệt đối không tự bịa đặt thêm.
 
 Ngữ cảnh (Context):
 ${context.substring(0, 10000)}`;
-
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-lite",

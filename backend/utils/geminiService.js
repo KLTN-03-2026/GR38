@@ -93,7 +93,8 @@ O4: [Lựa chọn 4]
 C: [Đáp án đúng - viết y hệt như văn bản của lựa chọn ở trên]
 E: [Giải thích ngắn gọn tại sao đúng]
 D: [Độ khó: Dễ, Trung bình, hoặc Khó]
-
+YÊU CẦU BẮT BUỘC (CẦN TUÂN THỦ NGHIÊM NGẶT): 
+Giá trị của trường correctAnswer phải copy chính xác 100% từng chữ cái, dấu cách, viết hoa/thường từ một trong 4 giá trị của mảng options.
 Phân tách các câu hỏi bằng "---"
 
 Văn bản:

@@ -1,20 +1,19 @@
 import mongoose from "mongoose";
 
 const quizSchema = new mongoose.Schema({
-    userId: {
+    teacherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
-    },
-    documentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Document',
         required: true
     },
     title: {
         type: String,
         required: true,
         trim: true
+    },
+    description: {
+        type: String,
+        default: ''
     },
     questions: [{
         question:{
@@ -28,7 +27,13 @@ const quizSchema = new mongoose.Schema({
         },
         correctAnswer: {
             type: String,
-            required: true
+            required: true,
+            validate: {
+                validator: function(value) {
+                    return Array.isArray(this.options) && this.options.includes(value);
+                },
+                message: 'Đáp án đúng phải nằm trong danh sách lựa chọn'
+            }
         },
         explanation: {
             type: String,
@@ -40,42 +45,40 @@ const quizSchema = new mongoose.Schema({
             default: 'Trung bình'
         }
     }],
-    userAnswers: [{
-        questionIndex: {
-            type: Number,
-            required: true
-        },
-        selectedAnswer: {
-            type: String,
-            required: true
-        },
-        isCorrect: {
-            type: Boolean,
-            requered: true
-        },
-        answeredAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    score: {
+    totalQuestions: {
         type: Number,
         default: 0
     },
-    totalQuestions: {
-        type: Number,
-        required: true
+    isPublished: {
+        type: Boolean,
+        default: false
     },
-    completedAt: {
-        type: Date,
-        default: null
+    tags: [{
+        type: String,
+        trim: true
+    }],
+    stats: {
+        enrolledLearners: {
+            type: Number,
+            default: 0
+        },
+        totalAttempts: {
+            type: Number,
+            default: 0
+        }
     }
 }, {
     timestamps: true
 })
 
+quizSchema.pre('save', function(next) {
+    this.totalQuestions = Array.isArray(this.questions) ? this.questions.length : 0;
+    next();
+});
+
 //Index for faster queries
-quizSchema.index({ userId: 1, documentId: 1 });
+quizSchema.index({ teacherId: 1, createdAt: -1 });
+quizSchema.index({ teacherId: 1, isPublished: 1 });
 
 const Quiz = mongoose.model('Quiz', quizSchema);
 

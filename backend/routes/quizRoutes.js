@@ -6,16 +6,16 @@ import {
     getQuizResults,
     deleteQuiz
 } from '../controllers/quizController.js';
-import protect from '../middleware/auth.js';   
+import protect, { authorize, USER_ROLES } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.use(protect);
 
-router.get('/:documentId', getQuizzes);
-router.get('/quiz/:id', getQuizById);
-router.post('/:id/submit', submitQuiz);
-router.get('/:id/results', getQuizResults);
-router.delete('/:id', deleteQuiz);
+router.get('/quiz/:id', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), getQuizById);
+router.get('/:documentId', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), getQuizzes);
+router.post('/:id/submit', authorize(USER_ROLES.LEARNER), submitQuiz);
+router.get('/:id/results', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getQuizResults);
+router.delete('/:id', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), deleteQuiz);
 
 export default router;

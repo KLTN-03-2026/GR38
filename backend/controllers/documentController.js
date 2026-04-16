@@ -42,7 +42,7 @@ export const uploadsDocument = async (req, res, next) => {
       fileName: req.file.originalname,
       filePath: fileUrl, //Lưu trữ URL thay vì đường dẫn vật lý
       fileSize: req.file.size,
-      status: "Xử lý",
+      status: "processing",
     });
 
     await document.save();
@@ -81,13 +81,13 @@ const processPDF = async (documentId, filePath) => {
     await Document.findByIdAndUpdate(documentId, {
       extractedText: text,
       chunks: chunks,
-      status: "Đã xử lý",
+      status: "ready",
     });
     console.log(`Tài liệu ${documentId} đã được xử lý thành công.`);
   } catch (error) {
     console.error(`Lỗi xử lý tài liệu ${documentId}:`, error);
     await Document.findByIdAndUpdate(documentId, {
-      status: "Lỗi xử lý",
+      status: "false",
     });
   }
 };
@@ -97,9 +97,19 @@ const processPDF = async (documentId, filePath) => {
 // @access Private
 export const getDocuments = async (req, res, next) => {
   try {
+
+    let matchQuery = {};
+    if (req.user.role === 'Teacher') {
+        // Giáo viên: Chỉ thấy tài liệu do mình tải lên
+        matchQuery = { userId: new mongoose.Types.ObjectId(req.user._id) };
+    } else if (req.user.role === 'Learner') {
+        // Học sinh: Thấy tất cả tài liệu đã được AI xử lý xong
+        matchQuery = { status: "ready" }; 
+    }
+
     const documents = await Document.aggregate([
       {
-        $match: { userId: new mongoose.Types.ObjectId(req.user._id) },
+        $match: matchQuery,
       },
       {
         $lookup: {
@@ -132,7 +142,7 @@ export const getDocuments = async (req, res, next) => {
         },
       },
       {
-        $sort: { upLoadDate: -1 },
+        $sort: { createdAt: -1 },
       },
     ]);
 
@@ -151,9 +161,17 @@ export const getDocuments = async (req, res, next) => {
 // @access Private
 export const getDocument = async (req, res, next) => {
   try {
+
+    let query = { _id: req.params.id };
+    
+    // Nếu là giáo viên thì mới cần check userId, Học sinh thì được xem tự do
+    if (req.user.role === 'Teacher') {
+        query.userId = req.user._id;
+    }
+
     const document = await Document.findOne({
       _id: req.params.id,
-      userId: req.user._id
+      
     });
 
     if(!document) {
@@ -165,8 +183,8 @@ export const getDocument = async (req, res, next) => {
     }
 
     //Tính số lượng flashcard và quizzes liên quan
-    const flashcardCount = await Flashcard.countDocuments({ documentId: document._id, userId: req.user._id});
-    const quizCount = await Quiz.countDocuments({ documentId: document._id, userId: req.user._id});
+    const flashcardCount = await Flashcard.countDocuments({ documentId: document._id });
+    const quizCount = await Quiz.countDocuments({ documentId: document._id });
     
     //Cập nhật truy cập lần cuối
     document.lastAccessed = Date.now();
@@ -178,7 +196,7 @@ export const getDocument = async (req, res, next) => {
     documentData.quizCount = quizCount;
 
     res.status(200).json({
-      succes: true,
+      success: true,
       data: documentData
     });
   } catch (error) {

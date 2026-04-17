@@ -128,7 +128,7 @@ components:
           example: 401
 
 paths:
-  /api/progress/dashboard:
+  /api/v1/progress/dashboard:
     get:
       summary: Lấy thống kê dashboard tiến độ học tập
       description: Trả về tổng quan học tập và hoạt động gần đây của người dùng hiện tại.

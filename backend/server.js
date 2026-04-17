@@ -54,13 +54,13 @@ app.use(
 
 
 //Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/documents', documentRoutes)
-app.use('/api/flashcards', flashcardRoutes)
-app.use('/api/ai', aiRoutes)
-app.use('/api/quizzes', quizRoutes)
-app.use('/api/progress', progressRoutes)
-app.use('/api/admin', adminRoutes)
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/documents', documentRoutes);
+app.use('/api/v1/flashcards', flashcardRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/quizzes', quizRoutes);
+app.use('/api/v1/progress', progressRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 app.use(errorHandler);
 

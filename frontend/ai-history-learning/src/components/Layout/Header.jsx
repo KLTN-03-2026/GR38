@@ -1,14 +1,68 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Modal xác nhận đăng xuất
+const LogoutModal = ({ onConfirm, onCancel }) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    onClick={onCancel}
+  >
+    <div
+      className="bg-white rounded-2xl shadow-xl w-[300px] p-7 text-center"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Icon */}
+      <div className="w-13 h-13 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-50">
+        <div className="w-12 h-12 flex items-center justify-center rounded-full bg-red-100">
+          <svg
+            className="w-6 h-6 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.8}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
+          </svg>
+        </div>
+      </div>
+
+      {/* Text */}
+      <p className="text-base font-semibold text-gray-800 mb-1">Đăng xuất?</p>
+      <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+        Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?
+      </p>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          Huỷ
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-500 font-medium hover:bg-red-100 transition-colors"
+        >
+          Đăng xuất
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const Header = () => {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("user") || "{}")
   );
-
   const [open, setOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dropdownRef = useRef(null);
 
   const avatarUrl =
@@ -30,117 +84,91 @@ const Header = () => {
     navigate("/");
   };
 
-  // sync khi update profile
   useEffect(() => {
     const updateUser = () => {
       setUser(JSON.parse(localStorage.getItem("user") || "{}"));
     };
-
     window.addEventListener("user-update", updateUser);
     return () => window.removeEventListener("user-update", updateUser);
   }, []);
 
-  // click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
-    <header className="h-14 fixed top-0 left-[240px] right-0 bg-white border-b border-gray-200 flex items-center justify-end px-6 z-20">
-      <div className="relative" ref={dropdownRef}>
-        {/* AVATAR */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 hover:border-[#F26739] transition-all"
-        >
-          <img
-            src={avatarUrl}
-            alt="avatar"
-            className="w-full h-full object-cover"
-          />
-        </button>
+    <>
+      <header className="h-14 fixed top-0 left-[240px] right-0 bg-white border-b border-gray-200 flex items-center justify-end px-6 z-20">
+        <div className="relative" ref={dropdownRef}>
+          {/* Avatar */}
+          <button
+            onClick={() => setOpen(!open)}
+            className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 hover:border-[#F26739] transition-all"
+          >
+            <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+          </button>
 
-        {/* DROPDOWN */}
-        {open && (
-          <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
-            
-            {/* INFO */}
-            <div className="px-4 py-3 border-b">
-              <p className="text-sm font-medium text-gray-800 truncate">
-                {user.name || "Người dùng"}
-              </p>
-              <p className="text-xs text-gray-400">
-                {user.role === "admin"
-                  ? "Quản trị viên"
-                  : user.role === "teacher"
-                  ? "Giáo viên"
-                  : "Người đọc"}
-              </p>
+          {/* Dropdown */}
+          {open && (
+            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
+              {/* Info */}
+              <div className="px-4 py-3 border-b">
+                <p className="text-sm font-medium text-gray-800 truncate">
+                  {user.name || "Người dùng"}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {user.role === "admin"
+                    ? "Quản trị viên"
+                    : user.role === "teacher"
+                    ? "Giáo viên"
+                    : "Người đọc"}
+                </p>
+              </div>
+
+              {/* Profile */}
+              <button
+                onClick={() => { navigate(profilePath); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" strokeWidth={1.5} />
+                  <circle cx="12" cy="10" r="3" strokeWidth={1.5} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 18c1.5-2 8.5-2 10 0" />
+                </svg>
+                Quản lý tài khoản
+              </button>
+
+              {/* Logout — mở modal thay vì logout thẳng */}
+              <button
+                onClick={() => { setShowLogoutModal(true); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50"
+              >
+                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                Đăng xuất
+              </button>
             </div>
+          )}
+        </div>
+      </header>
 
-            {/* PROFILE */}
-            <button
-              onClick={() => {
-                navigate(profilePath);
-                setOpen(false);
-              }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <svg
-                className="w-4 h-4 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="12" cy="12" r="10" strokeWidth={1.5} />
-                <circle cx="12" cy="10" r="3" strokeWidth={1.5} />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M7 18c1.5-2 8.5-2 10 0"
-                />
-              </svg>
-
-              Quản lý tài khoản
-            </button>
-
-            {/* LOGOUT */}
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50"
-            >
-              <svg
-                className="w-4 h-4 text-red-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.8}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-              Đăng xuất
-            </button>
-
-          </div>
-        )}
-      </div>
-    </header>
+      {/* Modal xác nhận */}
+      {showLogoutModal && (
+        <LogoutModal
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutModal(false)}
+        />
+      )}
+    </>
   );
 };
 

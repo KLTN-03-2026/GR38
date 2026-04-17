@@ -2,7 +2,7 @@ import React from 'react'
 
 function FlashcardPage() {
   return (
-    <div>FlashcardPage</div>
+    <div>sao dài quá z trời </div>
   )
 }
 

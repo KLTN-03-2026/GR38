@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const initialDocs = [
@@ -11,6 +11,46 @@ const initialDocs = [
 ];
 
 const TOTAL_PAGES = 3;
+const banners = ["/anh6.jpg", "/anh1.jpg", "/anh2.jpg", "/anh3.jpg"];
+
+// ─── CONFIRM DELETE MODAL ─────────────────────────────────────────────────────
+const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    onClick={onCancel}
+  >
+    <div
+      className="bg-white rounded-2xl shadow-xl w-[300px] p-7 text-center"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-100">
+        <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      </div>
+      <p className="text-base font-semibold text-gray-800 mb-1">Xoá tài liệu?</p>
+      <p className="text-sm text-gray-400 mb-6 leading-relaxed line-clamp-2">
+        Bạn có chắc muốn xoá <span className="font-medium text-gray-600">"{title}"</span>? Hành động này không thể hoàn tác.
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          Huỷ
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-500 font-medium hover:bg-red-100 transition-colors"
+        >
+          Xoá
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 export default function DocumentsPage() {
   const navigate = useNavigate();
@@ -23,10 +63,23 @@ export default function DocumentsPage() {
   const [addErrors, setAddErrors] = useState({});
   const [dragOver, setDragOver] = useState(false);
 
-  const banners = ["/anh6.jpg", "/anh1.jpg", "/anh2.jpg", "/anh3.jpg"];
+  // ── delete confirm state ──
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
   const filtered = docs.filter(d => d.title.toLowerCase().includes(search.toLowerCase()));
 
-  const handleDelete = (id) => setDocs(prev => prev.filter(d => d.id !== id));
+  // ── Auto-slide banner ──
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBannerIndex(prev => (prev + 1) % banners.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleDeleteConfirm = () => {
+    setDocs(prev => prev.filter(d => d.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
 
   const handleAddSubmit = () => {
     const err = {};
@@ -88,8 +141,13 @@ export default function DocumentsPage() {
       </div>
 
       {/* Banner */}
-      <div className="relative w-full h-52 rounded-2xl overflow-hidden shadow-sm">
-        <img src={banners[bannerIndex]} alt="banner" className="w-full h-full object-cover" />
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: "16/7" }}>
+        <img
+          key={bannerIndex}
+          src={banners[bannerIndex]}
+          alt="banner"
+          className="w-full h-full object-cover object-center transition-opacity duration-500"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
           {banners.map((_, i) => (
@@ -128,7 +186,7 @@ export default function DocumentsPage() {
                   <img src={doc.img} alt={doc.title} className="w-full h-40 object-cover bg-gray-100 group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <button
-                    onClick={e => { e.stopPropagation(); handleDelete(doc.id); }}
+                    onClick={e => { e.stopPropagation(); setDeleteTarget({ id: doc.id, title: doc.title }); }}
                     className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50"
                   >
                     <svg className="w-3.5 h-3.5 text-gray-400 hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,6 +251,15 @@ export default function DocumentsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal xác nhận xoá */}
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          title={deleteTarget.title}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
       {/* Modal thêm tài liệu */}
       {showAddModal && (

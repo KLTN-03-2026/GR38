@@ -93,18 +93,57 @@ function shuffleOptions(q) {
   return { ...q, options: shuffled.map((o) => o.text), answer: shuffled.findIndex((o) => o.isAnswer) };
 }
 
+// ─── CONFIRM DELETE MODAL ─────────────────────────────────────────────────────
+const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    onClick={onCancel}
+  >
+    <div
+      className="bg-white rounded-2xl shadow-xl w-[300px] p-7 text-center"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-100">
+        <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      </div>
+      <p className="text-base font-semibold text-gray-800 mb-1">Xoá Quiz?</p>
+      <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+        Bạn có chắc muốn xoá <span className="font-medium text-gray-600">"{title}"</span>? Hành động này không thể hoàn tác.
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          Huỷ
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-500 font-medium hover:bg-red-100 transition-colors"
+        >
+          Xoá
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // ─── ADD QUIZ MODAL ───────────────────────────────────────────────────────────
-const emptyQuizInfo  = { title: "" };
-const emptyQuestion  = { question: "", optionA: "", optionB: "", optionC: "", optionD: "", correctAnswer: "" };
+const emptyQuizInfo = { title: "" };
+const emptyQuestion = { question: "", optionA: "", optionB: "", optionC: "", optionD: "", correctAnswer: "" };
 
 function AddQuizModal({ onClose, onSave }) {
-  const [step, setStep]               = useState(1);
-  const [quizInfo, setQuizInfo]       = useState(emptyQuizInfo);
-  const [quizInfoErrors, setQIErr]    = useState({});
-  const [questions, setQuestions]     = useState([]);
-  const [currentQ, setCurrentQ]       = useState(emptyQuestion);
-  const [currentQErrors, setCQErr]    = useState({});
-  const [editingIndex, setEditIdx]    = useState(null);
+  const [step, setStep]             = useState(1);
+  const [quizInfo, setQuizInfo]     = useState(emptyQuizInfo);
+  const [quizInfoErrors, setQIErr]  = useState({});
+  const [questions, setQuestions]   = useState([]);
+  const [currentQ, setCurrentQ]     = useState(emptyQuestion);
+  const [currentQErrors, setCQErr]  = useState({});
+  const [editingIndex, setEditIdx]  = useState(null);
 
   const handleInfoChange = (e) => {
     const { name, value } = e.target;
@@ -305,32 +344,25 @@ function AddQuizModal({ onClose, onSave }) {
 const TABS = ["Thông tin", "Chat", "Quizz", "FlashCard"];
 
 function QuizView({ quiz, questions, onBack, onFinish }) {
-  const [currentQ, setCurrentQ]   = useState(0);
-  const [answers, setAnswers]     = useState({});
-  const [activeTab, setActiveTab] = useState("Quizz");
-  // "left" | "right" | null — for question slide
-  const [animDir, setAnimDir]     = useState(null);
-  // tab transition state
-  const [tabAnim, setTabAnim]     = useState(null); // null | "fade-out" | "fade-in"
+  const [currentQ, setCurrentQ]         = useState(0);
+  const [answers, setAnswers]           = useState({});
+  const [activeTab, setActiveTab]       = useState("Quizz");
+  const [animDir, setAnimDir]           = useState(null);
+  const [tabAnim, setTabAnim]           = useState(null);
   const [displayedTab, setDisplayedTab] = useState("Quizz");
-  const [showWarn, setShowWarn]   = useState(false);
-  const animRef                   = useRef(null);
-  const tabRef                    = useRef(null);
+  const [showWarn, setShowWarn]         = useState(false);
+  const animRef                         = useRef(null);
+  const tabRef                          = useRef(null);
 
   const total = questions.length;
   const q     = questions[currentQ];
   const selectedAnswer = answers[currentQ];
 
-  // Question slide transition
   const goTo = (next, dir) => {
     if (next < 0 || next >= total) return;
     setAnimDir(dir);
     clearTimeout(animRef.current);
-    animRef.current = setTimeout(() => {
-      setCurrentQ(next);
-      setAnimDir(null);
-      setShowWarn(false);
-    }, 220);
+    animRef.current = setTimeout(() => { setCurrentQ(next); setAnimDir(null); setShowWarn(false); }, 220);
   };
 
   const handleNext = () => {
@@ -338,22 +370,15 @@ function QuizView({ quiz, questions, onBack, onFinish }) {
     if (currentQ < total - 1) goTo(currentQ + 1, "left");
   };
 
-  const handlePrev = () => goTo(currentQ - 1, "right");
+  const handlePrev  = () => goTo(currentQ - 1, "right");
+  const handleJump  = (i) => { if (i !== currentQ) goTo(i, i > currentQ ? "left" : "right"); };
 
-  const handleJump = (i) => {
-    if (i === currentQ) return;
-    goTo(i, i > currentQ ? "left" : "right");
-  };
-
-  // Tab transition: fade out → swap content → fade in
   const handleTabChange = (tab) => {
     if (tab === activeTab) return;
     clearTimeout(tabRef.current);
     setTabAnim("fade-out");
     tabRef.current = setTimeout(() => {
-      setDisplayedTab(tab);
-      setActiveTab(tab);
-      setTabAnim("fade-in");
+      setDisplayedTab(tab); setActiveTab(tab); setTabAnim("fade-in");
       tabRef.current = setTimeout(() => setTabAnim(null), 200);
     }, 150);
   };
@@ -367,36 +392,25 @@ function QuizView({ quiz, questions, onBack, onFinish }) {
     (i) => i === 0 || i === total - 1 || Math.abs(i - currentQ) <= 1
   );
 
-  const slideClass = animDir === "left"
-    ? "animate-slide-left"
-    : animDir === "right"
-    ? "animate-slide-right"
-    : "";
-
-  const tabContentClass =
-    tabAnim === "fade-out" ? "tab-fade-out" :
-    tabAnim === "fade-in"  ? "tab-fade-in"  : "";
+  const slideClass = animDir === "left" ? "animate-slide-left" : animDir === "right" ? "animate-slide-right" : "";
+  const tabContentClass = tabAnim === "fade-out" ? "tab-fade-out" : tabAnim === "fade-in" ? "tab-fade-in" : "";
 
   return (
     <>
       <style>{`
-        @keyframes slideInLeft  { from { opacity: 0; transform: translateX(40px);  } to { opacity: 1; transform: translateX(0); } }
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes tabFadeOut   { from { opacity: 1; transform: translateY(0);     } to { opacity: 0; transform: translateY(6px); } }
-        @keyframes tabFadeIn    { from { opacity: 0; transform: translateY(-6px);  } to { opacity: 1; transform: translateY(0); } }
-
+        @keyframes slideInLeft  { from { opacity:0; transform:translateX(40px);  } to { opacity:1; transform:translateX(0); } }
+        @keyframes slideInRight { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes tabFadeOut   { from { opacity:1; transform:translateY(0);     } to { opacity:0; transform:translateY(6px); } }
+        @keyframes tabFadeIn    { from { opacity:0; transform:translateY(-6px);  } to { opacity:1; transform:translateY(0); } }
         .animate-slide-left  { animation: slideInLeft  0.22s cubic-bezier(.4,0,.2,1) both; }
         .animate-slide-right { animation: slideInRight 0.22s cubic-bezier(.4,0,.2,1) both; }
         .tab-fade-out        { animation: tabFadeOut   0.15s ease both; }
         .tab-fade-in         { animation: tabFadeIn    0.20s ease both; }
-
-        /* Big "Tiếp theo" button pulse on warn */
-        @keyframes warnPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
-        .btn-next-warn { animation: warnPulse 0.6s ease; }
+        @keyframes warnPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.35);}50%{box-shadow:0 0 0 6px rgba(239,68,68,0);} }
+        .btn-next-warn       { animation: warnPulse 0.6s ease; }
       `}</style>
 
       <div className="flex-1 flex flex-col bg-gray-50 min-h-0">
-        {/* Top bar */}
         <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
           <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,57 +418,37 @@ function QuizView({ quiz, questions, onBack, onFinish }) {
             </svg>
             Trở về
           </button>
-          <button className="bg-[#F26739] hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition-colors duration-200">
-            Chỉnh sửa câu hỏi
-          </button>
+          <button className="bg-[#F26739] hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition-colors duration-200">Chỉnh sửa câu hỏi</button>
         </div>
 
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="max-w-3xl mx-auto w-full">
             <h1 className="text-xl font-semibold text-gray-800 mb-5">{quiz.title}</h1>
-
-            {/* ── Tabs ── */}
             <div className="flex border-b border-gray-200 mb-6">
               {TABS.map((tab) => (
-                <button
-                  key={tab} onClick={() => handleTabChange(tab)}
-                  className={`px-8 py-2.5 text-sm transition-all duration-200 border-b-2 -mb-px ${
-                    activeTab === tab
-                      ? "border-[#F26739] text-[#F26739] font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
+                <button key={tab} onClick={() => handleTabChange(tab)}
+                  className={`px-8 py-2.5 text-sm transition-all duration-200 border-b-2 -mb-px ${activeTab === tab ? "border-[#F26739] text-[#F26739] font-medium" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                   {tab}
                 </button>
               ))}
             </div>
 
-            {/* ── Tab content with fade transition ── */}
             <div className={tabContentClass}>
-
               {displayedTab === "Quizz" && (
                 <>
-                  {/* Question card */}
                   <div className={`bg-white rounded-xl border border-gray-200 p-6 shadow-sm overflow-hidden ${slideClass}`}>
                     <div className="flex items-start gap-3 mb-1">
                       <span className="bg-blue-500 text-white text-sm font-medium px-4 py-1 rounded-full whitespace-nowrap">Câu {currentQ + 1}</span>
                       <p className="text-gray-800 text-sm font-medium leading-6 pt-0.5">{q.q}</p>
                     </div>
-
                     <div className="flex items-center justify-between mt-2 mb-4">
                       <span className="text-xs text-gray-400">Chọn 1 đáp án đúng</span>
                     </div>
-
                     <div className="space-y-3">
                       {q.options.map((opt, i) => (
-                        <button
-                          key={i}
+                        <button key={i}
                           onClick={() => { setAnswers((p) => ({ ...p, [currentQ]: i })); setShowWarn(false); }}
-                          className={`w-full flex items-center gap-3 p-3 border rounded-lg text-left transition-all duration-200 ${
-                            selectedAnswer === i
-                              ? "border-blue-400 bg-blue-50 shadow-sm"
-                              : "border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                          }`}
+                          className={`w-full flex items-center gap-3 p-3 border rounded-lg text-left transition-all duration-200 ${selectedAnswer === i ? "border-blue-400 bg-blue-50 shadow-sm" : "border-gray-200 hover:bg-gray-50 hover:border-gray-300"}`}
                         >
                           <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${selectedAnswer === i ? "border-blue-500 bg-blue-500" : "border-gray-300"}`}>
                             {selectedAnswer === i && <span className="w-2 h-2 rounded-full bg-white" />}
@@ -465,114 +459,51 @@ function QuizView({ quiz, questions, onBack, onFinish }) {
                     </div>
                   </div>
 
-                  {/* ── Actions + Navigation (redesigned) ── */}
                   <div className="mt-5">
-
-                    {/* Progress bar */}
                     <div className="flex items-center gap-3 mb-4">
                       <span className="text-xs text-gray-500 whitespace-nowrap font-medium">{currentQ + 1} / {total}</span>
                       <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-2 bg-blue-500 rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${((currentQ + 1) / total) * 100}%` }}
-                        />
+                        <div className="h-2 bg-blue-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${((currentQ + 1) / total) * 100}%` }} />
                       </div>
                       <span className="text-xs text-gray-400">{Math.round(((currentQ + 1) / total) * 100)}%</span>
                     </div>
 
-                    {/* Navigation row */}
                     <div className="flex items-center gap-3">
-
-                      {/* Prev button */}
-                      <button
-                        onClick={handlePrev}
-                        disabled={currentQ === 0}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-100 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 shrink-0"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
+                      <button onClick={handlePrev} disabled={currentQ === 0}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-100 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                         Trước
                       </button>
 
-                      {/* Page dots */}
                       <div className="flex items-center gap-1.5 flex-1 justify-center flex-wrap">
                         {pageNums.map((i, arrIdx) => (
                           <span key={i} className="flex items-center gap-1.5">
-                            {arrIdx > 0 && pageNums[arrIdx] - pageNums[arrIdx - 1] > 1 && (
-                              <span className="text-gray-300 text-xs select-none">…</span>
-                            )}
-                            <button
-                              onClick={() => handleJump(i)}
-                              className={`w-8 h-8 text-xs rounded-lg border transition-all duration-200 font-medium ${
-                                currentQ === i
-                                  ? "bg-blue-500 text-white border-blue-500 shadow-sm scale-110"
-                                  : answers[i] !== undefined
-                                  ? "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                  : "border-gray-200 text-gray-500 hover:bg-gray-100"
-                              }`}
-                            >
+                            {arrIdx > 0 && pageNums[arrIdx] - pageNums[arrIdx - 1] > 1 && <span className="text-gray-300 text-xs select-none">…</span>}
+                            <button onClick={() => handleJump(i)}
+                              className={`w-8 h-8 text-xs rounded-lg border transition-all duration-200 font-medium ${currentQ === i ? "bg-blue-500 text-white border-blue-500 shadow-sm scale-110" : answers[i] !== undefined ? "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" : "border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
                               {i + 1}
                             </button>
                           </span>
                         ))}
                       </div>
 
-                      {/* Next / Submit button — big & prominent */}
                       {currentQ < total - 1 ? (
-                        <button
-                          onClick={handleNext}
-                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shrink-0 ${
-                            showWarn
-                              ? "bg-red-500 hover:bg-red-600 text-white btn-next-warn"
-                              : selectedAnswer !== undefined
-                              ? "bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow-md"
-                              : "bg-gray-200 hover:bg-gray-300 text-gray-500"
-                          }`}
-                        >
-                          {showWarn ? (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                              </svg>
-                              Chọn đáp án!
-                            </>
-                          ) : (
-                            <>
-                              Câu tiếp
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </>
-                          )}
+                        <button onClick={handleNext}
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shrink-0 ${showWarn ? "bg-red-500 hover:bg-red-600 text-white btn-next-warn" : selectedAnswer !== undefined ? "bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow-md" : "bg-gray-200 hover:bg-gray-300 text-gray-500"}`}>
+                          {showWarn ? (<><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>Chọn đáp án!</>) : (<>Câu tiếp<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>)}
                         </button>
                       ) : (
-                        <button
-                          onClick={handleSubmit}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#F26739] hover:bg-orange-600 text-white shadow-sm hover:shadow-md transition-all duration-200 shrink-0"
-                        >
+                        <button onClick={handleSubmit}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#F26739] hover:bg-orange-600 text-white shadow-sm hover:shadow-md transition-all duration-200 shrink-0">
                           Nộp bài
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         </button>
                       )}
                     </div>
 
-                    {/* Secondary actions */}
                     <div className="flex justify-between items-center mt-3">
-                      <button
-                        onClick={() => { setCurrentQ(0); setAnswers({}); }}
-                        className="text-xs text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                      >
-                        Làm lại từ đầu
-                      </button>
-                      <button
-                        onClick={handleSubmit}
-                        className="text-xs text-[#F26739] hover:text-orange-700 font-medium transition-colors duration-200"
-                      >
-                        Nộp bài ngay →
-                      </button>
+                      <button onClick={() => { setCurrentQ(0); setAnswers({}); }} className="text-xs text-gray-400 hover:text-gray-600 transition-colors duration-200">Làm lại từ đầu</button>
+                      <button onClick={handleSubmit} className="text-xs text-[#F26739] hover:text-orange-700 font-medium transition-colors duration-200">Nộp bài ngay →</button>
                     </div>
                   </div>
                 </>
@@ -582,34 +513,14 @@ function QuizView({ quiz, questions, onBack, onFinish }) {
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                   <h2 className="text-base font-bold text-gray-800 mb-3">{quiz.title}</h2>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      {total} câu hỏi
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {Object.keys(answers).length} đã trả lời
-                    </span>
+                    <span className="flex items-center gap-1.5"><svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>{total} câu hỏi</span>
+                    <span className="flex items-center gap-1.5"><svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{Object.keys(answers).length} đã trả lời</span>
                   </div>
                   <p className="text-sm text-gray-400 mt-4 leading-6">Bộ câu hỏi lịch sử giúp bạn ôn tập kiến thức một cách hệ thống và hiệu quả.</p>
                 </div>
               )}
-
-              {displayedTab === "Chat" && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm text-center text-gray-400 text-sm py-16">
-                  Tính năng Chat đang được phát triển...
-                </div>
-              )}
-
-              {displayedTab === "FlashCard" && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm text-center text-gray-400 text-sm py-16">
-                  Tính năng FlashCard đang được phát triển...
-                </div>
-              )}
+              {displayedTab === "Chat" && <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm text-center text-gray-400 text-sm py-16">Tính năng Chat đang được phát triển...</div>}
+              {displayedTab === "FlashCard" && <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm text-center text-gray-400 text-sm py-16">Tính năng FlashCard đang được phát triển...</div>}
             </div>
           </div>
         </div>
@@ -634,6 +545,9 @@ export default function QuizPage() {
   const [quizView, setQuizView]               = useState(null);
   const [showAddModal, setShowAddModal]       = useState(false);
 
+  // ── delete confirm state ──
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, title }
+
   const handleStartQuiz = (quiz) => {
     const raw = questionsByQuiz[quiz.id] ?? [];
     if (!raw.length) { alert("Quiz này chưa có câu hỏi!"); return; }
@@ -652,6 +566,11 @@ export default function QuizPage() {
     setShowAddModal(false);
   };
 
+  const handleDeleteConfirm = () => {
+    setQuizzes((p) => p.filter((q) => q.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
+
   if (quizView) {
     return <QuizView quiz={quizView.quiz} questions={quizView.questions} onBack={() => setQuizView(null)} onFinish={handleFinish} />;
   }
@@ -664,9 +583,7 @@ export default function QuizPage() {
           <p className="text-sm text-gray-400 mt-0.5">{quizzes.length} bộ câu hỏi đang có</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-[#F26739] hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200 shadow-sm">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-          </svg>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
           Thêm câu hỏi
         </button>
       </div>
@@ -678,7 +595,7 @@ export default function QuizPage() {
               <img src={quiz.img} alt={quiz.title} className="w-full h-40 object-cover bg-gray-100 group-hover:scale-105 transition-transform duration-300" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
               <button
-                onClick={(e) => { e.stopPropagation(); setQuizzes((p) => p.filter((q) => q.id !== quiz.id)); }}
+                onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: quiz.id, title: quiz.title }); }}
                 className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50"
               >
                 <svg className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -696,6 +613,15 @@ export default function QuizPage() {
           </div>
         ))}
       </div>
+
+      {/* Modal xác nhận xoá */}
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          title={deleteTarget.title}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
       {showAddModal && <AddQuizModal onClose={() => setShowAddModal(false)} onSave={handleSaveQuiz} />}
     </div>

@@ -19,6 +19,16 @@ const TAG_STYLES = {
   "Bài kiểm tra": { bg: "#FFF7ED", color: "#C2410C", dot: "#F97316" },
 };
 
+// Dữ liệu mặc định theo từng ID — khớp với initialDocs bên DocumentsPage
+const DEFAULT_DOCS = {
+  1: { title: "Chiến tranh Điện Biên Phủ", duration: "158h50p", img: "/anh6.jpg", tags: ["Bài giảng", "Bài kiểm tra"], description: "Tài liệu tổng hợp về chiến dịch lịch sử Điện Biên Phủ năm 1954, bao gồm bối cảnh, diễn biến và ý nghĩa lịch sử.", author: "Nguyễn Văn Hùng", updatedAt: "12/04/2025", students: 128 },
+  2: { title: "Kháng chiến chống Mỹ", duration: "158h50p", img: "/anh1.jpg", tags: ["Bài giảng", "Bài kiểm tra"], description: "Tài liệu về cuộc kháng chiến chống Mỹ cứu nước, giai đoạn 1954–1975.", author: "Trần Thị Mai", updatedAt: "10/04/2025", students: 95 },
+  3: { title: "Lịch sử Việt Nam thời tiền sử", duration: "158h50p", img: "/anh2.jpg", tags: ["Bài giảng"], description: "Khám phá lịch sử Việt Nam từ thời kỳ đồ đá đến các nền văn hóa đầu tiên.", author: "Lê Văn Nam", updatedAt: "08/04/2025", students: 74 },
+  4: { title: "Thời kỳ quân chủ (939–1945)", duration: "158h50p", img: "/anh3.jpg", tags: ["Bài kiểm tra"], description: "Các triều đại phong kiến Việt Nam từ thời Ngô Quyền đến khi nhà Nguyễn kết thúc.", author: "Phạm Thị Lan", updatedAt: "05/04/2025", students: 110 },
+  5: { title: "Thời Bắc thuộc (180 TCN–938)", duration: "158h50p", img: "/anh4.jpg", tags: ["Bài giảng", "Bài kiểm tra"], description: "Giai đoạn Bắc thuộc và các cuộc đấu tranh giành độc lập của dân tộc.", author: "Nguyễn Văn Hùng", updatedAt: "03/04/2025", students: 88 },
+  6: { title: "Thời kỳ hiện đại (1858–nay)", duration: "158h50p", img: "/anh5.jpg", tags: ["Bài giảng"], description: "Lịch sử Việt Nam từ thời Pháp thuộc đến công cuộc đổi mới và hội nhập quốc tế.", author: "Trần Thị Mai", updatedAt: "01/04/2025", students: 142 },
+};
+
 export default function DocumentsDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,16 +36,17 @@ export default function DocumentsDetailPage() {
   const [activeTab, setActiveTab] = useState("Thông tin");
   const [expandedChapter, setExpandedChapter] = useState(null);
 
-  const doc = location.state?.doc ?? {
+  // Ưu tiên dữ liệu từ navigate state, fallback về DEFAULT_DOCS theo id
+  const doc = location.state?.doc ?? DEFAULT_DOCS[Number(id)] ?? {
     id,
-    title: "Chiến dịch Điện Biên Phủ 1954",
-    duration: "158h 50p",
+    title: "Tài liệu lịch sử",
+    duration: "—",
     img: "/anh1.jpg",
-    tags: ["Bài giảng", "Bài kiểm tra"],
-    description: "Tài liệu tổng hợp về chiến dịch lịch sử Điện Biên Phủ, bao gồm bối cảnh, diễn biến và ý nghĩa lịch sử của trận đánh quyết định.",
-    author: "Nguyễn Văn Hùng",
-    updatedAt: "12/04/2025",
-    students: 128,
+    tags: [],
+    description: "",
+    author: "",
+    updatedAt: "",
+    students: 0,
   };
 
   return (
@@ -173,7 +184,7 @@ export default function DocumentsDetailPage() {
                   </div>
                   {/* Tag overlay */}
                   <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
-                    {doc.tags.map((tag) => {
+                    {(doc.tags ?? []).map((tag) => {
                       const s = TAG_STYLES[tag] || { bg: "#F3F4F6", color: "#374151", dot: "#9CA3AF" };
                       return (
                         <span key={tag} style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 999, display: "flex", alignItems: "center", gap: 5, backdropFilter: "blur(4px)" }}>
@@ -285,7 +296,7 @@ export default function DocumentsDetailPage() {
           )}
 
           {/* ── Tab: Chat ── */}
-          {activeTab === "Chat với AI " && (
+          {activeTab === "Chat" && (
             <div className="ddp-coming-soon">
               <div style={{ width: 52, height: 52, background: "#F3F4F6", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="24" height="24" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">

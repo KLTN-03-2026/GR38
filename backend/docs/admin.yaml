@@ -3,7 +3,7 @@ tags:
     description: Các API dành riêng cho Quản trị viên quản lý hệ thống (Yêu cầu quyền Admin)
 
 paths:
-  /api/admin/users:
+  /api/v1/admin/users:
     get:
       summary: Lấy danh sách tất cả người dùng
       description: Trả về danh sách người dùng. Hỗ trợ lọc theo vai trò thông qua query parameter.
@@ -49,7 +49,7 @@ paths:
         '403':
           description: Không có quyền truy cập (Tài khoản không phải Admin)
 
-  /api/admin/users/{id}:
+  /api/v1/admin/users/{id}:
     get:
       summary: Xem chi tiết một tài khoản
       tags: [Admin]

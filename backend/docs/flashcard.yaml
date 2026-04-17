@@ -187,7 +187,7 @@ components:
           example: 404
 
 paths:
-  /api/flashcards:
+  /api/v1/flashcards:
     get:
       summary: Lấy danh sách bộ flashcard
       description: Giáo viên chỉ thấy các bộ do mình tạo, học sinh thấy tất cả các bộ flashcard theo logic hiện tại của backend.
@@ -249,7 +249,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/flashcards/{documentId}:
+  /api/v1/flashcards/{documentId}:
     get:
       summary: Lấy bộ flashcard theo tài liệu kèm tiến độ cá nhân
       description: Trả về bộ flashcard gốc của tài liệu và gắn thêm trạng thái học của người dùng hiện tại cho từng thẻ.
@@ -324,7 +324,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/flashcards/{setId}/cards/{cardId}/review:
+  /api/v1/flashcards/{setId}/cards/{cardId}/review:
     post:
       summary: Ghi nhận một lần ôn tập thẻ
       description: Tăng số lần xem lại của thẻ trong tiến độ cá nhân. Nếu tiến độ chưa tồn tại thì backend sẽ tự tạo mới.
@@ -418,7 +418,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/flashcards/{setId}/cards/{cardId}/star:
+  /api/v1/flashcards/{setId}/cards/{cardId}/star:
     put:
       summary: Đánh dấu hoặc bỏ đánh dấu sao cho thẻ
       description: Chuyển trạng thái yêu thích của một thẻ trong tiến độ cá nhân hiện tại.
@@ -497,7 +497,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/flashcards/{id}:
+  /api/v1/flashcards/{id}:
     delete:
       summary: Xóa một bộ flashcard
       description: Chỉ người tạo bộ flashcard hoặc luồng quyền phù hợp ở tầng middleware mới có thể xóa.

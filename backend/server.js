@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import errorHandler from './middleware/errorHandler.js';
 
+import { swaggerUi, swaggerDocs } from './config/swagger.js';
+
 import authRoutes from './routes/authRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';;
 import flashcardRoutes from './routes/flashcardRoutes.js';
@@ -40,8 +42,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'upload', 'documents')));
+app.use('/uploads/avatars', express.static(path.join(__dirname, 'upload', 'avatars')));
+app.use(
+  '/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocs, {
+    customSiteTitle: "API Docs - AI History Learning"
+  })
+);
 
 
 //Routes
@@ -68,6 +77,7 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${process.env.NODE_ENV} mode on port ${PORT}`);
+    console.log(`📚 Swagger Docs đang chạy tại: http://localhost:${PORT}/docs`);
 });
 process.on('unhandledRejection', (err) => {
     console.error(`Error: ${err.message}`);

@@ -1,0 +1,172 @@
+tags:
+  - name: Document
+    description: Các API quản lý tài liệu PDF (Tải lên, xem danh sách, chi tiết, xóa)
+
+components:
+  schemas:
+    DocumentSummary:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+          example: "Lịch sử lớp 12 - Kháng chiến chống Pháp"
+        fileName:
+          type: string
+          example: "lich_su_12.pdf"
+        filePath:
+          type: string
+          example: "http://localhost:8000/uploads/lich_su_12.pdf"
+        fileSize:
+          type: integer
+          description: Kích thước file (bytes)
+        status:
+          type: string
+          enum: [processing, ready, failed]
+          example: ready
+        flashcardCount:
+          type: integer
+          example: 5
+        quizCount:
+          type: integer
+          example: 2
+        createdAt:
+          type: string
+          format: date-time
+
+    DocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/DocumentSummary'
+        - type: object
+          properties:
+            extractedText:
+              type: string
+              description: Toàn bộ văn bản thô trích xuất từ PDF
+            chunks:
+              type: array
+              items:
+                type: object
+                properties:
+                  content:
+                    type: string
+                  pageNumber:
+                    type: integer
+                  chunkIndex:
+                    type: integer
+            lastAccessed:
+              type: string
+              format: date-time
+
+paths:
+  /api/documents/upload:
+    post:
+      summary: Tải lên tài liệu PDF mới
+      description: API này sử dụng `multipart/form-data`. Sau khi tải lên, hệ thống sẽ xử lý PDF ở dưới nền (background).
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Tiêu đề của tài liệu
+                  example: "Tài liệu ôn tập Lịch sử"
+                file:
+                  type: string
+                  format: binary
+                  description: File PDF cần tải lên
+      responses:
+        '201':
+          description: Tải lên thành công, tài liệu đang được xử lý
+        '400':
+          description: Thiếu file hoặc thiếu tiêu đề
+        '401':
+          description: Chưa đăng nhập
+
+  /api/documents:
+    get:
+      summary: Lấy danh sách tài liệu
+      description: Phân quyền - Giáo viên chỉ thấy tài liệu của mình tải lên. Học sinh thấy tất cả tài liệu đã sẵn sàng (ready).
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentSummary'
+        '401':
+          description: Chưa đăng nhập
+
+  /api/documents/{id}:
+    get:
+      summary: Xem chi tiết tài liệu (kèm nội dung PDF đã trích xuất)
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của tài liệu
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DocumentDetail'
+        '401':
+          description: Chưa đăng nhập
+        '404':
+          description: Không tìm thấy tài liệu
+
+    delete:
+      summary: Xóa tài liệu
+      description: Giáo viên chỉ được phép xóa tài liệu do chính mình tải lên. File vật lý cũng sẽ bị xóa khỏi server.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của tài liệu cần xóa
+      responses:
+        '200':
+          description: Xóa tài liệu thành công
+        '401':
+          description: Chưa đăng nhập
+        '404':
+          description: Không tìm thấy tài liệu hoặc không có quyền xóa

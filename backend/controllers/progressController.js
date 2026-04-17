@@ -7,7 +7,7 @@ import Quiz from '../models/Quiz.js';
 //@access Private
 export const getDashboard = async (req, res, next) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user._id; 
 
         // Lấy tổng số tài liệu, flashcard và quiz của người dùng
         const totalDocuments = await Document.countDocuments({ userId });

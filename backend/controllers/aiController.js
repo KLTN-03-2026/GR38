@@ -44,13 +44,15 @@ export const generateFlashcards = async (req, res, next) => {
     const flashcardSet = await Flashcard.create({
       teacherId: req.user._id,
       documentId: document._id,
+      title: `${document.title} - Flashcards`,
+      description: `Bộ flashcard được tạo tự động từ tài liệu ${document.title}`,
       cards: cards.map(card => ({
-        question: card.question,
-        answer: card.answer,
+        front: card.question,
+        back: card.answer,
         difficulty: card.difficulty,
-        reviewCount: 0,
-        isStarred: false,
-      }))
+      })),
+      isPublished: false,
+      tags: []
     });
 
     res.status(200).json({

@@ -1,6 +1,18 @@
 import Flashcard from "../models/Flashcard.js";
 import FlashcardProgress from "../models/FlashcardProgress.js";
 
+const resolveFlashcardSetId = async ({ setId, cardId }) => {
+    if (setId) {
+        return setId;
+    }
+
+    const flashcardSet = await Flashcard.findOne({
+        "cards._id": cardId
+    }).select("_id");
+
+    return flashcardSet?._id || null;
+};
+
 //@desc Tải tất cả flashcard của tài liệu
 // @route GET /api/flashcards/:documentId
 // @access Private
@@ -91,17 +103,26 @@ export const getAllFlashcardSets = async (req, res, next) => {
 export const reviewFlashcard = async (req, res, next) => {
     try {
         const { setId, cardId } = req.params;
+        const flashcardSetId = await resolveFlashcardSetId({ setId, cardId });
+
+        if (!flashcardSetId) {
+            return res.status(404).json({
+                success: false,
+                error: 'Không tìm thấy bộ flashcard hoặc thẻ flashcard',
+                statusCode: 404
+            });
+        }
 
         // Tìm tiến độ của học sinh này với bộ flashcard. Nếu chưa có thì tạo mới (upsert)
         let progress = await FlashcardProgress.findOne({
             userId: req.user._id,
-            flashcardSetId: setId
+            flashcardSetId
         });
 
         if (!progress) {
             progress = new FlashcardProgress({
                 userId: req.user._id,
-                flashcardSetId: setId,
+                flashcardSetId,
                 cardProgress: []
             });
         }
@@ -139,16 +160,25 @@ export const reviewFlashcard = async (req, res, next) => {
 export const toggleStarFlashcard = async (req, res, next) => {
     try {
         const { setId, cardId } = req.params;
+        const flashcardSetId = await resolveFlashcardSetId({ setId, cardId });
+
+        if (!flashcardSetId) {
+            return res.status(404).json({
+                success: false,
+                error: 'Không tìm thấy bộ flashcard hoặc thẻ flashcard',
+                statusCode: 404
+            });
+        }
 
         let progress = await FlashcardProgress.findOne({
             userId: req.user._id,
-            flashcardSetId: setId
+            flashcardSetId
         });
 
         if (!progress) {
             progress = new FlashcardProgress({
                 userId: req.user._id,
-                flashcardSetId: setId,
+                flashcardSetId,
                 cardProgress: []
             });
         }
@@ -240,7 +270,7 @@ export const deleteFlashcardSet = async (req, res, next) => {
     try{
         const flashcardSet = await Flashcard.findOne({
             _id: req.params.id,
-            userId: req.user._id
+            teacherId: req.user._id
         });
 
         if(!flashcardSet) {

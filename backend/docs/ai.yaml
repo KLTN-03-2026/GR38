@@ -1,0 +1,809 @@
+tags:
+  - name: AI
+    description: Các API AI hỗ trợ tạo nội dung và trò chuyện theo tài liệu
+
+components:
+  schemas:
+    AIDocumentRef:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12
+        fileName:
+          type: string
+          example: lich_su_12.pdf
+
+    AIFlashcardCard:
+      type: object
+      properties:
+        front:
+          type: string
+          example: Chiến dịch Điện Biên Phủ diễn ra vào năm nào?
+        back:
+          type: string
+          example: Năm 1954
+        difficulty:
+          type: string
+          enum: [Dễ, Trung bình, Khó]
+          example: Trung bình
+
+    AIFlashcardSetCreated:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        teacherId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340002
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12 - Flashcards
+        description:
+          type: string
+          example: Bộ flashcard được tạo tự động từ tài liệu Lịch sử Việt Nam lớp 12
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIFlashcardCard'
+        isPublished:
+          type: boolean
+          example: false
+        tags:
+          type: array
+          items:
+            type: string
+            example: lich-su-viet-nam
+        stats:
+          type: object
+          properties:
+            enrolledLearners:
+              type: integer
+              example: 0
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:10:00.000Z'
+
+    AIQuizQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+          example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+        options:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: string
+            example: '1954'
+          example:
+            - '1953'
+            - '1954'
+            - '1955'
+            - '1956'
+        correctAnswer:
+          type: string
+          example: '1954'
+        explanation:
+          type: string
+          example: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+        difficulty:
+          type: string
+          enum: [Dễ, Trung bình, Khó]
+          example: Trung bình
+
+    AIQuizSetCreated:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f1234bbbb
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        teacherId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340002
+        title:
+          type: string
+          example: Quiz ôn tập Điện Biên Phủ
+        description:
+          type: string
+          example: Quiz trắc nghiệm được tạo tự động từ tài liệu Lịch sử Việt Nam lớp 12
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIQuizQuestion'
+        totalQuestions:
+          type: integer
+          example: 5
+        isPublished:
+          type: boolean
+          example: false
+        tags:
+          type: array
+          items:
+            type: string
+            example: dien-bien-phu
+        stats:
+          type: object
+          properties:
+            enrolledLearners:
+              type: integer
+              example: 0
+            totalAttempts:
+              type: integer
+              example: 0
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:10:00.000Z'
+
+    AISummaryRequest:
+      type: object
+      properties:
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+
+    AISummaryResponse:
+      type: object
+      properties:
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12
+        summary:
+          type: string
+          example: Tài liệu trình bày quá trình hình thành, kháng chiến và các mốc lịch sử quan trọng của Việt Nam.
+
+    AIChatRequest:
+      type: object
+      properties:
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        question:
+          type: string
+          example: Trình bày ý nghĩa của chiến thắng Điện Biên Phủ.
+
+    AIChatResponse:
+      type: object
+      properties:
+        question:
+          type: string
+          example: Trình bày ý nghĩa của chiến thắng Điện Biên Phủ.
+        answer:
+          type: string
+          example: Chiến thắng Điện Biên Phủ đã kết thúc thắng lợi cuộc kháng chiến chống Pháp và mở ra bước ngoặt lớn cho cách mạng Việt Nam.
+        relevantChunks:
+          type: array
+          items:
+            type: integer
+            example: 2
+          example:
+            - 1
+            - 2
+            - 4
+        chatHistoryId:
+          type: string
+          example: 66a1f2c9b8d4e01f1234cccc
+
+    AIExplainConceptRequest:
+      type: object
+      properties:
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        concept:
+          type: string
+          example: Việt Nam hóa chiến tranh
+
+    AIExplainConceptResponse:
+      type: object
+      properties:
+        concept:
+          type: string
+          example: Việt Nam hóa chiến tranh
+        explanation:
+          type: string
+          example: Việt Nam hóa chiến tranh là chiến lược của Mỹ nhằm rút dần quân viễn chinh và tăng cường vai trò quân đội Sài Gòn.
+        relevantChunks:
+          type: array
+          items:
+            type: integer
+            example: 3
+          example:
+            - 1
+            - 3
+            - 5
+
+    AIChatHistoryMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          example: user
+        content:
+          type: string
+          example: Trình bày ý nghĩa của chiến thắng Điện Biên Phủ.
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:30:00.000Z'
+        relevantChunks:
+          type: array
+          items:
+            type: integer
+            example: 2
+          example:
+            - 1
+            - 2
+
+    AIChatHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIChatHistoryMessage'
+        message:
+          type: string
+          example: Lịch sử chat đã được lấy thành công
+
+    AIErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Không tìm thấy tài liệu hoặc chưa được xử lý
+        statusCode:
+          type: integer
+          example: 404
+
+paths:
+  /api/ai/generate-flashcards:
+    post:
+      summary: Tạo flashcard từ tài liệu
+      description: Chỉ giáo viên hoặc admin được phép tạo flashcard theo router hiện tại.
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentId
+              properties:
+                documentId:
+                  type: string
+                  example: 66a1f2c9b8d4e01f12340001
+                count:
+                  type: integer
+                  example: 10
+      responses:
+        '200':
+          description: Tạo flashcard thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIFlashcardSetCreated'
+                  message:
+                    type: string
+                    example: Flashcards đã được tạo thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      _id: 66a1f2c9b8d4e01f12349999
+                      teacherId: 66a1f2c9b8d4e01f12340002
+                      documentId: 66a1f2c9b8d4e01f12340001
+                      title: Lịch sử Việt Nam lớp 12 - Flashcards
+                      description: Bộ flashcard được tạo tự động từ tài liệu Lịch sử Việt Nam lớp 12
+                      cards:
+                        - front: Chiến dịch Điện Biên Phủ diễn ra vào năm nào?
+                          back: Năm 1954
+                          difficulty: Trung bình
+                        - front: Ai là tổng tư lệnh quân đội Việt Nam trong chiến dịch?
+                          back: Võ Nguyên Giáp
+                          difficulty: Dễ
+                      isPublished: false
+                      tags:
+                        - lich-su-viet-nam
+                      stats:
+                        enrolledLearners: 0
+                      createdAt: '2026-04-17T08:00:00.000Z'
+                      updatedAt: '2026-04-17T08:10:00.000Z'
+                    message: Flashcards đã được tạo thành công
+        '201':
+          description: Flashcard được tạo mới thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIFlashcardSetCreated'
+                  message:
+                    type: string
+                    example: Flashcards đã được tạo thành công
+        '400':
+          description: Thiếu documentId hoặc dữ liệu đầu vào không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '404':
+          description: Không tìm thấy tài liệu hoặc tài liệu chưa được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+
+  /api/ai/generate-quiz:
+    post:
+      summary: Tạo quiz từ tài liệu
+      description: Chỉ giáo viên hoặc admin được phép tạo quiz theo router hiện tại.
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentId
+              properties:
+                documentId:
+                  type: string
+                  example: 66a1f2c9b8d4e01f12340001
+                numQuestions:
+                  type: integer
+                  example: 5
+                title:
+                  type: string
+                  example: Quiz ôn tập Điện Biên Phủ
+      responses:
+        '200':
+          description: Tạo quiz thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIQuizSetCreated'
+                  message:
+                    type: string
+                    example: Quiz đã được tạo thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      _id: 66a1f2c9b8d4e01f1234bbbb
+                      documentId: 66a1f2c9b8d4e01f12340001
+                      teacherId: 66a1f2c9b8d4e01f12340002
+                      title: Quiz ôn tập Điện Biên Phủ
+                      description: Quiz trắc nghiệm được tạo tự động từ tài liệu Lịch sử Việt Nam lớp 12
+                      questions:
+                        - question: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+                          options:
+                            - '1953'
+                            - '1954'
+                            - '1955'
+                            - '1956'
+                          correctAnswer: '1954'
+                          explanation: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+                          difficulty: Trung bình
+                      totalQuestions: 1
+                      isPublished: false
+                      tags:
+                        - dien-bien-phu
+                      stats:
+                        enrolledLearners: 0
+                        totalAttempts: 0
+                      createdAt: '2026-04-17T08:00:00.000Z'
+                      updatedAt: '2026-04-17T08:10:00.000Z'
+                    message: Quiz đã được tạo thành công
+        '201':
+          description: Quiz được tạo mới thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIQuizSetCreated'
+                  message:
+                    type: string
+                    example: Quiz đã được tạo thành công
+        '400':
+          description: Thiếu documentId hoặc dữ liệu đầu vào không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '404':
+          description: Không tìm thấy tài liệu hoặc tài liệu chưa được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+
+  /api/ai/generate-summary:
+    post:
+      summary: Tạo tóm tắt tài liệu
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AISummaryRequest'
+      responses:
+        '200':
+          description: Tạo tóm tắt thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AISummaryResponse'
+                  message:
+                    type: string
+                    example: Tóm tắt đã được tạo thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      documentId: 66a1f2c9b8d4e01f12340001
+                      title: Lịch sử Việt Nam lớp 12
+                      summary: Tài liệu trình bày các mốc lịch sử quan trọng của Việt Nam theo từng giai đoạn.
+                    message: Tóm tắt đã được tạo thành công
+        '201':
+          description: Tóm tắt được tạo mới thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AISummaryResponse'
+                  message:
+                    type: string
+                    example: Tóm tắt đã được tạo thành công
+        '400':
+          description: Thiếu documentId hoặc dữ liệu đầu vào không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '404':
+          description: Không tìm thấy tài liệu hoặc tài liệu chưa được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+
+  /api/ai/chat:
+    post:
+      summary: Chat theo nội dung tài liệu
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIChatRequest'
+      responses:
+        '200':
+          description: Trả lời chat thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIChatResponse'
+                  message:
+                    type: string
+                    example: Câu trả lời đã được tạo thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      question: Trình bày ý nghĩa của chiến thắng Điện Biên Phủ.
+                      answer: Chiến thắng Điện Biên Phủ đã kết thúc thắng lợi cuộc kháng chiến chống Pháp và mở ra bước ngoặt lớn cho cách mạng Việt Nam.
+                      relevantChunks:
+                        - 1
+                        - 2
+                        - 4
+                      chatHistoryId: 66a1f2c9b8d4e01f1234cccc
+                    message: Câu trả lời đã được tạo thành công
+        '201':
+          description: Câu trả lời chat được tạo mới thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIChatResponse'
+                  message:
+                    type: string
+                    example: Câu trả lời đã được tạo thành công
+        '400':
+          description: Thiếu documentId hoặc question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '404':
+          description: Không tìm thấy tài liệu hoặc tài liệu chưa được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+
+  /api/ai/explain-concept:
+    post:
+      summary: Giải thích khái niệm từ tài liệu
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIExplainConceptRequest'
+      responses:
+        '200':
+          description: Giải thích khái niệm thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIExplainConceptResponse'
+                  message:
+                    type: string
+                    example: Giải thích đã được tạo thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      concept: Việt Nam hóa chiến tranh
+                      explanation: Việt Nam hóa chiến tranh là chiến lược của Mỹ nhằm rút dần quân viễn chinh và tăng cường vai trò quân đội Sài Gòn.
+                      relevantChunks:
+                        - 1
+                        - 3
+                        - 5
+                    message: Giải thích đã được tạo thành công
+        '201':
+          description: Giải thích khái niệm được tạo mới thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AIExplainConceptResponse'
+                  message:
+                    type: string
+                    example: Giải thích đã được tạo thành công
+        '400':
+          description: Thiếu documentId hoặc concept
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '404':
+          description: Không tìm thấy tài liệu hoặc tài liệu chưa được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+
+  /api/ai/chat-history/{documentId}:
+    get:
+      summary: Lấy lịch sử chat của tài liệu
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12340001
+          description: ID của tài liệu cần lấy lịch sử chat
+      responses:
+        '200':
+          description: Lấy lịch sử chat thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatHistoryResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      - role: user
+                        content: Trình bày ý nghĩa của chiến thắng Điện Biên Phủ.
+                        timestamp: '2026-04-17T08:30:00.000Z'
+                        relevantChunks: []
+                      - role: assistant
+                        content: Chiến thắng Điện Biên Phủ đã kết thúc thắng lợi cuộc kháng chiến chống Pháp...
+                        timestamp: '2026-04-17T08:30:05.000Z'
+                        relevantChunks:
+                          - 1
+                          - 2
+                    message: Lịch sử chat đã được lấy thành công
+        '201':
+          description: Lịch sử chat được tạo mới thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatHistoryResponse'
+        '400':
+          description: Thiếu documentId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'
+        '404':
+          description: Không tìm thấy lịch sử chat hoặc tài liệu liên quan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIErrorResponse'

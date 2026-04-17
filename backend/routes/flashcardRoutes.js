@@ -14,8 +14,13 @@ router.use(protect);
 
 router.get('/', getAllFlashcardSets);
 router.get('/:documentId', getFlashcards);
+
+router.post('/:setId/cards/:cardId/review', reviewFlashcard);
 router.post('/:cardId/review', reviewFlashcard);
+
+router.put('/:setId/cards/:cardId/star', toggleStarFlashcard);
 router.put('/:cardId/star', toggleStarFlashcard);
+
 router.delete('/:id', deleteFlashcardSet);
 
 export default router;

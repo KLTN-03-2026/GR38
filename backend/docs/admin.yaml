@@ -1,0 +1,136 @@
+tags:
+  - name: Admin
+    description: Các API dành riêng cho Quản trị viên quản lý hệ thống (Yêu cầu quyền Admin)
+
+paths:
+  /api/admin/users:
+    get:
+      summary: Lấy danh sách tất cả người dùng
+      description: Trả về danh sách người dùng. Hỗ trợ lọc theo vai trò thông qua query parameter.
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [Admin, Teacher, Learner]
+          description: Lọc danh sách theo vai trò (VD chọn Teacher để xem danh sách giáo viên)
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        fullName:
+                          type: string
+                        email:
+                          type: string
+                        role:
+                          type: string
+        '401':
+          description: Chưa đăng nhập hoặc Token không hợp lệ
+        '403':
+          description: Không có quyền truy cập (Tài khoản không phải Admin)
+
+  /api/admin/users/{id}:
+    get:
+      summary: Xem chi tiết một tài khoản
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của người dùng cần xem (Lấy từ MongoDB)
+      responses:
+        '200':
+          description: Thành công
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền truy cập
+        '404':
+          description: Không tìm thấy người dùng
+
+    put:
+      summary: Cập nhật trạng thái tài khoản (Khóa/Mở khóa hoặc Duyệt giáo viên)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của người dùng cần cập nhật
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+                  description: Trạng thái hoạt động (true = Hoạt động, false = Khóa tài khoản)
+                  example: true
+                teacherApprovalStatus:
+                  type: string
+                  description: Trạng thái duyệt giáo viên (Chỉ gửi lên nếu đang thao tác với Teacher)
+                  enum: [pending, approved, rejected]
+                  example: approved
+      responses:
+        '200':
+          description: Cập nhật trạng thái thành công
+        '400':
+          description: Lỗi Logic (VD cố tình duyệt tài khoản Learner)
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền truy cập
+        '404':
+          description: Không tìm thấy người dùng
+
+    delete:
+      summary: Xóa vĩnh viễn một tài khoản
+      description: Cảnh báo Hành động này sẽ xóa hoàn toàn user khỏi database.
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của người dùng cần xóa
+      responses:
+        '200':
+          description: Xóa tài khoản thành công
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền truy cập
+        '404':
+          description: Không tìm thấy người dùng

@@ -1,0 +1,210 @@
+tags:
+  - name: Progress
+    description: API thống kê tiến độ học tập của người dùng
+
+components:
+  schemas:
+    ProgressOverview:
+      type: object
+      properties:
+        totalDocuments:
+          type: integer
+          example: 12
+        totalFlashcardSets:
+          type: integer
+          example: 8
+        totalFlashcards:
+          type: integer
+          example: 160
+        reviewedFlashcards:
+          type: integer
+          example: 95
+        starredFlashcards:
+          type: integer
+          example: 21
+        totalQuizzes:
+          type: integer
+          example: 14
+        completedQuizzes:
+          type: integer
+          example: 10
+        averageScore:
+          type: integer
+          example: 78
+        studyStreak:
+          type: integer
+          example: 5
+
+    ProgressRecentDocument:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12
+        fileName:
+          type: string
+          example: lich_su_12.pdf
+        lastAccessed:
+          type: string
+          format: date-time
+          example: '2026-04-17T07:40:00.000Z'
+        status:
+          type: string
+          enum: [processing, ready, failed]
+          example: ready
+
+    ProgressRecentQuizDocumentRef:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12
+
+    ProgressRecentQuiz:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        title:
+          type: string
+          example: Quiz ôn tập Điện Biên Phủ
+        score:
+          type: integer
+          example: 8
+        totalQuestions:
+          type: integer
+          example: 10
+        completedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T07:55:00.000Z'
+        documentId:
+          $ref: '#/components/schemas/ProgressRecentQuizDocumentRef'
+
+    ProgressDashboardData:
+      type: object
+      properties:
+        overview:
+          $ref: '#/components/schemas/ProgressOverview'
+        recent:
+          type: object
+          properties:
+            documents:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProgressRecentDocument'
+            quizzes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProgressRecentQuiz'
+
+    ProgressDashboardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ProgressDashboardData'
+
+    ProgressErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Không có token, truy cập bị từ chối
+        statusCode:
+          type: integer
+          example: 401
+
+paths:
+  /api/progress/dashboard:
+    get:
+      summary: Lấy thống kê dashboard tiến độ học tập
+      description: Trả về tổng quan học tập và hoạt động gần đây của người dùng hiện tại.
+      tags: [Progress]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lấy dashboard thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressDashboardResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      overview:
+                        totalDocuments: 12
+                        totalFlashcardSets: 8
+                        totalFlashcards: 160
+                        reviewedFlashcards: 95
+                        starredFlashcards: 21
+                        totalQuizzes: 14
+                        completedQuizzes: 10
+                        averageScore: 78
+                        studyStreak: 5
+                      recent:
+                        documents:
+                          - _id: 66a1f2c9b8d4e01f12340001
+                            title: Lịch sử Việt Nam lớp 12
+                            fileName: lich_su_12.pdf
+                            lastAccessed: '2026-04-17T07:40:00.000Z'
+                            status: ready
+                          - _id: 66a1f2c9b8d4e01f12340002
+                            title: Việt Nam thời kỳ hiện đại
+                            fileName: viet_nam_hien_dai.pdf
+                            lastAccessed: '2026-04-16T14:20:00.000Z'
+                            status: ready
+                        quizzes:
+                          - _id: 66a1f2c9b8d4e01f12349999
+                            title: Quiz ôn tập Điện Biên Phủ
+                            score: 8
+                            totalQuestions: 10
+                            completedAt: '2026-04-17T07:55:00.000Z'
+                            documentId:
+                              _id: 66a1f2c9b8d4e01f12340001
+                              title: Lịch sử Việt Nam lớp 12
+        '201':
+          description: Dữ liệu dashboard được khởi tạo mới thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressDashboardResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'
+        '403':
+          description: Không có quyền truy cập tài nguyên
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'
+        '404':
+          description: Không tìm thấy dữ liệu dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'

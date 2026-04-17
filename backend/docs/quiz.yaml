@@ -1,0 +1,692 @@
+tags:
+  - name: Quiz
+    description: Các API quản lý quiz, nộp bài và xem kết quả quiz
+
+components:
+  schemas:
+    DocumentRef:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12
+        fileName:
+          type: string
+          example: lich_su_12.pdf
+
+    UserRef:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340002
+        fullName:
+          type: string
+          example: Nguyễn Văn A
+        email:
+          type: string
+          example: giaovien@example.com
+
+    QuizQuestion:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12345678
+        question:
+          type: string
+          example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+        options:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: string
+            example: '1954'
+          example:
+            - '1953'
+            - '1954'
+            - '1955'
+            - '1956'
+        correctAnswer:
+          type: string
+          example: '1954'
+        explanation:
+          type: string
+          example: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+        difficulty:
+          type: string
+          enum: [Dễ, Trung bình, Khó]
+          example: Trung bình
+
+    QuizBase:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        documentId:
+          $ref: '#/components/schemas/DocumentRef'
+        teacherId:
+          $ref: '#/components/schemas/UserRef'
+        title:
+          type: string
+          example: Bộ câu hỏi ôn tập Điện Biên Phủ
+        description:
+          type: string
+          example: Quiz trắc nghiệm cho phần kháng chiến chống Pháp
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+        totalQuestions:
+          type: integer
+          example: 10
+        isPublished:
+          type: boolean
+          example: true
+        tags:
+          type: array
+          items:
+            type: string
+            example: dien-bien-phu
+        stats:
+          type: object
+          properties:
+            enrolledLearners:
+              type: integer
+              example: 125
+            totalAttempts:
+              type: integer
+              example: 42
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:15:00.000Z'
+
+    QuizListResponse:
+      allOf:
+        - $ref: '#/components/schemas/QuizBase'
+
+    QuizDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/QuizBase'
+
+    QuizAnswerItem:
+      type: object
+      properties:
+        questionId:
+          type: string
+          example: 66a1f2c9b8d4e01f12345678
+        selectedAnswer:
+          type: string
+          example: '1954'
+
+    QuizSubmitRequest:
+      type: object
+      properties:
+        userAnswers:
+          type: array
+          description: Mảng đáp án người dùng gửi lên
+          items:
+            $ref: '#/components/schemas/QuizAnswerItem'
+          example:
+            - questionId: 66a1f2c9b8d4e01f12345678
+              selectedAnswer: '1954'
+            - questionId: 66a1f2c9b8d4e01f12345679
+              selectedAnswer: Võ Nguyên Giáp
+        answers:
+          type: array
+          description: Tên thay thế cho userAnswers mà backend vẫn chấp nhận
+          items:
+            $ref: '#/components/schemas/QuizAnswerItem'
+
+    QuizSubmitQuestionDetail:
+      type: object
+      properties:
+        questionId:
+          type: string
+          example: 66a1f2c9b8d4e01f12345678
+        question:
+          type: string
+          example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+        selectedAnswer:
+          type: string
+          example: '1954'
+        correctAnswer:
+          type: string
+          example: '1954'
+        explanation:
+          type: string
+          example: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+        isCorrect:
+          type: boolean
+          example: true
+
+    QuizSubmitResponse:
+      type: object
+      properties:
+        quizResultId:
+          type: string
+          example: 66a1f2c9b8d4e01f1234abcd
+        score:
+          type: integer
+          example: 8
+        correctCount:
+          type: integer
+          example: 8
+        totalQuestions:
+          type: integer
+          example: 10
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizSubmitQuestionDetail'
+
+    QuizResultAnswer:
+      type: object
+      properties:
+        questionId:
+          type: string
+          example: 66a1f2c9b8d4e01f12345678
+        selectedAnswer:
+          type: string
+          example: '1954'
+        isCorrect:
+          type: boolean
+          example: true
+
+    QuizResultRecord:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f1234abcd
+        userId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340003
+        quizId:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        score:
+          type: integer
+          example: 8
+        totalQuestions:
+          type: integer
+          example: 10
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizResultAnswer'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:30:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:30:00.000Z'
+
+    QuizResultQuestionDetail:
+      type: object
+      properties:
+        questionId:
+          type: string
+          example: 66a1f2c9b8d4e01f12345678
+        question:
+          type: string
+          example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+        options:
+          type: array
+          items:
+            type: string
+            example: '1954'
+          example:
+            - '1953'
+            - '1954'
+            - '1955'
+            - '1956'
+        correctAnswer:
+          type: string
+          example: '1954'
+        selectedAnswer:
+          type: string
+          example: '1954'
+        isCorrect:
+          type: boolean
+          example: true
+        explanation:
+          type: string
+          example: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+
+    QuizResultsResponse:
+      type: object
+      properties:
+        quizResultId:
+          type: string
+          example: 66a1f2c9b8d4e01f1234abcd
+        quiz:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: 66a1f2c9b8d4e01f12349999
+            title:
+              type: string
+              example: Bộ câu hỏi ôn tập Điện Biên Phủ
+            teacher:
+              $ref: '#/components/schemas/UserRef'
+        score:
+          type: integer
+          example: 8
+        totalQuestions:
+          type: integer
+          example: 10
+        submittedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:30:00.000Z'
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizResultQuestionDetail'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Không tìm thấy Quiz
+        statusCode:
+          type: integer
+          example: 404
+
+paths:
+  /api/quizzes/{documentId}:
+    get:
+      summary: Lấy danh sách quiz theo tài liệu
+      description: Dành cho tất cả người dùng đã đăng nhập (Learner, Teacher, Admin).
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12340001
+          description: ID của tài liệu cần lấy danh sách quiz
+      responses:
+        '200':
+          description: Lấy danh sách quiz thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 2
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuizListResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    count: 1
+                    data:
+                      - _id: 66a1f2c9b8d4e01f12349999
+                        documentId:
+                          _id: 66a1f2c9b8d4e01f12340001
+                          title: Lịch sử Việt Nam lớp 12
+                          fileName: lich_su_12.pdf
+                        teacherId:
+                          _id: 66a1f2c9b8d4e01f12340002
+                          fullName: Nguyễn Văn A
+                          email: giaovien@example.com
+                        title: Bộ câu hỏi ôn tập Điện Biên Phủ
+                        description: Quiz trắc nghiệm cho phần kháng chiến chống Pháp
+                        questions:
+                          - _id: 66a1f2c9b8d4e01f12345678
+                            question: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+                            options:
+                              - '1953'
+                              - '1954'
+                              - '1955'
+                              - '1956'
+                            correctAnswer: '1954'
+                            explanation: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+                            difficulty: Trung bình
+                        totalQuestions: 10
+                        isPublished: true
+                        tags:
+                          - dien-bien-phu
+                        stats:
+                          enrolledLearners: 125
+                          totalAttempts: 42
+                        createdAt: '2026-04-17T08:00:00.000Z'
+                        updatedAt: '2026-04-17T08:15:00.000Z'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Không tìm thấy tài liệu hoặc không có quiz liên quan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/quizzes/quiz/{id}:
+    get:
+      summary: Lấy chi tiết một quiz
+      description: Dành cho tất cả người dùng đã đăng nhập (Learner, Teacher, Admin).
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của quiz cần xem chi tiết
+      responses:
+        '200':
+          description: Lấy chi tiết quiz thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/QuizDetailResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      _id: 66a1f2c9b8d4e01f12349999
+                      documentId:
+                        _id: 66a1f2c9b8d4e01f12340001
+                        title: Lịch sử Việt Nam lớp 12
+                        fileName: lich_su_12.pdf
+                      teacherId:
+                        _id: 66a1f2c9b8d4e01f12340002
+                        fullName: Nguyễn Văn A
+                        email: giaovien@example.com
+                      title: Bộ câu hỏi ôn tập Điện Biên Phủ
+                      description: Quiz trắc nghiệm cho phần kháng chiến chống Pháp
+                      questions:
+                        - _id: 66a1f2c9b8d4e01f12345678
+                          question: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+                          options:
+                            - '1953'
+                            - '1954'
+                            - '1955'
+                            - '1956'
+                          correctAnswer: '1954'
+                          explanation: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+                          difficulty: Trung bình
+                      totalQuestions: 10
+                      isPublished: true
+                      tags:
+                        - dien-bien-phu
+                      stats:
+                        enrolledLearners: 125
+                        totalAttempts: 42
+                      createdAt: '2026-04-17T08:00:00.000Z'
+                      updatedAt: '2026-04-17T08:15:00.000Z'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Không tìm thấy quiz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/quizzes/{id}/submit:
+    post:
+      summary: Nộp bài quiz
+      description: Chỉ Learner được phép nộp bài.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của quiz cần nộp bài
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizSubmitRequest'
+      responses:
+        '200':
+          description: Nộp bài quiz thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/QuizSubmitResponse'
+                  message:
+                    type: string
+                    example: Quiz đã được nộp thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      quizResultId: 66a1f2c9b8d4e01f1234abcd
+                      score: 8
+                      correctCount: 8
+                      totalQuestions: 10
+                      details:
+                        - questionId: 66a1f2c9b8d4e01f12345678
+                          question: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+                          selectedAnswer: '1954'
+                          correctAnswer: '1954'
+                          explanation: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+                          isCorrect: true
+                    message: Quiz đã được nộp thành công
+        '400':
+          description: Thiếu userAnswers hoặc answers hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Không tìm thấy quiz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/quizzes/{id}/results:
+    get:
+      summary: Lấy kết quả quiz của người dùng hiện tại
+      description: Dành cho Learner, Teacher hoặc Admin.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của quiz cần xem kết quả
+      responses:
+        '200':
+          description: Lấy kết quả quiz thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/QuizResultsResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      quizResultId: 66a1f2c9b8d4e01f1234abcd
+                      quiz:
+                        _id: 66a1f2c9b8d4e01f12349999
+                        title: Bộ câu hỏi ôn tập Điện Biên Phủ
+                        teacher:
+                          _id: 66a1f2c9b8d4e01f12340002
+                          fullName: Nguyễn Văn A
+                          email: giaovien@example.com
+                      score: 8
+                      totalQuestions: 10
+                      submittedAt: '2026-04-17T08:30:00.000Z'
+                      details:
+                        - questionId: 66a1f2c9b8d4e01f12345678
+                          question: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+                          options:
+                            - '1953'
+                            - '1954'
+                            - '1955'
+                            - '1956'
+                          correctAnswer: '1954'
+                          selectedAnswer: '1954'
+                          isCorrect: true
+                          explanation: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Không có quyền truy cập tính năng này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Chưa có kết quả nộp bài hoặc không tìm thấy quiz gốc
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/quizzes/{id}:
+    delete:
+      summary: Xóa quiz
+      description: Chỉ Teacher (người tạo quiz) hoặc Admin được phép xóa.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của quiz cần xóa
+      responses:
+        '200':
+          description: Xóa quiz thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Quiz đã được xóa thành công
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Quiz đã được xóa thành công
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Không có quyền xóa quiz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Không tìm thấy quiz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

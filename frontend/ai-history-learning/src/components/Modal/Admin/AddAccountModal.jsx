@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, User, Image as ImageIcon, } from "lucide-react";
+import { X, User, Image as ImageIcon, Calendar } from "lucide-react";
 
 const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
   const [activeTab, setActiveTab] = useState("info"); // 'info' hoặc 'avatar'

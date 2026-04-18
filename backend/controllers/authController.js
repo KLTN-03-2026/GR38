@@ -1,214 +1,151 @@
-import jwt from "jsonwebtoken"
-import User from "../models/User.js"
+import jwt from 'jsonwebtoken';
+import User, { USER_ROLES } from '../models/User.js';
 
-//JWT token
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET,{
-        expiresIn: process.env.JWT_EXPIRE || "7d"
+/**
+ * Hàm phụ trợ: Tạo JWT token và trả về response
+ */
+const sendTokenResponse = (user, statusCode, res) => {
+    // Tạo JWT token
+    const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+    );
+
+    // Trả về response
+    return res.status(statusCode).json({
+        success: true,
+        token,
+        data: {
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            teacherApprovalStatus: user.teacherApprovalStatus,
+            isActive: user.isActive,
+            profileImage: user.profileImage,
+            createdAt: user.createdAt
+        }
     });
 };
 
-//@desc Register new user
-//@route POST /api/auth/register
-//@access Public
+/**
+ * Đăng ký tài khoản
+ * POST /api/auth/register
+ * Body: { fullName, email, password, role }
+ */
 export const register = async (req, res, next) => {
     try {
-        const { username, email, password } = req.body;
+        const { fullName, email, password, role } = req.body;
 
-        //Kiểm tra xem người dùng đã tồn tại chưa
-        const userExists = await User.findOne ({ $or: [{email}] });
-
-        if(userExists) {
+        // Kiểm tra input
+        if (!fullName || !email || !password || !role) {
             return res.status(400).json({
                 success: false,
-                error:
-                    userExists.email === email
-                    ?"Email đã được sử dụng"
-                    :"Tên người dùng đã được sử dụng",
-                statusCode: 400,
-            })
+                error: 'Vui lòng cung cấp đầy đủ thông tin: fullName, email, password, role'
+            });
         }
 
-        //Tạo người dùng mới
-        const user = await User.create({
-            username,
-            email,
+        // Kiểm tra role có hợp lệ không
+        if (!Object.values(USER_ROLES).includes(role)) {
+            return res.status(400).json({
+                success: false,
+                error: `Role không hợp lệ. Các role hợp lệ là: ${Object.values(USER_ROLES).join(', ')}`
+            });
+        }
+
+        // Kiểm tra email đã tồn tại chưa
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email đã được sử dụng'
+            });
+        }
+
+        // Tạo user mới
+        const user = new User({
+            fullName,
+            email: email.toLowerCase(),
             password,
+            role
         });
 
-        //Tạo token
-        const token = generateToken(user._id);
+        // Lưu user vào DB (pre-save hook sẽ tự động hash password và set teacherApprovalStatus)
+        await user.save();
 
-        res.status(201).json({
-            success: true,
-            data: {
-                user:{
-                    id: user._id,
-                    username: user.username,
-                    email: user.email,
-                    profileImage: user.profileImage,
-                    createAt: user.createdAt,
-                },
-                token,
-            },
-            message: "Đăng ký thành công",
-        });
+        // Tạo JWT token và trả về response
+        return sendTokenResponse(user, 201, res);
     } catch (error) {
-        next(error);
+        console.error('Lỗi đăng ký:', error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || 'Lỗi khi đăng ký tài khoản'
+        });
     }
 };
 
-//@desc Login user
-//@route POST /api/auth/login
-//@access Public
+/**
+ * Đăng nhập
+ * POST /api/auth/login
+ * Body: { email, password }
+ */
 export const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        //Xác nhận nhập liệu
+        // Kiểm tra input
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                error: "Vui lòng nhập email và mật khẩu",
-                statusCode: 400,
+                error: 'Vui lòng cung cấp email và password'
             });
         }
 
-        //Kiểm tra người dùng tồn tại(bao gồm password cho việc so sánh)
-        const user = await User.findOne({ email }).select('+password');
+        // Tìm user theo email (select password vì nó được ẩn trong schema)
+        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                error: "Email hoặc mật khẩu không đúng",
-                statusCode: 401,
+                error: 'Email hoặc mật khẩu không đúng'
             });
         }
 
-        //Kiểm tra mật khẩu
-        const isMatch = await user.matchPassword(password);
-
-        if (!isMatch) {
+        // Kiểm tra password
+        const isPasswordCorrect = await user.matchPassword(password);
+        if (!isPasswordCorrect) {
             return res.status(401).json({
                 success: false,
-                error: "Email hoặc mật khẩu không đúng",
-                statusCode: 401,
+                error: 'Email hoặc mật khẩu không đúng'
             });
         }
 
-        //Tạo token
-        const token = generateToken(user._id);
+        // Kiểm tra quyền đăng nhập
+        const canLogin = user.canLogin();
+        if (!canLogin) {
+            // Phân biệt trường hợp: Teacher chưa được duyệt vs Learner/Admin bị vô hiệu hóa
+            if (user.role === USER_ROLES.TEACHER) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin. Vui lòng liên hệ với quản trị viên.'
+                });
+            } else {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ với quản trị viên.'
+                });
+            }
+        }
 
-        res.status(200).json({
-            success: true,
-            data: {
-                user: {
-                    id: user._id,
-                    username: user.username,
-                    email: user.email,
-                    profileImage: user.profileImage,
-                    createdAt: user.createdAt,
-                },
-                token,
-            },
-            message: "Đăng nhập thành công",
-        });
+        // Tạo JWT token và trả về response
+        return sendTokenResponse(user, 200, res);
     } catch (error) {
-        next(error);
-    }       
-};
-
-//@desc Get user profile
-//@route GET /api/auth/profile
-//@access Private
-export const getProfile = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.user._id);
-
-        res.status(200).json({
-            success: true,
-            data: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                profileImage: user.profileImage,
-                createdAt: user.createdAt,
-                updateAt: user.updatedAt,
-            },
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-//@desc Update user profile
-//@route PUT /api/auth/profile
-//@access Private
-export const updateProfile = async (req, res, next) => {
-    try {
-        const { username, email, profileImage } = req.body;
-
-        const user = await User.findById(req.user._id);
-        //Cập nhật thông tin người dùng
-        if (username) user.username = username;
-        if (email) user.email = email;
-        if (profileImage) user.profileImage = profileImage;
-
-        await user.save();
-
-        res.status(200).json({
-            success: true,
-            data: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                profileImage: user.profileImage,
-            },
-            message: "Cập nhật thông tin thành công",
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-//@desc Change password
-//@router POST /api/auth/change-password
-//@access Private
-export const changePassword = async (req, res, next) => {
-    try {
-       const { currentPassword, newPassword } = req.body;
-
-       if (!currentPassword || !newPassword) {
-        return res.status(400).json({
+        console.error('Lỗi đăng nhập:', error);
+        return res.status(500).json({
             success: false,
-            error: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới",
-            statusCode: 400,
+            error: error.message || 'Lỗi khi đăng nhập'
         });
-       }
-       
-        const user = await User.findById(req.user._id).select('+password');
-        //Kiểm tra mật khẩu hiện tại
-        const isMatch = await user.matchPassword(currentPassword);
-
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                error: "Mật khẩu hiện tại không đúng",
-                statusCode: 401,
-            });
-        }
-
-        //Cập nhật mật khẩu mới
-        user.password = newPassword;
-        await user.save();
-
-        res.status(200).json({
-            success: true,
-            message: "Đổi mật khẩu thành công",
-        });
-
-    } catch (error) {
-        next(error);
     }
 };
 

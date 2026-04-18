@@ -1,346 +1,286 @@
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useState } from "react";
 
-const tabs = [
-  { key: "Thông tin", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-  { key: "Chat", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
-  { key: "Quizz", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
-  { key: "FlashCard", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
-];
+const tabs = ["Thông tin", "Chat", "Quizz", "FlashCard"];
 
 const mockChapters = [
-  { id: 1, title: "Chương 1: Bối cảnh lịch sử", duration: "45p", lessons: 3, progress: 100 },
-  { id: 2, title: "Chương 2: Diễn biến chính", duration: "60p", lessons: 5, progress: 60 },
-  { id: 3, title: "Chương 3: Kết quả & ý nghĩa", duration: "30p", lessons: 2, progress: 0 },
+  { id: 1, title: "Chương 1: Bối cảnh lịch sử", duration: "45p" },
+  { id: 2, title: "Chương 2: Diễn biến chính", duration: "60p" },
+  { id: 3, title: "Chương 3: Kết quả & ý nghĩa", duration: "30p" },
 ];
 
-const TAG_STYLES = {
-  "Bài giảng": { bg: "#EFF6FF", color: "#1D4ED8", dot: "#3B82F6" },
-  "Bài kiểm tra": { bg: "#FFF7ED", color: "#C2410C", dot: "#F97316" },
-};
-
-// Dữ liệu mặc định theo từng ID — khớp với initialDocs bên DocumentsPage
 const DEFAULT_DOCS = {
-  1: { title: "Chiến tranh Điện Biên Phủ", duration: "158h50p", img: "/anh6.jpg", tags: ["Bài giảng", "Bài kiểm tra"], description: "Tài liệu tổng hợp về chiến dịch lịch sử Điện Biên Phủ năm 1954, bao gồm bối cảnh, diễn biến và ý nghĩa lịch sử.", author: "Nguyễn Văn Hùng", updatedAt: "12/04/2025", students: 128 },
-  2: { title: "Kháng chiến chống Mỹ", duration: "158h50p", img: "/anh1.jpg", tags: ["Bài giảng", "Bài kiểm tra"], description: "Tài liệu về cuộc kháng chiến chống Mỹ cứu nước, giai đoạn 1954–1975.", author: "Trần Thị Mai", updatedAt: "10/04/2025", students: 95 },
-  3: { title: "Lịch sử Việt Nam thời tiền sử", duration: "158h50p", img: "/anh2.jpg", tags: ["Bài giảng"], description: "Khám phá lịch sử Việt Nam từ thời kỳ đồ đá đến các nền văn hóa đầu tiên.", author: "Lê Văn Nam", updatedAt: "08/04/2025", students: 74 },
-  4: { title: "Thời kỳ quân chủ (939–1945)", duration: "158h50p", img: "/anh3.jpg", tags: ["Bài kiểm tra"], description: "Các triều đại phong kiến Việt Nam từ thời Ngô Quyền đến khi nhà Nguyễn kết thúc.", author: "Phạm Thị Lan", updatedAt: "05/04/2025", students: 110 },
-  5: { title: "Thời Bắc thuộc (180 TCN–938)", duration: "158h50p", img: "/anh4.jpg", tags: ["Bài giảng", "Bài kiểm tra"], description: "Giai đoạn Bắc thuộc và các cuộc đấu tranh giành độc lập của dân tộc.", author: "Nguyễn Văn Hùng", updatedAt: "03/04/2025", students: 88 },
-  6: { title: "Thời kỳ hiện đại (1858–nay)", duration: "158h50p", img: "/anh5.jpg", tags: ["Bài giảng"], description: "Lịch sử Việt Nam từ thời Pháp thuộc đến công cuộc đổi mới và hội nhập quốc tế.", author: "Trần Thị Mai", updatedAt: "01/04/2025", students: 142 },
+  1: {
+    title: "Chiến tranh Điện Biên Phủ",
+    duration: "158h50p",
+    img: "/anh6.jpg",
+    tags: ["Bài giảng", "Bài kiểm tra"],
+    description: "Tài liệu về chiến dịch Điện Biên Phủ",
+    students: 128,
+  },
 };
 
+// ============ ICONS ============
+function IconBack() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+function IconBook() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+function IconUser() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+function IconArrowRight() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  );
+}
+function IconCards() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="16" height="13" rx="2" />
+      <path d="M6 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2" />
+    </svg>
+  );
+}
+
+// ============ COMPONENT ============
 export default function DocumentsDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState("Thông tin");
-  const [expandedChapter, setExpandedChapter] = useState(null);
 
-  // Ưu tiên dữ liệu từ navigate state, fallback về DEFAULT_DOCS theo id
-  const doc = location.state?.doc ?? DEFAULT_DOCS[Number(id)] ?? {
-    id,
-    title: "Tài liệu lịch sử",
-    duration: "—",
-    img: "/anh1.jpg",
-    tags: [],
-    description: "",
-    author: "",
-    updatedAt: "",
-    students: 0,
-  };
+  const doc =
+    location.state?.doc ??
+    DEFAULT_DOCS[Number(id)] ?? {
+      title: "Tài liệu",
+      duration: "—",
+      img: "/anh1.jpg",
+      tags: [],
+      description: "",
+      students: 0,
+    };
+
+  const [activeTab, setActiveTab] = useState(
+    location.state?.activeTab ?? "Thông tin"
+  );
+
+  const goToBaiGiang = () => navigate(`/teacher/baigiang/${id}`, { state: { doc } });
+  const goToBaiKiemTra = () => navigate(`/teacher/baikiemtra/${id}`, { state: { doc } });
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#F8F7F4", minHeight: 0, fontFamily: "'DM Sans', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
+    <div className="h-full overflow-y-auto bg-gray-50 p-6">
 
-        .ddp-back-btn {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 13px; color: #6B7280; font-weight: 500;
-          background: none; border: none; cursor: pointer;
-          padding: 6px 10px; border-radius: 8px;
-          transition: background 0.15s, color 0.15s;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .ddp-back-btn:hover { background: #F3F4F6; color: #111827; }
-
-        .ddp-edit-btn {
-          font-size: 13px; font-weight: 500; color: #fff;
-          background: #F26739; border: none; cursor: pointer;
-          padding: 7px 20px; border-radius: 10px;
-          transition: background 0.15s, transform 0.1s;
-          font-family: 'DM Sans', sans-serif; letter-spacing: 0.01em;
-        }
-        .ddp-edit-btn:hover { background: #E05530; }
-        .ddp-edit-btn:active { transform: scale(0.97); }
-
-        .ddp-tab {
-          display: flex; align-items: center; gap: 6px;
-          padding: 10px 20px; font-size: 13px; font-weight: 500;
-          border: none; background: none; cursor: pointer;
-          color: #9CA3AF; border-bottom: 2px solid transparent;
-          margin-bottom: -1px; transition: all 0.15s;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .ddp-tab:hover { color: #374151; }
-        .ddp-tab.active { color: #F26739; border-bottom-color: #F26739; }
-
-        .ddp-chapter-row {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 14px 16px; border-radius: 12px;
-          border: 1px solid #F0EDE8; background: #fff;
-          cursor: pointer; transition: all 0.15s;
-          gap: 12px;
-        }
-        .ddp-chapter-row:hover { border-color: #F26739; background: #FFFAF8; }
-
-        .ddp-stat-card {
-          display: flex; flex-direction: column; align-items: center;
-          padding: 14px 20px; background: #fff;
-          border: 1px solid #F0EDE8; border-radius: 14px;
-          flex: 1; gap: 2px;
-        }
-
-        .ddp-progress-bar {
-          height: 4px; border-radius: 999px;
-          background: #F0EDE8; overflow: hidden; width: 64px;
-        }
-        .ddp-progress-fill {
-          height: 100%; border-radius: 999px; background: #F26739;
-          transition: width 0.3s ease;
-        }
-
-        .ddp-coming-soon {
-          display: flex; flex-direction: column; align-items: center;
-          justify-content: center; padding: 64px 24px;
-          background: #fff; border: 1px solid #F0EDE8;
-          border-radius: 16px; gap: 12px; text-align: center;
-        }
-
-        .ddp-action-btn {
-          font-size: 13px; font-weight: 500; color: #fff;
-          background: #F26739; border: none; cursor: pointer;
-          padding: 10px 28px; border-radius: 10px;
-          transition: background 0.15s, transform 0.1s;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .ddp-action-btn:hover { background: #E05530; }
-        .ddp-action-btn:active { transform: scale(0.97); }
-      `}</style>
-
-      {/* Sub-header */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #F0EDE8", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button className="ddp-back-btn" onClick={() => navigate(-1)}>
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Trở về
+      {/* HEADER */}
+      <div className="flex items-center justify-between mb-6">
+        <button onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition">
+          <IconBack /> Trở về
         </button>
-        <button className="ddp-edit-btn">Chỉnh sửa</button>
+        <button className="flex items-center gap-2 bg-[#F26739] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm transition">
+          <IconEdit /> Chỉnh sửa
+        </button>
       </div>
 
-      {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "28px 24px" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+      <div className="max-w-3xl mx-auto w-full">
+        <h1 className="text-xl font-bold text-gray-800 mb-5">{doc.title}</h1>
 
-          {/* Hero title */}
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: "#111827", marginBottom: 20, fontWeight: 400, lineHeight: 1.3 }}>
-            {doc.title}
-          </h1>
+        {/* TABS */}
+        <div className="flex border-b border-gray-200 mb-6">
+          {tabs.map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-6 py-2 text-sm transition border-b-2 -mb-px ${
+                activeTab === tab
+                  ? "border-[#F26739] text-[#F26739] font-medium"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {tab}
+            </button>
+          ))}
+        </div>
 
-          {/* Tabs */}
-          <div style={{ display: "flex", borderBottom: "1px solid #F0EDE8", marginBottom: 24 }}>
-            {tabs.map(({ key, icon }) => (
-              <button key={key} className={`ddp-tab${activeTab === key ? " active" : ""}`} onClick={() => setActiveTab(key)}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
-                </svg>
-                {key}
-              </button>
-            ))}
-          </div>
+        {/* ===== THÔNG TIN ===== */}
+        {activeTab === "Thông tin" && (
+          <div className="space-y-4">
 
-          {/* ── Tab: Thông tin ── */}
-          {activeTab === "Thông tin" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Ảnh + meta */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+              <img src={doc.img} alt={doc.title} className="w-full h-52 object-cover bg-gray-100" />
+              <div className="p-4">
+                {doc.description && <p className="text-sm text-gray-500 mb-3">{doc.description}</p>}
+                <div className="flex gap-4 text-sm text-gray-500">
+                  <span className="flex items-center gap-1.5"><IconClock /> {doc.duration}</span>
+                  <span className="flex items-center gap-1.5"><IconBook /> {mockChapters.length} chương</span>
+                  <span className="flex items-center gap-1.5"><IconUser /> {doc.students ?? 0}</span>
+                </div>
+              </div>
+            </div>
 
-              {/* Cover + meta */}
-              <div style={{ background: "#fff", border: "1px solid #F0EDE8", borderRadius: 16, overflow: "hidden" }}>
-                <div style={{ position: "relative" }}>
-                  <img
-                    src={doc.img}
-                    alt={doc.title}
-                    style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "flex";
-                    }}
-                  />
-                  {/* Fallback cover */}
-                  <div style={{ display: "none", width: "100%", height: 220, background: "linear-gradient(135deg, #FFF0E8 0%, #FFD9C4 100%)", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="48" height="48" fill="none" stroke="#F26739" viewBox="0 0 24 24" opacity="0.4">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            {/* ✅ 2 CARD LỚN — bấm vào là vào thẳng */}
+            <div className="grid grid-cols-2 gap-4">
+
+              {/* Bài giảng */}
+              <button
+                onClick={goToBaiGiang}
+                className="group relative bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg rounded-xl p-5 text-left transition-all duration-200 overflow-hidden"
+              >
+                {/* accent bar */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <div className="flex items-start justify-between mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                     </svg>
                   </div>
-                  {/* Tag overlay */}
-                  <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
-                    {(doc.tags ?? []).map((tag) => {
-                      const s = TAG_STYLES[tag] || { bg: "#F3F4F6", color: "#374151", dot: "#9CA3AF" };
-                      return (
-                        <span key={tag} style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 999, display: "flex", alignItems: "center", gap: 5, backdropFilter: "blur(4px)" }}>
-                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
-                          {tag}
-                        </span>
-                      );
-                    })}
+                  <span className="text-blue-400 translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                    <IconArrowRight />
+                  </span>
+                </div>
+
+                <p className="text-sm font-bold text-gray-800 mb-1">Bài giảng</p>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <IconClock /> {mockChapters.length} chương · {doc.duration}
+                </p>
+              </button>
+
+              {/* Bài kiểm tra */}
+              <button
+                onClick={goToBaiKiemTra}
+                className="group relative bg-white border border-gray-200 hover:border-orange-300 hover:shadow-lg rounded-xl p-5 text-left transition-all duration-200 overflow-hidden"
+              >
+                {/* accent bar */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-[#F26739] rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <div className="flex items-start justify-between mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-orange-50 group-hover:bg-orange-100 flex items-center justify-center transition-colors">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="#F26739" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
                   </div>
+                  <span className="text-orange-400 translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                    <IconArrowRight />
+                  </span>
                 </div>
 
-                <div style={{ padding: "16px 20px" }}>
-                  {doc.description && (
-                    <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.65, marginBottom: 16 }}>{doc.description}</p>
-                  )}
+                <p className="text-sm font-bold text-gray-800 mb-1">Bài kiểm tra</p>
+                <p className="text-xs text-gray-400">Kiểm tra kiến thức</p>
+              </button>
 
-                  {/* Stats row */}
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <div className="ddp-stat-card">
-                      <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>{doc.duration}</span>
-                      <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 500 }}>Thời lượng</span>
-                    </div>
-                    <div className="ddp-stat-card">
-                      <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>{mockChapters.length}</span>
-                      <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 500 }}>Chương</span>
-                    </div>
-                    <div className="ddp-stat-card">
-                      <span style={{ fontSize: 18, fontWeight: 600, color: "#111827" }}>{doc.students ?? "—"}</span>
-                      <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 500 }}>Học sinh</span>
-                    </div>
-                  </div>
-
-                  {/* Author / update */}
-                  {(doc.author || doc.updatedAt) && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, paddingTop: 14, borderTop: "1px solid #F9F7F4" }}>
-                      {doc.author && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#FFF0E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <svg width="13" height="13" fill="none" stroke="#F26739" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                          </div>
-                          <span style={{ fontSize: 12, color: "#6B7280" }}>{doc.author}</span>
-                        </div>
-                      )}
-                      {doc.updatedAt && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
-                          <svg width="12" height="12" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>Cập nhật {doc.updatedAt}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Chapters */}
-              <div style={{ background: "#fff", border: "1px solid #F0EDE8", borderRadius: 16, padding: "18px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, color: "#111827", margin: 0 }}>Nội dung tài liệu</h3>
-                  <span style={{ fontSize: 12, color: "#9CA3AF" }}>{mockChapters.length} chương</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {mockChapters.map((ch) => (
-                    <div
-                      key={ch.id}
-                      className="ddp-chapter-row"
-                      onClick={() => setExpandedChapter(expandedChapter === ch.id ? null : ch.id)}
-                    >
-                      {/* Number badge */}
-                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FFF0E8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#F26739" }}>{ch.id}</span>
-                      </div>
-
-                      {/* Text */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 13.5, fontWeight: 500, color: "#111827", margin: "0 0 4px" }}>{ch.title}</p>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontSize: 11, color: "#9CA3AF" }}>{ch.lessons} bài học</span>
-                          <span style={{ fontSize: 11, color: "#D1D5DB" }}>·</span>
-                          <span style={{ fontSize: 11, color: "#9CA3AF" }}>{ch.duration}</span>
-                        </div>
-                      </div>
-
-                      {/* Progress + chevron */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                        <div style={{ textAlign: "right" }}>
-                          <div className="ddp-progress-bar">
-                            <div className="ddp-progress-fill" style={{ width: `${ch.progress}%` }} />
-                          </div>
-                          <span style={{ fontSize: 10, color: ch.progress === 100 ? "#10B981" : "#9CA3AF", fontWeight: 500, marginTop: 3, display: "block" }}>
-                            {ch.progress === 100 ? "Hoàn thành" : ch.progress > 0 ? `${ch.progress}%` : "Chưa học"}
-                          </span>
-                        </div>
-                        <svg
-                          width="16" height="16" fill="none" stroke="#D1D5DB" viewBox="0 0 24 24"
-                          style={{ transform: expandedChapter === ch.id ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
-          )}
 
-          {/* ── Tab: Chat ── */}
-          {activeTab === "Chat" && (
-            <div className="ddp-coming-soon">
-              <div style={{ width: 52, height: 52, background: "#F3F4F6", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="24" height="24" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+            {/* Danh sách chương */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">Danh sách chương</p>
+                <button onClick={goToBaiGiang}
+                  className="text-xs text-[#F26739] hover:underline font-medium">
+                  Xem tất cả →
+                </button>
               </div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: "#374151", margin: 0 }}>Tính năng Chat</p>
-              <p style={{ fontSize: 13, color: "#9CA3AF", margin: 0 }}>Đang được phát triển, sẽ sớm ra mắt</p>
+              {mockChapters.map((ch, i) => (
+                <button key={ch.id} onClick={goToBaiGiang}
+                  className={`w-full flex justify-between items-center px-4 py-3 text-sm hover:bg-orange-50 transition text-left ${
+                    i !== mockChapters.length - 1 ? "border-b border-gray-100" : ""
+                  }`}>
+                  <span className="text-gray-700">{ch.title}</span>
+                  <span className="flex items-center gap-1 text-gray-400 shrink-0 ml-2">
+                    <IconClock /> {ch.duration}
+                  </span>
+                </button>
+              ))}
             </div>
-          )}
 
-          {/* ── Tab: Quizz ── */}
-          {activeTab === "Quizz" && (
-            <div className="ddp-coming-soon">
-              <div style={{ width: 52, height: 52, background: "#FFF0E8", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="24" height="24" fill="none" stroke="#F26739" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: "#374151", margin: 0 }}>Ôn tập với bài kiểm tra nhanh</p>
-              <p style={{ fontSize: 13, color: "#9CA3AF", margin: 0 }}>Kiểm tra kiến thức của bạn qua các câu hỏi trắc nghiệm</p>
-              <button className="ddp-action-btn" onClick={() => navigate("/teacher/quizzes")}>
-                Vào làm bài
+          </div>
+        )}
+
+        {/* ===== CHAT ===== */}
+        {activeTab === "Chat" && (
+          <div className="bg-white border border-gray-200 rounded-xl p-10 flex flex-col items-center gap-3 text-gray-400">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+              stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <p className="text-sm">Chat đang phát triển...</p>
+          </div>
+        )}
+
+        {/* ===== QUIZZ ===== */}
+        {activeTab === "Quizz" && (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-700 mb-1">Bài kiểm tra</p>
+              <p className="text-xs text-gray-400">Kiểm tra kiến thức sau khi học xong bài giảng</p>
+            </div>
+            <div className="p-6 flex justify-center">
+              <button onClick={goToBaiKiemTra}
+                className="inline-flex items-center gap-2 bg-[#F26739] hover:bg-orange-600 text-white px-8 py-3 rounded-xl text-sm font-semibold transition shadow-sm hover:shadow-md">
+                Vào bài kiểm tra <IconArrowRight />
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ── Tab: FlashCard ── */}
-          {activeTab === "FlashCard" && (
-            <div className="ddp-coming-soon">
-              <div style={{ width: 52, height: 52, background: "#FFF0E8", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="24" height="24" fill="none" stroke="#F26739" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: "#374151", margin: 0 }}>Ôn tập với FlashCard</p>
-              <p style={{ fontSize: 13, color: "#9CA3AF", margin: 0 }}>Ghi nhớ kiến thức nhanh hơn với phương pháp FlashCard</p>
-              <button className="ddp-action-btn" onClick={() => navigate("/teacher/flashcards")}>
-                Xem FlashCard
+        {/* ===== FLASHCARD ===== */}
+        {activeTab === "FlashCard" && (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-700 mb-1">FlashCard</p>
+              <p className="text-xs text-gray-400">Ôn tập nhanh với thẻ ghi nhớ</p>
+            </div>
+            <div className="p-6 flex justify-center">
+              <button onClick={() => navigate("/teacher/flashcards")}
+                className="inline-flex items-center gap-2 bg-[#F26739] hover:bg-orange-600 text-white px-8 py-3 rounded-xl text-sm font-semibold transition shadow-sm hover:shadow-md">
+                <IconCards /> Mở FlashCard
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-        </div>
       </div>
     </div>
   );

@@ -1,17 +1,28 @@
 import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 
+export const USER_ROLES = Object.freeze({
+    ADMIN: 'Admin',
+    TEACHER: 'Teacher',
+    LEARNER: 'Learner'
+});
+
+export const TEACHER_APPROVAL_STATUS = Object.freeze({
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    REJECTED: 'rejected'
+});
+
 const userSchema = new mongoose.Schema({
-    username: {
+    fullName: {
         type: String,
-        required: [true, 'vui lòng nhập tên người dùng'],
-        unique: true,
+        required: [true, 'Vui lòng nhập họ tên'],
         trim: true,
-        minlength: [3, 'Tên người dùng phải có ít nhất 3 ký tự']
+        minlength: [3, 'Họ tên phải có ít nhất 3 ký tự']
     },
     email: {
         type: String,
-        required: [true, 'vui lòng nhập email'],
+        required: [true, 'Vui lòng nhập email'],
         unique: true,
         trim: true,
         lowercase: true,
@@ -19,22 +30,27 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'vui lòng nhập mật khẩu'],
+        required: [true, 'Vui lòng nhập mật khẩu'],
         minlength: [6, 'Mật khẩu phải có ít nhất 6 ký tự'],
         select: false
     },
     role: {
         type: String,
-        enum: ['student', 'teacher', 'admin'],
-        default: 'student'
+        enum: Object.values(USER_ROLES),
+        default: USER_ROLES.LEARNER
     },
-    isApproved: {
-        type: Boolean,
+    teacherApprovalStatus: {
+        type: String,
+        enum: Object.values(TEACHER_APPROVAL_STATUS),
         default: function() {
-            if (this.role === 'student') return true;
-            if (this.role === 'teacher') return false;
-            return false;
+            return this.role === USER_ROLES.TEACHER
+                ? TEACHER_APPROVAL_STATUS.PENDING
+                : TEACHER_APPROVAL_STATUS.APPROVED;
         }
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     },
     profileImage: {
         type: String,
@@ -44,8 +60,7 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Hash password trước khi lưu
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function(){
     if(!this.isModified('password')){
         return;
     }
@@ -54,10 +69,21 @@ userSchema.pre('save', async function (next) {
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Phương thức kiểm tra mật khẩu
 userSchema.methods.matchPassword = async function(enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);  
 };
+
+userSchema.methods.canLogin = function() {
+    if (!this.isActive) return false;
+
+    if (this.role === USER_ROLES.TEACHER) {
+        return this.teacherApprovalStatus === TEACHER_APPROVAL_STATUS.APPROVED;
+    }
+
+    return true;
+};
+
+userSchema.index({ role: 1, teacherApprovalStatus: 1, isActive: 1 });
 
 const User = mongoose.model('User', userSchema);
 

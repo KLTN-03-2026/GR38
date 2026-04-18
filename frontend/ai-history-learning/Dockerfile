@@ -15,8 +15,8 @@ RUN npm install
 # 5. Copy toàn bộ mã nguồn
 COPY . .
 
-# 6. Mở cổng 5173 (Cổng mặc định của Vite)
-EXPOSE 5173
+# 6. Mở cổng 3000
+EXPOSE 3000
 
 # 7. Lệnh chạy Vite với cờ --host để mở mạng ra bên ngoài container
 CMD ["npm", "run", "dev", "--", "--host"]

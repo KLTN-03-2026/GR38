@@ -40,6 +40,8 @@ paths:
                 - fullName
                 - email
                 - password
+                - passwordConfirm
+                - role
               properties:
                 fullName:
                   type: string
@@ -52,7 +54,11 @@ paths:
                 password:
                   type: string
                   description: Mật khẩu (tối thiểu 6 ký tự)
-                  example: 123456
+                  example: "123456"
+                passwordConfirm:
+                  type: string
+                  description: Xác nhận lại mật khẩu (phải khớp với password)
+                  example: "123456"
                 role:
                   type: string
                   description: Vai trò của người dùng
@@ -95,7 +101,7 @@ paths:
                   example: nguyenvana@gmail.com
                 password:
                   type: string
-                  example: 123456
+                  example: "123456"
       responses:
         '200':
           description: Đăng nhập thành công, trả về Token
@@ -181,13 +187,13 @@ paths:
               properties:
                 currentPassword:
                   type: string
-                  example: 123456
+                  example: "123456"
                 newPassword:
                   type: string
-                  example: 12345678
+                  example: "12345678"
                 newPasswordConfirm:
                   type: string
-                  example: 12345678
+                  example: "12345678"
       responses:
         '200':
           description: Đổi mật khẩu thành công

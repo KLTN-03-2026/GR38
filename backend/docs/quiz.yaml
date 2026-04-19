@@ -315,7 +315,7 @@ paths:
   /api/v1/quizzes/{documentId}:
     get:
       summary: Lấy danh sách quiz theo tài liệu
-      description: Dành cho tất cả người dùng đã đăng nhập (Learner, Teacher, Admin).
+      description: Dành cho tất cả người dùng đã đăng nhập (LEARNER, TEACHER, ADMIN).
       tags: [Quiz]
       security:
         - bearerAuth: []
@@ -404,7 +404,7 @@ paths:
   /api/v1/quizzes/quiz/{id}:
     get:
       summary: Lấy chi tiết một quiz
-      description: Dành cho tất cả người dùng đã đăng nhập (Learner, Teacher, Admin).
+      description: Dành cho tất cả người dùng đã đăng nhập (LEARNER, TEACHER, ADMIN).
       tags: [Quiz]
       security:
         - bearerAuth: []
@@ -487,7 +487,7 @@ paths:
   /api/v1/quizzes/{id}/submit:
     post:
       summary: Nộp bài quiz
-      description: Chỉ Learner được phép nộp bài.
+      description: Chỉ LEARNER được phép nộp bài.
       tags: [Quiz]
       security:
         - bearerAuth: []
@@ -566,7 +566,7 @@ paths:
   /api/v1/quizzes/{id}/results:
     get:
       summary: Lấy kết quả quiz của người dùng hiện tại
-      description: Dành cho Learner, Teacher hoặc Admin.
+      description: Dành cho LEARNER, TEACHER hoặc ADMIN.
       tags: [Quiz]
       security:
         - bearerAuth: []
@@ -641,7 +641,7 @@ paths:
   /api/v1/quizzes/{id}:
     delete:
       summary: Xóa quiz
-      description: Chỉ Teacher (người tạo quiz) hoặc Admin được phép xóa.
+      description: Chỉ TEACHER (người tạo quiz) hoặc ADMIN được phép xóa.
       tags: [Quiz]
       security:
         - bearerAuth: []

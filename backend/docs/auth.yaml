@@ -17,7 +17,7 @@ components:
           example: nguyenvana@gmail.com
         role:
           type: string
-          example: Learner
+          example: LEARNER
         teacherApprovalStatus:
           type: string
           example: approved
@@ -62,8 +62,8 @@ paths:
                 role:
                   type: string
                   description: Vai trò của người dùng
-                  enum: [Admin, Teacher, Learner]
-                  example: Learner
+                  enum: [ADMIN, TEACHER, LEARNER]
+                  example: LEARNER
       responses:
         '201':
           description: Đăng ký tài khoản thành công

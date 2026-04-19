@@ -4,6 +4,7 @@ import Flashcard from "../models/Flashcard.js";
 import Quiz from "../models/Quiz.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
+import { USER_ROLES } from "../models/User.js";
 import fs from "fs/promises";
 import flashcard from "../models/Flashcard.js";
 import { count, error } from "console";
@@ -99,10 +100,10 @@ export const getDocuments = async (req, res, next) => {
   try {
 
     let matchQuery = {};
-    if (req.user.role === 'Teacher') {
+    if (req.user.role === USER_ROLES.TEACHER) {
         // Giáo viên: Chỉ thấy tài liệu do mình tải lên
         matchQuery = { userId: new mongoose.Types.ObjectId(req.user._id) };
-    } else if (req.user.role === 'Learner') {
+    } else if (req.user.role === USER_ROLES.LEARNER) {
         // Học sinh: Thấy tất cả tài liệu đã được AI xử lý xong
         matchQuery = { status: "ready" }; 
     }
@@ -165,11 +166,11 @@ export const getDocument = async (req, res, next) => {
     let query = { _id: req.params.id };
     
     // Nếu là giáo viên thì mới cần check userId, Học sinh thì được xem tự do
-    if (req.user.role === 'Teacher') {
+    if (req.user.role === USER_ROLES.TEACHER) {
         query.userId = req.user._id;
     }
 
-   if (req.user.role === 'Learner') query.status = "ready";
+     if (req.user.role === USER_ROLES.LEARNER) query.status = "ready";
     const document = await Document.findOne(query);
 
     if(!document) {

@@ -18,7 +18,7 @@ if not exist "frontend\ai-history-learning\.env.docker" (
     copy "frontend\ai-history-learning\.env.example" "frontend\ai-history-learning\.env.docker" >nul
     echo   - Da tao thanh cong: frontend\ai-history-learning\.env.docker
 ) else (
-    echo   - Bo qua: File frontend\.env.docker da ton tai.
+    echo   - Bo qua: File frontend\ai-history-learning\.env.docker da ton tai.
 )
 echo.
 
@@ -28,3 +28,4 @@ echo Vui long mo cac file .env.docker vua duoc tao ra de dien API Key va Databas
 echo Sau do chay lenh: docker-compose up -d --build
 echo ==================================================
 pause 
+

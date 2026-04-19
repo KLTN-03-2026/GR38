@@ -1,5 +1,6 @@
 import Flashcard from "../models/Flashcard.js";
 import FlashcardProgress from "../models/FlashcardProgress.js";
+import { USER_ROLES } from "../models/User.js";
 
 const resolveFlashcardSetId = async ({ setId, cardId }) => {
     if (setId) {
@@ -79,7 +80,7 @@ export const getFlashcards = async (req, res, next) => {
 export const getAllFlashcardSets = async (req, res, next) => {
     try{
         let query = {};
-        if (req.user.role === 'Teacher') {
+        if (req.user.role === USER_ROLES.TEACHER) {
             query = { teacherId: req.user._id }; 
         }
 

@@ -1,5 +1,6 @@
 import Quiz from "../models/Quiz.js";
 import QuizResult from "../models/QuizResult.js";
+import { USER_ROLES } from "../models/User.js";
 
 //@desc Lấy danh sách quiz cho một tài liệu
 //@route GET /api/quizzes/:documentId
@@ -247,7 +248,7 @@ export const deleteQuiz = async (req, res, next) => {
     // Chỉ người tạo (teacherId) hoặc Admin mới được xóa
     if (
       quiz.teacherId.toString() !== req.user._id.toString() &&
-      req.user.role !== "Admin"
+      req.user.role !== USER_ROLES.ADMIN
     ) {
       return res.status(403).json({
         success: false,

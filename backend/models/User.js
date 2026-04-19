@@ -2,9 +2,9 @@ import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 
 export const USER_ROLES = Object.freeze({
-    ADMIN: 'Admin',
-    TEACHER: 'Teacher',
-    LEARNER: 'Learner'
+    ADMIN: 'ADMIN',
+    TEACHER: 'TEACHER',
+    LEARNER: 'LEARNER'
 });
 
 export const TEACHER_APPROVAL_STATUS = Object.freeze({

@@ -6,11 +6,12 @@ import {
   deleteUser
 } from '../controllers/adminController.js';
 import protect, { authorize } from '../middleware/auth.js';
+import { USER_ROLES } from '../models/User.js';
 
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('Admin'));
+router.use(authorize(USER_ROLES.ADMIN));
 
 // Định tuyến các API
 router.get('/users', getUsers);

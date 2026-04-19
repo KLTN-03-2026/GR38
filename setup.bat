@@ -27,4 +27,5 @@ echo THIET LAP HOAN TAT!
 echo Vui long mo cac file .env.docker vua duoc tao ra de dien API Key va Database URI.
 echo Sau do chay lenh: docker-compose up -d --build
 echo ==================================================
-pause
+pause 
+

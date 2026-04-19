@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
-import usersMock from "../../data/UserMock";
+import axios from "axios";
 
 // CHỈ CẬP NHẬT ĐIỀU HƯỚNG TẠI ĐÂY
 const ROLE_CONFIG = {
-  admin:   { path: "/admin",   label: "Quản trị viên" },
-  teacher: { path: "/teacher", label: "Giáo viên" },
-  learner: { path: "/learner", label: "Học sinh" }, // Đã khớp với App.js
+  Admin:   { path: "/admin",   label: "Quản trị viên" },
+  Teacher: { path: "/teacher", label: "Giáo viên" },
+  Learner: { path: "/learner", label: "Học sinh" },
 };
 
 function LoginPage() {
@@ -31,49 +31,48 @@ function LoginPage() {
 
     setLoading(true);
 
-    const found = usersMock.find(
-      (u) => u.email === input.email && u.pass === input.pass
-    );
+    try {
+      const res = await axios.post(
+        "http://localhost:8000/api/v1/auth/login", // ✅ port 8000
+        { email: input.email, password: input.pass }
+      );
 
-    setTimeout(async () => {
-      if (found) {
-        // Lưu thông tin user
-        localStorage.setItem("user", JSON.stringify({
-          id:      found.id,
-          name:    found.name,
-          email:   found.email,
-          role:    found.role,
-          ...(found.subject && { subject: found.subject }),
-          ...(found.class   && { class:   found.class }),
-        }));
+      // API trả về: { success, token, data: { _id, fullName, email, role, ... } }
+      const { token, data: user } = res.data;
 
-        // Lưu role để App.js kiểm tra PrivateRoute
-        localStorage.setItem("role", found.role);
+      // Lưu token + thông tin user
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("role", user.role);
 
-        const roleLabel = ROLE_CONFIG[found.role]?.label ?? found.role;
+      const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
 
-        await Swal.fire({
-          icon: "success",
-          title: "ĐĂNG NHẬP THÀNH CÔNG",
-          html: `Xin chào <b>${found.name}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
-          confirmButtonColor: "#f97316",
-          timer: 1800,
-          timerProgressBar: true,
-        });
+      await Swal.fire({
+        icon: "success",
+        title: "ĐĂNG NHẬP THÀNH CÔNG",
+        html: `Xin chào <b>${user.fullName}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
+        confirmButtonColor: "#f97316",
+        timer: 1800,
+        timerProgressBar: true,
+      });
 
-        const path = ROLE_CONFIG[found.role]?.path;
-        if (path) navigate(path);
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Đăng nhập thất bại",
-          text: "Sai email hoặc mật khẩu",
-          confirmButtonColor: "#f97316",
-        });
-        setErrors({ pass: "Email hoặc mật khẩu không đúng" });
-      }
+      const path = ROLE_CONFIG[user.role]?.path;
+      if (path) navigate(path);
+
+    } catch (error) {
+      const msg = error.response?.data?.error ?? "Lỗi server, vui lòng thử lại";
+
+      Swal.fire({
+        icon: "error",
+        title: "Đăng nhập thất bại",
+        text: msg,
+        confirmButtonColor: "#f97316",
+      });
+      setErrors({ pass: msg });
+
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -115,15 +114,7 @@ function LoginPage() {
         />
         {errors.email && <p className="text-xs text-red-500 mb-3">{errors.email}</p>}
 
-        <div className="flex justify-between items-center mb-1.5">
-          <label className="text-sm text-gray-500">Mật khẩu</label>
-          <button
-            type="button"
-            className="text-xs text-orange-500 hover:text-orange-600 transition"
-          >
-            Bạn quên mật khẩu?
-          </button>
-        </div>
+        <label className="block text-sm text-gray-500 mb-1.5">Mật khẩu</label>
         <input
           type="password"
           name="pass"
@@ -147,11 +138,20 @@ function LoginPage() {
           {loading ? "Đang xử lý..." : "Đăng nhập"}
         </button>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-gray-500 mb-2">
           Bạn chưa có tài khoản?{" "}
           <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition">
             Đăng ký
           </Link>
+        </p>
+
+        <p className="text-center">
+          <button
+            type="button"
+            className="text-xs text-orange-500 hover:text-orange-600 transition"
+          >
+            Bạn quên mật khẩu?
+          </button>
         </p>
       </div>
     </div>

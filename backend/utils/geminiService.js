@@ -23,8 +23,14 @@ export const generateFlashcards = async (text, count = 10) => {
 Định dạng mỗi flashcard bắt buộc như sau:
 Q: [Câu hỏi rõ ràng, cụ thể về sự kiện/nhân vật]
 A: [Câu trả lời ngắn gọn, chính xác]
-D: [Độ khó: Dể, Trung bình, hoặc Khó]
-
+D: [Độ khó: Dễ, Trung bình, hoặc Khó]
+Yêu cầu BẮT BUỘC về độ khó (difficulty):
+- Bạn KHÔNG ĐƯỢC để tất cả các thẻ là "Trung bình".
+- Hãy phân bổ đa dạng: 
+  + Chọn "Dễ" cho các câu hỏi nhận biết cơ bản (nhớ tên, ngày tháng).
+  + Chọn "Trung bình" cho các câu hỏi thông hiểu (nguyên nhân, nội dung chính).
+  + Chọn "Khó" cho các câu hỏi phân tích, suy luận hoặc tổng hợp sự kiện.
+- Đảm bảo tỷ lệ các mức độ khó xen kẽ nhau.
 Phân tách mỗi flashcard bằng "---"
 
 Văn bản:
@@ -95,6 +101,13 @@ E: [Giải thích ngắn gọn tại sao đúng]
 D: [Độ khó: Dễ, Trung bình, hoặc Khó]
 YÊU CẦU BẮT BUỘC (CẦN TUÂN THỦ NGHIÊM NGẶT): 
 Giá trị của trường correctAnswer phải copy chính xác 100% từng chữ cái, dấu cách, viết hoa/thường từ một trong 4 giá trị của mảng options.
+Yêu cầu BẮT BUỘC về độ khó (difficulty):
+- Bạn KHÔNG ĐƯỢC để tất cả các thẻ là "Trung bình".
+- Hãy phân bổ đa dạng: 
+  + Chọn "Dễ" cho các câu hỏi nhận biết cơ bản (nhớ tên, ngày tháng).
+  + Chọn "Trung bình" cho các câu hỏi thông hiểu (nguyên nhân, nội dung chính).
+  + Chọn "Khó" cho các câu hỏi phân tích, suy luận hoặc tổng hợp sự kiện.
+- Đảm bảo tỷ lệ các mức độ khó xen kẽ nhau.
 Phân tách các câu hỏi bằng "---"
 
 Văn bản:

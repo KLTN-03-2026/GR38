@@ -1,12 +1,15 @@
-import User from '../models/User.js';
+import User, { USER_ROLES } from '../models/User.js';
 
 //@desc   Lấy tất cả người dùng (Có hỗ trợ lọc theo role)
 //@route  GET /api/admin/users
 //@access Private/Admin
 export const getUsers = async (req, res, next) => {
   try {
-    // Nếu có truyền ?role=Teacher trên URL thì sẽ lọc theo role
-    const query = req.query.role ? { role: req.query.role } : {};
+    // Chuẩn hóa role filter để hỗ trợ đầu vào không đồng nhất hoa/thường.
+    const normalizedRole = typeof req.query.role === 'string'
+      ? req.query.role.toUpperCase()
+      : null;
+    const query = normalizedRole ? { role: normalizedRole } : {};
 
     const users = await User.find(query).select('-password').sort({ createdAt: -1 });
 
@@ -62,7 +65,7 @@ export const updateUserStatus = async (req, res, next) => {
 
     // Cập nhật trạng thái duyệt
     if (teacherApprovalStatus) {
-      if (user.role !== 'Teacher') {
+      if (user.role !== USER_ROLES.TEACHER) {
         return res.status(400).json({
           success: false,
           error: 'Tính năng duyệt hồ sơ (teacherApprovalStatus) chỉ áp dụng cho Giáo viên.'

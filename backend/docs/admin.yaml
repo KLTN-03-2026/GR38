@@ -15,7 +15,7 @@ paths:
           name: role
           schema:
             type: string
-            enum: [Admin, Teacher, Learner]
+            enum: [ADMIN, TEACHER, LEARNER]
           description: Lọc danh sách theo vai trò (VD chọn Teacher để xem danh sách giáo viên)
       responses:
         '200':

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 function RegisterPage() {
   const [input, setInput] = useState({
@@ -11,6 +12,7 @@ function RegisterPage() {
   });
   const [errors, setErrors] = useState({});
   const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleInput = (e) => {
@@ -19,7 +21,7 @@ function RegisterPage() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let err = {};
 
@@ -44,29 +46,45 @@ function RegisterPage() {
       return;
     }
 
-    const existingRaw = JSON.parse(localStorage.getItem("users") || "[]");
-    const existing = Array.isArray(existingRaw) ? existingRaw : [existingRaw];
+    setLoading(true);
 
-    if (existing.find((u) => u.email === input.email)) {
-      setErrors({ email: "Email này đã được đăng ký" });
-      return;
+    try {
+      await axios.post("http://localhost:8000/api/v1/auth/register", {
+        fullName: input.hoTen,
+        email: input.email,
+        password: input.pass,
+        passwordConfirm: input.confirmPass,
+        role: role, // "Teacher" hoặc "Learner"
+      });
+
+      await Swal.fire({
+        icon: "success",
+        title: "ĐĂNG KÝ THÀNH CÔNG",
+        text: `Chào mừng ${input.hoTen} đến với Lịch Sử Việt Nam!`,
+        confirmButtonColor: "#f97316",
+        timer: 2000,
+        timerProgressBar: true,
+      });
+
+      navigate("/");
+
+    } catch (error) {
+      const msg = error.response?.data?.error ?? "Lỗi server, vui lòng thử lại";
+
+      // Nếu lỗi liên quan email thì hiện dưới ô email
+      if (msg.toLowerCase().includes("email")) {
+        setErrors({ email: msg });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Đăng ký thất bại",
+          text: msg,
+          confirmButtonColor: "#f97316",
+        });
+      }
+    } finally {
+      setLoading(false);
     }
-
-    const newUser = {
-      email: input.email,
-      pass: input.pass,
-      name: input.hoTen,
-      role: role,
-    };
-    localStorage.setItem("users", JSON.stringify([...existing, newUser]));
-
-    Swal.fire({
-      icon: "success",
-      title: "ĐĂNG KÝ THÀNH CÔNG",
-      text: `Chào mừng ${input.hoTen} đến với Lịch Sử Việt Nam!`,
-      confirmButtonColor: "#f97316",
-    });
-    navigate("/");
   };
 
   const inputClass = (field) =>
@@ -141,14 +159,15 @@ function RegisterPage() {
               Vai trò <span className="text-red-400">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2">
+              {/* GIÁO VIÊN */}
               <button
                 type="button"
                 onClick={() => {
-                  setRole(role === "teacher" ? null : "teacher");
+                  setRole(role === "Teacher" ? null : "Teacher");
                   setErrors((prev) => ({ ...prev, role: "" }));
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2 border text-xs font-medium rounded-md transition
-                  ${role === "teacher"
+                  ${role === "Teacher"
                     ? "border-orange-500 bg-orange-500 text-white"
                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
                   }`}
@@ -163,14 +182,15 @@ function RegisterPage() {
                 Giáo viên
               </button>
 
+              {/* NGƯỜI HỌC */}
               <button
                 type="button"
                 onClick={() => {
-                  setRole(role === "student" ? null : "student");
+                  setRole(role === "Learner" ? null : "Learner");
                   setErrors((prev) => ({ ...prev, role: "" }));
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2 border text-xs font-medium rounded-md transition
-                  ${role === "student"
+                  ${role === "Learner"
                     ? "border-orange-500 bg-orange-500 text-white"
                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
                   }`}
@@ -187,9 +207,12 @@ function RegisterPage() {
           </div>
 
           {/* BUTTON ĐĂNG KÝ */}
-          <button type="submit"
-            className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98]">
-            ĐĂNG KÝ
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? "Đang xử lý..." : "ĐĂNG KÝ"}
           </button>
         </form>
 

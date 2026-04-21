@@ -5,9 +5,9 @@ import axios from "axios";
 
 // CHỈ CẬP NHẬT ĐIỀU HƯỚNG TẠI ĐÂY
 const ROLE_CONFIG = {
-  Admin:   { path: "/admin",   label: "Quản trị viên" },
-  Teacher: { path: "/teacher", label: "Giáo viên" },
-  Learner: { path: "/learner", label: "Học sinh" },
+  ADMIN:   { path: "/admin",   label: "Quản trị viên" },
+  TEACHER: { path: "/teacher", label: "Giáo viên" },
+  LEARNER: { path: "/learner", label: "Học sinh" },
 };
 
 function LoginPage() {
@@ -157,5 +157,4 @@ function LoginPage() {
     </div>
   );
 }
-
 export default LoginPage;

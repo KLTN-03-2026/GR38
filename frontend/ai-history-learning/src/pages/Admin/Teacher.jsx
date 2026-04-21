@@ -1,96 +1,221 @@
 import { useNavigate } from "react-router-dom";
-const stats = [
-  { label: "Tổng bài TestQuiz", value: "450,000,000", icon: "📋" },
-  { label: "Tổng tài liệu",     value: "500",          icon: "📱" },
-  { label: "FlashCard",          value: "510",          icon: "🗒️" },
-  { label: "Sự cố đã báo cáo",  value: "0",            icon: "⚠️" },
-];
+import { useEffect, useState } from "react";
+import axios from "axios";
+import {
+  ClipboardList, BookOpen, LayoutGrid, AlertTriangle,
+  FileText, PenLine, Wrench, CreditCard,
+  Users, GraduationCap, Download, Trophy,
+  Medal, Plus, Zap
+} from "lucide-react";
+
+const API = "http://localhost:8000/api/v1";
+
 const activities = [
-  { icon: "📄", iconBg: "bg-green-100",  title: "Update tài liệu",                 subtitle: "Chiến tranh giải phóng miền Nam", time: "5 phút trước" },
-  { icon: "📝", iconBg: "bg-blue-100",   title: "Cập nhật danh sách bài kiểm tra", subtitle: "Kháng chiến chống Mỹ",           time: "5 phút trước" },
-  { icon: "🔧", iconBg: "bg-orange-100", title: "Báo cáo sự cố",                   subtitle: "Không Chat AI được",             time: "5 phút trước" },
+  { Icon: FileText,   color: "#0EA472", title: "Update tài liệu",                 subtitle: "Chiến tranh giải phóng miền Nam", time: "5 phút trước"  },
+  { Icon: PenLine,    color: "#1473E6", title: "Cập nhật danh sách bài kiểm tra", subtitle: "Kháng chiến chống Mỹ",           time: "12 phút trước" },
+  { Icon: Wrench,     color: "#F26739", title: "Báo cáo sự cố",                   subtitle: "Không Chat AI được",             time: "30 phút trước" },
+  { Icon: CreditCard, color: "#8B5CF6", title: "Thêm bộ Flashcard mới",           subtitle: "Thời kỳ Bắc thuộc",             time: "1 giờ trước"   },
 ];
-const rankings = [
-  { name: "Công Phúc",         phone: "0934970856", time: "14:00 05/11/2025", score: "10/10",  highlight: true  },
-  { name: "Nguyễn Toàn Chung", phone: "0934970856", time: "14:00 05/11/2025", score: "9/10",   highlight: false },
-  { name: "Nguyễn Tấn Anh",   phone: "0934970856", time: "14:00 05/11/2025", score: "8,5/10", highlight: false },
-];
-export default function Dashboard() {
+
+const rankColors = ["#F59E0B", "#9CA3AF", "#CD7C2F"];
+
+function AnimatedNumber({ target }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const raw = typeof target === "number" ? target : parseFloat(String(target).replace(/,/g, "")) || 0;
+    if (!raw) { setVal(target); return; }
+    let start = 0;
+    const step = Math.ceil(raw / 40);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= raw) { setVal(raw.toLocaleString("vi-VN")); clearInterval(timer); }
+      else setVal(start.toLocaleString("vi-VN"));
+    }, 30);
+    return () => clearInterval(timer);
+  }, [target]);
+  return <span>{val}</span>;
+}
+
+export default function TeacherDashboard() {
+  const navigate = useNavigate();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Chào buổi sáng" : hour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
+
+  const [docCount,       setDocCount]       = useState(0);
+  const [flashcardCount, setFlashcardCount] = useState(0);
+  const [loading,        setLoading]        = useState(true);
+
+  // Lấy tên giáo viên từ localStorage
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const fetchStats = async () => {
+      try {
+        const [docRes, flashRes] = await Promise.all([
+          axios.get(`${API}/documents`, { headers }),
+          axios.get(`${API}/flashcards`, { headers }),
+        ]);
+
+        setDocCount(docRes.data.count ?? docRes.data.data?.length ?? 0);
+        setFlashcardCount(flashRes.data.count ?? flashRes.data.data?.length ?? 0);
+      } catch (err) {
+        console.error("Lỗi tải thống kê:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [token]);
+
+  const stats = [
+    { label: "Tổng bài TestQuiz", value: "450,000,000", Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE", trend: "+12%" },
+    { label: "Tổng tài liệu",     value: loading ? "..." : String(docCount), Icon: BookOpen, color: "#1473E6", bg: "#EEF4FF", trend: "+5%"  },
+    { label: "FlashCard",          value: loading ? "..." : String(flashcardCount), Icon: LayoutGrid, color: "#0EA472", bg: "#EEFAF5", trend: "+8%"  },
+    { label: "Sự cố báo cáo",     value: "0",            Icon: AlertTriangle, color: "#F59E0B", bg: "#FFFBEB", trend: "–"    },
+  ];
+
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Trang chủ</h1>
-        <button className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          Xuất báo cáo
+    <div style={{ fontFamily: "'Sora', 'Be Vietnam Pro', sans-serif", minHeight: "100vh", background: "#F5F6FA", padding: "32px 28px" }}>
+
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600&display=swap');
+        .stat-card { transition: transform .25s, box-shadow .25s; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.10) !important; }
+        .act-row { transition: background .2s; }
+        .act-row:hover { background: #F5F6FA; }
+        .export-btn { transition: background .2s, transform .15s; }
+        .export-btn:hover { background: #d9562d; transform: scale(1.03); }
+        .rank-card { transition: transform .2s; }
+        .rank-card:hover { transform: translateX(4px); }
+      `}</style>
+
+      {/* ── HEADER ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
+        <div>
+          <p style={{ fontSize: 13, color: "#9CA3AF", fontWeight: 500, marginBottom: 4, letterSpacing: ".04em" }}>
+            {new Date().toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          </p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111827", margin: 0, lineHeight: 1.2 }}>
+            {greeting}, <span style={{ color: "#F26739" }}>{user.fullName ?? "Giáo viên"}</span>
+          </h1>
+          <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4, fontWeight: 400 }}>
+            Đây là tổng quan hoạt động hôm nay của bạn.
+          </p>
+        </div>
+        <button
+          className="export-btn"
+          style={{ background: "#F26739", color: "#fff", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(242,103,57,.35)", display: "flex", alignItems: "center", gap: 8 }}
+        >
+          <Download size={15} strokeWidth={2.5} /> Xuất báo cáo
         </button>
       </div>
-      {/* Stats 4 cột */}
-      <div className="grid grid-cols-4 gap-4 mb-4">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
-            <div className="flex items-center justify-between text-gray-400 text-sm">
-              <span>{stat.label}</span>
-              <span className="text-lg">{stat.icon}</span>
+
+      {/* ── STAT CARDS ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, marginBottom: 24 }}>
+        {stats.map((s, i) => (
+          <div key={i} className="stat-card" style={{ background: "#fff", borderRadius: 18, padding: "22px 20px", boxShadow: "0 2px 12px rgba(0,0,0,.06)", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: s.color, borderRadius: "18px 18px 0 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center" }}><s.Icon size={20} color={s.color} strokeWidth={2} /></div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#10B981", background: "#ECFDF5", padding: "3px 9px", borderRadius: 20 }}>{s.trend}</span>
             </div>
-            <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+            <p style={{ fontSize: 26, fontWeight: 800, color: "#111827", margin: "0 0 4px" }}>
+              <AnimatedNumber target={s.value} />
+            </p>
+            <p style={{ fontSize: 12, color: "#9CA3AF", margin: 0, fontWeight: 500 }}>{s.label}</p>
           </div>
         ))}
       </div>
-      {/* Stats 2 cột */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between text-gray-400 text-sm mb-2">
-            <span>Tổng học sinh</span>
-            <span className="text-lg">👥</span>
+
+      {/* ── STUDENT OVERVIEW ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 24 }}>
+        {[
+          { label: "Tổng Người đọc", value: "1,048,588,576", Icon: Users,          color: "#1473E6", note: "Đang hoạt động" },
+          { label: "Người đọc làm bài kiểm tra", value: "11,550,447", Icon: GraduationCap, color: "#10B981", note: "Trong tháng này" },
+        ].map((item, i) => (
+          <div key={i} style={{ background: `linear-gradient(135deg, ${item.color}18 0%, #fff 60%)`, border: `1.5px solid ${item.color}22`, borderRadius: 18, padding: "24px 26px", display: "flex", alignItems: "center", gap: 20, boxShadow: "0 2px 12px rgba(0,0,0,.05)" }}>
+            <div style={{ width: 60, height: 60, borderRadius: 16, background: item.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 6px 18px ${item.color}55` }}><item.Icon size={26} color="#fff" strokeWidth={1.8} /></div>
+            <div>
+              <p style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", margin: "0 0 4px" }}>{item.label}</p>
+              <p style={{ fontSize: 30, fontWeight: 800, color: "#111827", margin: "0 0 2px" }}><AnimatedNumber target={item.value} /></p>
+              <p style={{ fontSize: 12, color: item.color, fontWeight: 600, margin: 0 }}>● {item.note}</p>
+            </div>
           </div>
-          <p className="text-3xl font-bold text-gray-800">1.048.588.576</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between text-gray-400 text-sm mb-2">
-            <span>Tổng học sinh làm bài kiểm tra</span>
-            <span className="text-lg">👨‍🎓</span>
-          </div>
-          <p className="text-3xl font-bold text-green-500">11.550.447</p>
-        </div>
+        ))}
       </div>
-      {/* Hoạt động + Xếp hạng */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="font-semibold text-gray-700 mb-4">Hoạt động gần đây</h2>
-          <div className="flex flex-col gap-3">
+
+      {/* ── BOTTOM: ACTIVITY + RANKING ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 18 }}>
+
+        {/* Activity Feed */}
+        <div style={{ background: "#fff", borderRadius: 18, padding: "24px", boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, display: "flex", alignItems: "center", gap: 8 }}><Zap size={16} color="#F26739" strokeWidth={2.5} /> Hoạt động gần đây</h2>
+            <span style={{ fontSize: 12, color: "#1473E6", fontWeight: 600, cursor: "pointer" }}>Xem tất cả →</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {activities.map((act, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className={`w-9 h-9 rounded-lg ${act.iconBg} flex items-center justify-center text-base flex-shrink-0`}>
-                  {act.icon}
+              <div key={i} className="act-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 10px", borderRadius: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: act.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><act.Icon size={18} color={act.color} strokeWidth={2} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#1F2937", margin: "0 0 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{act.title}</p>
+                  <p style={{ fontSize: 12, color: "#9CA3AF", margin: 0 }}>{act.subtitle}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{act.title}</p>
-                  <p className="text-xs text-gray-500">{act.subtitle}</p>
-                </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap">{act.time}</span>
+                <span style={{ fontSize: 11, color: "#D1D5DB", fontWeight: 500, flexShrink: 0 }}>{act.time}</span>
               </div>
             ))}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="font-semibold text-gray-700 mb-4">Xếp hạng bài kiểm tra</h2>
-          <div className="flex flex-col gap-2">
-            {rankings.map((r, i) => (
-              <div key={i} className={`rounded-lg p-3 ${r.highlight ? "bg-blue-500 text-white" : "bg-blue-50 text-gray-700"}`}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className={`font-semibold text-sm ${r.highlight ? "text-white" : "text-gray-800"}`}>{r.name}</p>
-                    <p className={`text-xs mt-0.5 ${r.highlight ? "text-blue-100" : "text-gray-500"}`}>{r.phone}</p>
-                    <p className={`text-xs ${r.highlight ? "text-blue-100" : "text-gray-400"}`}>{r.time}</p>
-                  </div>
-                  <span className={`text-sm font-bold ${r.highlight ? "text-white" : "text-blue-500"}`}>{r.score}</span>
+
+        {/* Rankings */}
+        <div style={{ background: "#fff", borderRadius: 18, padding: "24px", boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0, display: "flex", alignItems: "center", gap: 8 }}><Trophy size={16} color="#F59E0B" strokeWidth={2.5} /> Xếp hạng bài kiểm tra</h2>
+            <span style={{ fontSize: 12, color: "#1473E6", fontWeight: 600, cursor: "pointer" }}>Chi tiết →</span>
+          </div>
+
+          {/* Không có API rankings → giữ data tĩnh */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              { name: "Công Phúc",         phone: "0934970856", time: "14:00 05/11/2025", score: 10  },
+              { name: "Nguyễn Toàn Chung", phone: "0934970856", time: "14:00 05/11/2025", score: 9   },
+              { name: "Nguyễn Tấn Anh",   phone: "0934970856", time: "14:00 05/11/2025", score: 8.5 },
+            ].map((r, i) => (
+              <div key={i} className="rank-card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 14, background: i === 0 ? "linear-gradient(135deg, #FEF3C7, #FFFBEB)" : "#F9FAFB", border: i === 0 ? "1.5px solid #F59E0B44" : "1.5px solid #F3F4F6" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: rankColors[i] + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Medal size={17} color={rankColors[i]} strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: "0 0 2px" }}>{r.name}</p>
+                  <p style={{ fontSize: 11, color: "#9CA3AF", margin: 0 }}>{r.phone} · {r.time}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: rankColors[i] }}>{r.score}</span>
+                  <p style={{ fontSize: 10, color: "#D1D5DB", margin: 0 }}>/10</p>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Mini CTA */}
+          <div style={{ marginTop: 20, padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #F26739, #f9a87e)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: "0 0 2px" }}>Tạo bài kiểm tra mới</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,.8)", margin: 0 }}>Thêm câu hỏi cho học sinh</p>
+            </div>
+            <button
+              onClick={() => navigate("/teacher/quizzes")}
+              style={{ background: "rgba(255,255,255,.25)", border: "1.5px solid rgba(255,255,255,.5)", color: "#fff", borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            >
+              Tạo ngay <Plus size={13} strokeWidth={3} style={{ display: "inline", marginLeft: 2 }} />
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );
-}
+} 

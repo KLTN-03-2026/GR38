@@ -1,7 +1,7 @@
 // DocumentsDetailPage.jsx
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { documentService } from "../../../services/DocumentService";
+import { documentService } from "../../../services/documentService";
 import axios from "axios";
 
 const API = "http://localhost:8000/api/v1";

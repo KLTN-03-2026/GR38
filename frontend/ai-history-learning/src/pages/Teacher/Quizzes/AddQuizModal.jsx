@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { quizService } from "../../../services/QuizService";
+import { quizService } from "../../../services/quizService";
 
 
 const emptyQuestion = {

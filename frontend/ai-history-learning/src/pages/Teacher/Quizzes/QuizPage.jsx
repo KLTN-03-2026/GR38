@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { quizService } from "../../../services/QuizService";
+import { quizService } from "../../../services/quizService";
 import AddQuizModal from "./AddQuizModal";
 
 function shuffleArray(arr) {

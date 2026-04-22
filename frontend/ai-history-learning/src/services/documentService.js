@@ -1,103 +1,100 @@
-/**
- * Document Service - API client cho quản lý tài liệu lịch sử
- *
- * Các chức năng:
- * - Lấy danh sách tài liệu
- * - Lấy chi tiết tài liệu
- * - Tạo / cập nhật / xoá tài liệu
- * - Upload file tài liệu
- */
-import api from "../lib/api";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+const getAuthHeader = () => {
+  const raw = localStorage.getItem("token");
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    const token = parsed.access_token ?? parsed;
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    return { Authorization: `Bearer ${raw}` };
+  }
+};
 
 export const documentService = {
-  /**
-   * Lấy danh sách tài liệu
-   * @param {Object} params - Tham số lọc / phân trang
-   * @param {number} params.page - Trang hiện tại
-   * @param {number} params.limit - Số lượng mỗi trang
-   * @param {string} params.keyword - Tìm kiếm theo tiêu đề
-   * @param {string} params.category - Lọc theo danh mục
-   * @returns {Promise<Object>} Danh sách tài liệu và thông tin phân trang
-   */
-  getAll: async (params = {}) => {
-    const res = await api.get("/documents", { params });
-    return res.data;
+  // POST /api/v1/documents/upload
+  // response: { success, data: document, message }
+  uploadDocument: async (formData) => {
+    const response = await axios.post(`${API_URL}/documents/upload`, formData, {
+      headers: {
+        ...getAuthHeader(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
   },
 
-  /**
-   * Lấy chi tiết một tài liệu
-   * @param {string|number} id - ID tài liệu
-   * @returns {Promise<Object>} Thông tin chi tiết tài liệu
-   */
+  // GET /api/v1/documents
+  // response: { success, count, data: [...] }
+  getAllDocuments: async () => {
+    const response = await axios.get(`${API_URL}/documents`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // GET /api/v1/documents/{id}
+  // response: { success, data: {...} }
+  getDocumentById: async (id) => {
+    const response = await axios.get(`${API_URL}/documents/${id}`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // DELETE /api/v1/documents/{id}
+  // response: { success, message }
+  deleteDocument: async (id) => {
+    const response = await axios.delete(`${API_URL}/documents/${id}`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  // ── Alias dùng trong DocumentsPage.jsx & DocumentsDetailPage.jsx ────
+
+  // DocumentsPage:       const res = await documentService.getAll()
+  //                      setDocs(res.data ?? [])
+  // Backend trả về:      { success, count, data: [...] }
+  getAll: async () => {
+    const response = await axios.get(`${API_URL}/documents`, {
+      headers: getAuthHeader(),
+    });
+    return response.data; // { success, count, data: [...] }
+  },
+
+  // DocumentsDetailPage: const res = await documentService.getById(id)
+  //                      setDoc(res.data)
+  // Backend trả về:      { success, data: {...} }
   getById: async (id) => {
-    const res = await api.get(`/documents/${id}`);
-    return res.data;
+    const response = await axios.get(`${API_URL}/documents/${id}`, {
+      headers: getAuthHeader(),
+    });
+    return response.data; // { success, data: {...} }
   },
 
-  /**
-   * Tạo tài liệu mới
-   * @param {Object} data - Thông tin tài liệu
-   * @param {string} data.title - Tiêu đề
-   * @param {string} data.description - Mô tả
-   * @param {string} data.category - Danh mục
-   * @param {string} data.content - Nội dung
-   * @returns {Promise<Object>} Tài liệu vừa tạo
-   */
-  create: async (data) => {
-    const payload = {
-      title: data.title,
-      description: data.description,
-      category: data.category,
-      content: data.content,
-    };
-    const res = await api.post("/documents", payload);
-    return res.data;
-  },
-
-  /**
-   * Cập nhật tài liệu
-   * @param {string|number} id - ID tài liệu
-   * @param {Object} data - Thông tin cần cập nhật
-   * @returns {Promise<Object>} Tài liệu sau khi cập nhật
-   */
-  update: async (id, data) => {
-    const payload = {
-      title: data.title,
-      description: data.description,
-      category: data.category,
-      content: data.content,
-    };
-    const res = await api.put(`/documents/${id}`, payload);
-    return res.data;
-  },
-
-  /**
-   * Xoá tài liệu
-   * @param {string|number} id - ID tài liệu
-   * @returns {Promise<Object>} Kết quả xoá
-   */
+  // DocumentsPage:       await documentService.delete(deleteTarget.id)
   delete: async (id) => {
-    const res = await api.delete(`/documents/${id}`);
-    return res.data;
+    const response = await axios.delete(`${API_URL}/documents/${id}`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
   },
 
-  /**
-   * Upload file tài liệu (PDF, Word, ...)
-   * @param {File} file - File cần upload
-   * @param {Object} metadata - Thông tin kèm theo
-   * @param {string} metadata.title - Tiêu đề tài liệu
-   * @param {string} metadata.category - Danh mục
-   * @returns {Promise<Object>} Thông tin file sau khi upload
-   */
-  upload: async (file, metadata = {}) => {
+  // DocumentsPage:       await documentService.upload(file, { title })
+  upload: async (file, { title }) => {
     const formData = new FormData();
     formData.append("file", file);
-    Object.entries(metadata).forEach(([key, value]) =>
-      formData.append(key, value)
-    );
-    const res = await api.post("/documents/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+    formData.append("title", title);
+    const response = await axios.post(`${API_URL}/documents/upload`, formData, {
+      headers: {
+        ...getAuthHeader(),
+        "Content-Type": "multipart/form-data",
+      },
     });
-    return res.data;
+    return response.data;
   },
 };

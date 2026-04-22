@@ -26,26 +26,26 @@ export const authService = {
     return res.data;
   },
 
-  login: async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
-    return res.data;
-  },
+login: async (email, password) => {
+  const res = await api.post("/auth/login", { email, password });
 
-  getMe: async () => {
-    const res = await api.get("/auth/profile");
-    return res.data;
-  },
+  if (res.data.token) {
 
-  updateProfile: async (data) => {
-    const res = await api.put("/auth/profile", data);
-    return res.data;
-  },
+    localStorage.setItem(
+      "token",
+      JSON.stringify({
+        access_token: res.data.token,
+        refresh_token: res.data.refresh_token ?? null,
+      })
+    );
+  }
 
-  changePassword: async (currentPassword, newPassword) => {
-    const res = await api.post("/auth/change-password", { currentPassword, newPassword });
-    return res.data;
-  },
-
+  if (res.data.data) {
+    localStorage.setItem("user", JSON.stringify(res.data.data));
+    localStorage.setItem("role", res.data.data.role);
+  }
+  return res.data;
+},
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");

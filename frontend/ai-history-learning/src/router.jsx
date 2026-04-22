@@ -18,21 +18,21 @@ import ReportManagement from "./pages/Admin/ReportManagement";
 
 // Teacher
 import Teacher from "./pages/Admin/Teacher.jsx";
-import QuizPage from "./pages/Quizzes/QuizPage";
-import QuizResultPage from "./pages/Quizzes/QuizResultPage";
-import DocumentsPage from "./pages/Documents/DocumentsPage";
-import DocumentsDetailPage from "./pages/Documents/DocumentsDetailPage";
-import AssignmentStatistics from "./pages/Quizzes/AssignmentStatistics";
-import ProfilePage from "./pages/Profile/ProfilePage";
+import QuizPage from "./pages/Teacher/Quizzes/QuizPage.jsx";
+import QuizResultPage from "./pages/Teacher/Quizzes/QuizResultPage.jsx";
+import DocumentsPage from "./pages/Teacher/Documents/DocumentsPage.jsx";
+import DocumentsDetailPage from "./pages/Teacher/Documents/DocumentsDetailPage.jsx";
+import AssignmentStatistics from "./pages/Teacher/Quizzes/AssignmentStatistics.jsx";
+import ProfilePage from "./pages/Teacher/Profile/ProfilePage.jsx";
 
 // Bài giảng & Bài kiểm tra (fullscreen)
-import Baigiangpage from "./pages/Documents/Baigiangpage.jsx";
-import Baikiemtra from "./pages/Documents/Baikiemtra.jsx";
+import Baigiangpage from "./pages/Teacher/Documents/Baigiangpage.jsx";
+import Baikiemtra from "./pages/Teacher/Documents/Baikiemtra.jsx";
 
 // Flashcard (Teacher)
-import Flashcards from "./pages/Flashcards/FlashcardPage.jsx";
-import AddFlashcards from "./pages/Flashcards/AddFlashcard.jsx";
-import FlashcardDetail from "./pages/Flashcards/FlashcardDetail.jsx";
+import Flashcards from "./pages/Teacher/Flashcards/FlashcardPage.jsx";
+import AddFlashcards from "./pages/Teacher/Flashcards/AddFlashcard.jsx";
+import FlashcardDetail from "./pages/Teacher/Flashcards/FlashcardDetail.jsx";
 
 // Learner
 import Dashboard from "./pages/Learner/Dashboard";
@@ -167,6 +167,7 @@ export default function AppRouter() {
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="flashcards/add" element={<AddFlashcards />} />
           <Route path="flashcards/:id" element={<FlashcardDetail />} />
+          <Route path="quiz/:id" element={<QuizPage />} />
         </Route>
 
       </Route>

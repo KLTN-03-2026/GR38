@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
-import axios from "axios";
+import { authService } from "../../services/AuthService";
 
-// CHỈ CẬP NHẬT ĐIỀU HƯỚNG TẠI ĐÂY
+// CHỈ CẬP NHẬT ĐIỀU HƯỚNG 
 const ROLE_CONFIG = {
-  ADMIN:   { path: "/admin",   label: "Quản trị viên" },
+  ADMIN: { path: "/admin", label: "Quản trị viên" },
   TEACHER: { path: "/teacher", label: "Giáo viên" },
   LEARNER: { path: "/learner", label: "Học sinh" },
 };
@@ -26,24 +26,17 @@ function LoginPage() {
     e.preventDefault();
     const err = {};
     if (!input.email) err.email = "Vui lòng nhập email";
-    if (!input.pass)  err.pass  = "Vui lòng nhập mật khẩu";
-    if (Object.keys(err).length) { setErrors(err); return; }
+    if (!input.pass) err.pass = "Vui lòng nhập mật khẩu";
+    if (Object.keys(err).length) {
+      setErrors(err);
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        "http://localhost:8000/api/v1/auth/login", // ✅ port 8000
-        { email: input.email, password: input.pass }
-      );
-
-      // API trả về: { success, token, data: { _id, fullName, email, role, ... } }
-      const { token, data: user } = res.data;
-
-      // Lưu token + thông tin user
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("role", user.role);
+  const resData = await authService.login(input.email, input.pass);
+  const user = resData.data;
 
       const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
 
@@ -58,7 +51,6 @@ function LoginPage() {
 
       const path = ROLE_CONFIG[user.role]?.path;
       if (path) navigate(path);
-
     } catch (error) {
       const msg = error.response?.data?.error ?? "Lỗi server, vui lòng thử lại";
 
@@ -69,7 +61,6 @@ function LoginPage() {
         confirmButtonColor: "#f97316",
       });
       setErrors({ pass: msg });
-
     } finally {
       setLoading(false);
     }
@@ -94,8 +85,12 @@ function LoginPage() {
             alt="logo"
             className="w-12 h-12 rounded-full object-cover mb-2 shadow"
           />
-          <h1 className="text-base font-semibold text-gray-800">Lịch sử Việt Nam</h1>
-          <p className="text-xs text-gray-400 mt-1">Nhập thông tin Email và Mật khẩu</p>
+          <h1 className="text-base font-semibold text-gray-800">
+            Lịch sử Việt Nam
+          </h1>
+          <p className="text-xs text-gray-400 mt-1">
+            Nhập thông tin Email và Mật khẩu
+          </p>
         </div>
 
         <label className="block text-sm text-gray-500 mb-1.5">Email</label>
@@ -107,12 +102,15 @@ function LoginPage() {
           onChange={handleChange}
           autoComplete="off"
           className={`w-full px-3 py-2 text-sm rounded-md border outline-none transition mb-1
-            ${errors.email
-              ? "border-red-400 bg-red-50"
-              : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
+            ${
+              errors.email
+                ? "border-red-400 bg-red-50"
+                : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
             }`}
         />
-        {errors.email && <p className="text-xs text-red-500 mb-3">{errors.email}</p>}
+        {errors.email && (
+          <p className="text-xs text-red-500 mb-3">{errors.email}</p>
+        )}
 
         <label className="block text-sm text-gray-500 mb-1.5">Mật khẩu</label>
         <input
@@ -123,12 +121,15 @@ function LoginPage() {
           onChange={handleChange}
           autoComplete="new-password"
           className={`w-full px-3 py-2 text-sm rounded-md border outline-none transition mb-1
-            ${errors.pass
-              ? "border-red-400 bg-red-50"
-              : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
+            ${
+              errors.pass
+                ? "border-red-400 bg-red-50"
+                : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
             }`}
         />
-        {errors.pass && <p className="text-xs text-red-500 mb-3">{errors.pass}</p>}
+        {errors.pass && (
+          <p className="text-xs text-red-500 mb-3">{errors.pass}</p>
+        )}
 
         <button
           onClick={handleLogin}
@@ -140,7 +141,10 @@ function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mb-2">
           Bạn chưa có tài khoản?{" "}
-          <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition">
+          <Link
+            to="/register"
+            className="text-orange-500 font-medium hover:text-orange-600 transition"
+          >
             Đăng ký
           </Link>
         </p>

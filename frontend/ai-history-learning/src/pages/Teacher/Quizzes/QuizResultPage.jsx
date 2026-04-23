@@ -6,15 +6,14 @@ export default function QuizResultPage() {
   const location = useLocation();
   const [showDetail, setShowDetail] = useState(false);
 
-  const { quiz, answers, score, total, questions, answered } = location.state ?? {};
+  const { quiz, answers, score, total, questions, answered } =
+    location.state ?? {};
 
-  if (!quiz) {
-    navigate("/teacher/quizzes");
-    return null;
-  }
+  if (!quiz) { navigate(-1); return null; }
+  
 
-  const isCompleted = answered > 0;                                          // ← MỚI
-  const percent = answered === 0 ? 0 : Math.round((score / total) * 100);   // ← MỚI
+  const isCompleted = answered > 0;
+  const percent = answered === 0 ? 0 : Math.round((score / total) * 100);
 
   const getPercentColor = () => {
     if (!isCompleted) return "text-red-500";
@@ -27,14 +26,13 @@ export default function QuizResultPage() {
     <div className="min-h-screen bg-gray-50 p-4">
       {/* Card tổng kết */}
       <div className="relative bg-gray-100 rounded-xl border border-gray-200 p-6 mb-4 text-center">
-
         {/* Badge trạng thái */}
         <span
           className={`absolute top-3 left-3 text-white text-xs px-3 py-1 rounded-full font-medium ${
-            isCompleted ? "bg-green-500" : "bg-red-500"   // ← MỚI: đỏ khi không làm câu nào
+            isCompleted ? "bg-green-500" : "bg-red-500" // đỏ khi không làm câu nào
           }`}
         >
-          {isCompleted ? "Hoàn Thành" : "Không Hoàn Thành"}  {/* ← MỚI */}
+          {isCompleted ? "Hoàn Thành" : "Không Hoàn Thành"} {/* ← MỚI */}
         </span>
 
         <div className="text-5xl mb-2">👑</div>
@@ -44,13 +42,14 @@ export default function QuizResultPage() {
         {/* Stat pills */}
         <div className="flex justify-center gap-2 mt-4 flex-wrap">
           <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-3 py-1.5 rounded-full">
-            Hoàn thành {answered}/{total} câu   {/* ← MỚI: answered thay vì total */}
+            Hoàn thành {answered}/{total} câu{" "}
+            {/* ← MỚI: answered thay vì total */}
           </span>
           <span className="bg-green-100 text-green-800 text-xs font-medium px-3 py-1.5 rounded-full">
             Đúng {score} câu
           </span>
           <span className="bg-red-100 text-red-800 text-xs font-medium px-3 py-1.5 rounded-full">
-            Sai {answered - score} câu           {/* ← MỚI: answered - score */}
+            Sai {answered - score} câu {/* ← MỚI: answered - score */}
           </span>
         </div>
       </div>
@@ -72,7 +71,10 @@ export default function QuizResultPage() {
             const isCorrect = isAnswered && userAnswer === q.answer;
 
             return (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div
+                key={i}
+                className="bg-white rounded-xl border border-gray-200 p-4"
+              >
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <p className="text-sm font-medium text-gray-800">
                     Câu {i + 1}: {q.q}
@@ -82,8 +84,8 @@ export default function QuizResultPage() {
                       !isAnswered
                         ? "bg-gray-100 text-gray-500"
                         : isCorrect
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-600"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-600"
                     }`}
                   >
                     {!isAnswered ? "Chưa làm" : isCorrect ? "Đúng" : "Sai"}
@@ -108,7 +110,11 @@ export default function QuizResultPage() {
                     <div key={j} className={cls}>
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ${
-                          isAnswer ? "bg-green-500" : isChosen ? "bg-red-400" : "bg-gray-300"
+                          isAnswer
+                            ? "bg-green-500"
+                            : isChosen
+                              ? "bg-red-400"
+                              : "bg-gray-300"
                         }`}
                       />
                       <span className="flex-1">{opt}</span>
@@ -118,7 +124,9 @@ export default function QuizResultPage() {
                         </span>
                       )}
                       {isChosen && !isAnswer && (
-                        <span className="text-xs text-red-500 ml-auto">✗ Bạn chọn</span>
+                        <span className="text-xs text-red-500 ml-auto">
+                          ✗ Bạn chọn
+                        </span>
                       )}
                     </div>
                   );
@@ -130,7 +138,15 @@ export default function QuizResultPage() {
       )}
 
       <button
-        onClick={() => navigate("/teacher/quizzes")}
+        onClick={() => {
+          if (location.state?.documentId) {
+            navigate(`/teacher/documents/${location.state.documentId}`, {
+              state: { activeTab: "Quizz" }, // mở thẳng tab Quizz
+            });
+          } else {
+            navigate(-1);
+          }
+        }}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg text-sm font-medium"
       >
         Quay lại danh sách

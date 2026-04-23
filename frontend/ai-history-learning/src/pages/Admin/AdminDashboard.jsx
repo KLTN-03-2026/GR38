@@ -10,6 +10,8 @@ import {
   Users,
 } from "lucide-react";
 
+const API = "http://localhost:8000/api/v1";
+
 // Component con để hiển thị các thẻ số liệu
 const StatCard = ({ label, value, detail, icon: Icon }) => (
   <div className="flex-1 min-w-[200px] p-6 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 
+const API = "http://localhost:8000/api/v1";
+
 const ReportManagement = () => {
   const [reportData, setReportData] = useState([
     {

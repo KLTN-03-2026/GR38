@@ -1,7 +1,7 @@
 // DocumentsDetailPage.jsx
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { documentService } from "../../../services/DocumentService";
+import { documentService } from "../../../services/documentService";
 import api from "../../../lib/api";
 import QuizPageInline from "./QuizPageInline";
 import FlashcardPageInline from "./FlashcardPageInline";
@@ -299,7 +299,7 @@ export default function DocumentsDetailPage() {
   const loadQuizList = async () => {
     try {
       setQuizLoading(true);
-      const res = await api.get(`/quizzes/${id}`);
+      const res = await api.get(`/quizzes/document/${id}`);
       const raw = res.data.data ?? res.data ?? [];
       setQuizList(Array.isArray(raw) ? raw : []);
     } catch (err) {

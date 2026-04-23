@@ -56,25 +56,61 @@ if (typeof document !== "undefined" && !document.getElementById("docs-anim")) {
   document.head.appendChild(el);
 }
 
-const DEFAULT_COVERS = ["/anh1.jpg", "/anh2.jpg", "/anh3.jpg", "/anh6.jpg"];
-const getCover = (doc, idx) => doc.coverImage || DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
-
+const DEFAULT_COVERS = [
+  "/anh1.jpg",
+  "/anh2.jpg",
+  "/anh3.jpg",
+  "/anh4.jpg",
+  "/anh5.jpg",
+  "/anh6.jpg",
+];
+const getCover = (doc, idx) =>
+  DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
 const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
-  <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
-    <div className="modal-box bg-white rounded-2xl shadow-xl w-[300px] p-7 text-center" onClick={(e) => e.stopPropagation()}>
+  <div
+    className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    onClick={onCancel}
+  >
+    <div
+      className="modal-box bg-white rounded-2xl shadow-xl w-[300px] p-7 text-center"
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-100">
-        <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        <svg
+          className="w-6 h-6 text-red-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
         </svg>
       </div>
-      <p className="text-base font-semibold text-gray-800 mb-1">Xoá tài liệu?</p>
+      <p className="text-base font-semibold text-gray-800 mb-1">
+        Xoá tài liệu?
+      </p>
       <p className="text-sm text-gray-400 mb-6 leading-relaxed line-clamp-2">
-        Bạn có chắc muốn xoá <span className="font-medium text-gray-600">"{title}"</span>? Hành động này không thể hoàn tác.
+        Bạn có chắc muốn xoá{" "}
+        <span className="font-medium text-gray-600">"{title}"</span>? Hành động
+        này không thể hoàn tác.
       </p>
       <div className="flex gap-2">
-        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Huỷ</button>
-        <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-500 font-medium hover:bg-red-100 transition-colors">Xoá</button>
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          Huỷ
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-500 font-medium hover:bg-red-100 transition-colors"
+        >
+          Xoá
+        </button>
       </div>
     </div>
   </div>
@@ -93,26 +129,48 @@ function DocCard({ doc, idx, onDelete, onCardClick, onTagClick }) {
           className="card-img w-full h-36 object-cover bg-gray-100"
         />
         <button
-          onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(doc);
+          }}
           className="delete-btn absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow"
         >
-          <svg className="w-3.5 h-3.5 text-gray-400 hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          <svg
+            className="w-3.5 h-3.5 text-gray-400 hover:text-red-500 transition-colors"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
           </svg>
         </button>
 
-        <span className={`absolute top-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-          doc.status === "ready"      ? "bg-green-100 text-green-700" :
-          doc.status === "processing" ? "bg-orange-100 text-orange-600" :
-                                        "bg-red-100 text-red-500"
-        }`}>
-          {doc.status === "ready" ? "Đã xử lý" : doc.status === "processing" ? "Đang xử lý..." : "Lỗi"}
+        <span
+          className={`absolute top-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+            doc.status === "ready"
+              ? "bg-green-100 text-green-700"
+              : doc.status === "processing"
+                ? "bg-orange-100 text-orange-600"
+                : "bg-red-100 text-red-500"
+          }`}
+        >
+          {doc.status === "ready"
+            ? "Đã xử lý"
+            : doc.status === "processing"
+              ? "Đang xử lý..."
+              : "Lỗi"}
         </span>
       </div>
 
       <div className="p-3">
-        <p className="text-sm font-medium text-gray-800 mb-1.5 line-clamp-2">{doc.title}</p>
+        <p className="text-sm font-medium text-gray-800 mb-1.5 line-clamp-2">
+          {doc.title}
+        </p>
         <p className="text-xs text-gray-400 mb-2 truncate">📄 {doc.fileName}</p>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-gray-400">
@@ -123,7 +181,10 @@ function DocCard({ doc, idx, onDelete, onCardClick, onTagClick }) {
           {["Bài giảng", "Bài kiểm tra"].map((tag) => (
             <span
               key={tag}
-              onClick={(e) => { e.stopPropagation(); onTagClick(doc, tag); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTagClick(doc, tag);
+              }}
               className={`tag-chip text-xs px-2.5 py-0.5 rounded-full font-medium cursor-pointer ${
                 tag === "Bài giảng"
                   ? "bg-blue-100 text-blue-700"
@@ -158,7 +219,6 @@ export default function DocumentsPage() {
 
   const ITEMS_PER_PAGE = 6;
 
-  // ✅ Dùng documentService thay vì axios trực tiếp
   const fetchDocs = async () => {
     try {
       setLoading(true);
@@ -171,7 +231,9 @@ export default function DocumentsPage() {
     }
   };
 
-  useEffect(() => { fetchDocs(); }, []);
+  useEffect(() => {
+    fetchDocs();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -181,13 +243,17 @@ export default function DocumentsPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const changeBanner = (i) => { setBannerIndex(i); setBannerKey((k) => k + 1); };
+  const changeBanner = (i) => {
+    setBannerIndex(i);
+    setBannerKey((k) => k + 1);
+  };
 
-  // ✅ Dùng documentService.delete
   const handleDeleteConfirm = async () => {
     try {
       await documentService.delete(deleteTarget.id);
-      setDocs((prev) => prev.filter((d) => d._id.toString() !== deleteTarget.id.toString()));
+      setDocs((prev) =>
+        prev.filter((d) => d._id.toString() !== deleteTarget.id.toString()),
+      );
       setDeleteTarget(null);
     } catch (err) {
       console.error("Lỗi xoá:", err);
@@ -201,12 +267,14 @@ export default function DocumentsPage() {
     if (addErrors[name]) setAddErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // ✅ Dùng documentService.upload
   const handleAddSubmit = async () => {
     const err = {};
     if (!addForm.title.trim()) err.title = "Vui lòng nhập tên tài liệu";
     if (!addForm.file) err.file = "Vui lòng chọn file PDF";
-    if (Object.keys(err).length) { setAddErrors(err); return; }
+    if (Object.keys(err).length) {
+      setAddErrors(err);
+      return;
+    }
 
     setAddLoading(true);
     try {
@@ -216,7 +284,9 @@ export default function DocumentsPage() {
       setGridKey((k) => k + 1);
     } catch (err) {
       console.error("Lỗi upload:", err);
-      setAddErrors({ file: err.response?.data?.error ?? "Lỗi khi upload tài liệu" });
+      setAddErrors({
+        file: err.response?.data?.error ?? "Lỗi khi upload tài liệu",
+      });
     } finally {
       setAddLoading(false);
     }
@@ -239,20 +309,26 @@ export default function DocumentsPage() {
   };
 
   const filtered = docs.filter((d) =>
-    d.title.toLowerCase().includes(search.toLowerCase())
+    d.title.toLowerCase().includes(search.toLowerCase()),
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const paginated = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
 
-  const handleSearch = (val) => { setSearch(val); setCurrentPage(1); setGridKey((k) => k + 1); };
-  const handlePageChange = (p) => { setCurrentPage(p); setGridKey((k) => k + 1); window.scrollTo(0, 0); };
+  const handleSearch = (val) => {
+    setSearch(val);
+    setCurrentPage(1);
+    setGridKey((k) => k + 1);
+  };
+  const handlePageChange = (p) => {
+    setCurrentPage(p);
+    setGridKey((k) => k + 1);
+    window.scrollTo(0, 0);
+  };
 
   const handleCardClick = (doc) => {
-    navigate(`/teacher/documents/${doc._id}`, { state: { doc, activeTab: "Thông tin" } });
+    navigate(`/teacher/documents/${doc._id}`, {
+      state: { doc, activeTab: "Thông tin" },
+    });
   };
 
   const handleTagClick = (doc, tag) => {
@@ -265,43 +341,70 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex-1 bg-gray-50 overflow-y-auto">
-
       {/* Search + Thêm */}
-      <div className="page-header px-6 pt-5 pb-3 flex items-center gap-3">
-        <div className="search-bar flex flex-1 border border-gray-200 rounded-lg overflow-hidden bg-white">
-          <div className="flex items-center px-3 text-gray-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+      <div className="page-header px-6 pt-5 pb-3">
+        <div className="w-full h-[53px] bg-white border border-gray-200 rounded-[10px] flex items-center px-5 justify-between shadow-sm">
+          <div className="flex items-center bg-[#F9F9F9] border border-gray-200 rounded-[6px] px-3 h-[38px] w-full max-w-[500px] gap-2">
+            <svg
+              width="16"
+              height="16"
+              className="text-gray-400 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+              />
             </svg>
+            <input
+              type="text"
+              placeholder="Tìm kiếm tài liệu..."
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="bg-transparent border-none outline-none text-[14px] w-full text-gray-700"
+            />
+            {search && (
+              <button
+                onClick={() => handleSearch("")}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            )}
           </div>
-          <input
-            type="text" placeholder="Tìm kiếm tài liệu"
-            value={search} onChange={(e) => handleSearch(e.target.value)}
-            className="flex-1 py-2 text-sm outline-none text-gray-700 placeholder-gray-400"
-          />
-          {search && (
-            <button onClick={() => handleSearch("")} className="px-3 text-gray-400 hover:text-gray-600">×</button>
-          )}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-[#F26739] text-white text-[14px] font-semibold rounded-[6px] px-6 h-[36px] hover:bg-orange-600 transition-colors shadow-sm"
+          >
+            + Thêm tài liệu
+          </button>
         </div>
-        <button className="btn-primary bg-[#F26739] text-white text-sm px-5 py-2 rounded-lg">Tìm</button>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary bg-[#F26739] text-white text-sm px-4 py-2 rounded-lg whitespace-nowrap"
-        >
-          + Thêm tài liệu
-        </button>
       </div>
 
       {/* Banner */}
       <div className="px-6 mb-2">
-        <div className="relative w-full rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: "16/7" }}>
-          <img key={bannerKey} src={banners[bannerIndex]} alt="banner"
-            className="banner-img w-full h-full object-cover object-center" />
+        <div
+          className="relative w-full rounded-xl overflow-hidden shadow-sm"
+          style={{ height: "350px" }}
+        >
+          <img
+            key={bannerKey}
+            src={banners[bannerIndex]}
+            alt="banner"
+            className="banner-img w-full h-full object-cover object-center"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
             {banners.map((_, i) => (
-              <button key={i} onClick={() => changeBanner(i)}
-                className={`dot-btn h-1.5 rounded-full ${i === bannerIndex ? "bg-blue-500 w-8" : "bg-gray-300 w-4"}`} />
+              <button
+                key={i}
+                onClick={() => changeBanner(i)}
+                className={`dot-btn h-1.5 rounded-full ${i === bannerIndex ? "bg-blue-500 w-8" : "bg-gray-300 w-4"}`}
+              />
             ))}
           </div>
         </div>
@@ -313,7 +416,9 @@ export default function DocumentsPage() {
           <h2 className="text-base font-semibold text-gray-800">
             Tài liệu của tôi
             {filtered.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-gray-400">({filtered.length})</span>
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                ({filtered.length})
+              </span>
             )}
           </h2>
         </div>
@@ -321,7 +426,10 @@ export default function DocumentsPage() {
         {loading ? (
           <div className="grid grid-cols-3 gap-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
+              <div
+                key={i}
+                className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse"
+              >
                 <div className="w-full h-36 bg-gray-200" />
                 <div className="p-3 space-y-2">
                   <div className="h-4 bg-gray-200 rounded w-3/4" />
@@ -338,24 +446,40 @@ export default function DocumentsPage() {
           </div>
         ) : (
           <div key={gridKey} className="grid grid-cols-3 gap-5">
-            {paginated.map((doc, idx) => (
-              <div key={doc._id} style={{ animationDelay: `${idx * 0.07}s` }}>
-                <DocCard
-                  doc={doc}
-                  idx={(currentPage - 1) * ITEMS_PER_PAGE + idx}
-                  onDelete={(d) => setDeleteTarget({ id: d._id, title: d.title })}
-                  onCardClick={handleCardClick}
-                  onTagClick={handleTagClick}
-                />
-              </div>
-            ))}
+            {filtered
+              .slice(
+                (currentPage - 1) * ITEMS_PER_PAGE,
+                currentPage * ITEMS_PER_PAGE,
+              )
+              .map((doc, localIdx) => {
+                const globalIdx =
+                  (currentPage - 1) * ITEMS_PER_PAGE + localIdx;
+                return (
+                  <div
+                    key={doc._id}
+                    style={{ animationDelay: `${localIdx * 0.07}s` }}
+                  >
+                    <DocCard
+                      doc={doc}
+                      idx={globalIdx}
+                      onDelete={(d) =>
+                        setDeleteTarget({ id: d._id, title: d.title })
+                      }
+                      onCardClick={handleCardClick}
+                      onTagClick={handleTagClick}
+                    />
+                  </div>
+                );
+              })}
           </div>
         )}
 
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
-            <span className="text-xs text-gray-500">Trang {currentPage} / {totalPages}</span>
+            <span className="text-xs text-gray-500">
+              Trang {currentPage} / {totalPages}
+            </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
@@ -365,17 +489,22 @@ export default function DocumentsPage() {
                 &lt; Trước
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => handlePageChange(p)}
+                <button
+                  key={p}
+                  onClick={() => handlePageChange(p)}
                   className={`pagination-btn w-7 h-7 text-xs rounded-md border ${
                     currentPage === p
                       ? "bg-blue-500 text-white border-blue-500"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}>
+                  }`}
+                >
                   {p}
                 </button>
               ))}
               <button
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                onClick={() =>
+                  handlePageChange(Math.min(totalPages, currentPage + 1))
+                }
                 disabled={currentPage === totalPages}
                 className="pagination-btn px-3 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40"
               >
@@ -401,59 +530,114 @@ export default function DocumentsPage() {
           <div className="modal-box bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl">
             <div className="flex items-start justify-between px-6 pt-5 pb-3">
               <div>
-                <h2 className="text-base font-semibold text-gray-800">Thêm tài liệu</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Upload file PDF để AI xử lý</p>
+                <h2 className="text-base font-semibold text-gray-800">
+                  Thêm tài liệu
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Upload file PDF để AI xử lý
+                </p>
               </div>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 text-xl leading-none mt-0.5">×</button>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none mt-0.5"
+              >
+                ×
+              </button>
             </div>
 
             <div className="px-6 pb-4 space-y-4">
               <div>
-                <label className="block text-sm text-gray-700 mb-1.5">Tên tài liệu</label>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Tên tài liệu
+                </label>
                 <input
-                  type="text" name="title"
+                  type="text"
+                  name="title"
                   placeholder="VD: Chiến tranh chống Mỹ cứu nước"
-                  value={addForm.title} onChange={handleAddChange}
+                  value={addForm.title}
+                  onChange={handleAddChange}
                   className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-all duration-200 ${
                     addErrors.title
                       ? "border-red-400 bg-red-50"
                       : "border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   }`}
                 />
-                {addErrors.title && <p className="text-xs text-red-500 mt-1">{addErrors.title}</p>}
+                {addErrors.title && (
+                  <p className="text-xs text-red-500 mt-1">{addErrors.title}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm text-gray-700 mb-2">File PDF</label>
+                <label className="block text-sm text-gray-700 mb-2">
+                  File PDF
+                </label>
                 <label className="inline-flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition mb-3">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0L8 8m4-4l4 4" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0L8 8m4-4l4 4"
+                    />
                   </svg>
                   Chọn file
-                  <input type="file" accept="application/pdf" className="hidden"
-                    onChange={(e) => handleFileChange(e.target.files?.[0])} />
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleFileChange(e.target.files?.[0])}
+                  />
                 </label>
 
                 <div
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
                   onDragLeave={() => setDragOver(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileChange(e.dataTransfer.files?.[0]); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    handleFileChange(e.dataTransfer.files?.[0]);
+                  }}
                   className={`w-full h-44 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300 ${
-                    dragOver ? "border-orange-400 bg-orange-50 scale-[1.01]" : "border-gray-200 bg-white"
+                    dragOver
+                      ? "border-orange-400 bg-orange-50 scale-[1.01]"
+                      : "border-gray-200 bg-white"
                   }`}
                 >
                   {addForm.file ? (
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" />
+                        <svg
+                          className="w-5 h-5 text-red-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z"
+                          />
                         </svg>
                       </div>
-                      <p className="text-sm text-gray-700 font-medium max-w-xs truncate">{addForm.file.name}</p>
-                      <p className="text-xs text-gray-400">{(addForm.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-sm text-gray-700 font-medium max-w-xs truncate">
+                        {addForm.file.name}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {(addForm.file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
                       <button
-                        onClick={() => setAddForm((prev) => ({ ...prev, file: null }))}
+                        onClick={() =>
+                          setAddForm((prev) => ({ ...prev, file: null }))
+                        }
                         className="text-xs text-red-400 hover:text-red-600 transition-colors"
                       >
                         Xoá file
@@ -461,22 +645,37 @@ export default function DocumentsPage() {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <svg
+                        className="w-8 h-8"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
                       </svg>
-                      <p className="text-sm font-medium">Kéo thả file PDF vào đây</p>
+                      <p className="text-sm font-medium">
+                        Kéo thả file PDF vào đây
+                      </p>
                       <p className="text-xs">hoặc bấm "Chọn file" bên trên</p>
                     </div>
                   )}
                 </div>
-                {addErrors.file && <p className="text-xs text-red-500 mt-1">{addErrors.file}</p>}
+                {addErrors.file && (
+                  <p className="text-xs text-red-500 mt-1">{addErrors.file}</p>
+                )}
               </div>
             </div>
 
             <div className="flex justify-end gap-2 px-6 pb-5 mt-1">
-              <button onClick={closeModal}
-                className="px-5 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition">
+              <button
+                onClick={closeModal}
+                className="px-5 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition"
+              >
                 Huỷ
               </button>
               <button

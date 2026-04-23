@@ -2,7 +2,7 @@ import api from "../lib/api";
 
 export const quizService = {
   getAll: async (documentId) => {
-    const res = await api.get(`/quizzes/${documentId}`);
+    const res = await api.get(`/quizzes/document/${documentId}`);
     return res.data;
   },
 

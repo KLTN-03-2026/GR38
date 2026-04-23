@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
+import api from "../../../lib/api";
 import {
   ChevronLeft,
   Clock,
@@ -15,116 +15,200 @@ import {
   BookOpen,
   PanelLeftClose,
   PanelLeftOpen,
-  X,
-  SlidersHorizontal,
 } from "lucide-react";
-
-const API = "http://localhost:8000/api/v1";
 const TABS = ["Bài giảng", "Quizz", "FlashCard"];
+// ── Format text PDF ──
+function formatText(text) {
+  return text
+    .replace(/\[\d+\]/g, "")
+    .replace(/Trang_?\s*\d+/gi, "")
+    .replace(/([^\n.!?:+*\-])\n([^\n])/g, "$1 $2")
+    .replace(/\s{2,}/g, " ")
+    .replace(/([.!?])\s+([A-ZĐÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂẮẶẤẦ])/g, "$1\n\n$2")
+    .replace(/(\*\s)/g, "\n\n* ")
+    .replace(/([\+])\s+/g, "\n+ ")
+    .replace(/(\-\s)(?=[A-ZĐÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂ])/g, "\n- ")
+    .replace(/(\d+\.)\s+/g, "\n\n$1 ")
+    .replace(/([a-z]\.)\s+([A-ZĐÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂ])/g, "$1\n\n$2")
+    .replace(/-\s*>\s*/g, "\n\n➤ ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
-/* ══════════════ SHARED COMPONENTS ══════════════ */
+// ── Render nội dung text ──
 function RenderChunkContent({ text }) {
   if (!text) return null;
-  const paragraphs = text.split(/\n{2,}/).filter(Boolean);
+  const paragraphs = formatText(text)
+    .split(/\n{2,}/)
+    .filter(Boolean);
   return (
-    <>
+    <div className="space-y-4">
       {paragraphs.map((para, i) => {
-        const trimmed = para.trim();
-        const isHeading = trimmed.length < 80 && !trimmed.endsWith(".");
+        const t = para.trim();
+        if (!t) return null;
+        const isHeading =
+          t.length < 100 &&
+          !t.endsWith(".") &&
+          t.split(" ").filter((w) => /^[A-ZĐÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂ]/.test(w))
+            .length >= 3;
         if (isHeading && i === 0)
           return (
-            <h3 key={i} className="text-base font-bold text-gray-800 mt-6 mb-2">
-              {trimmed}
+            <h2 key={i} className="text-xl font-bold text-gray-900 mb-2">
+              {t}
+            </h2>
+          );
+        if (isHeading)
+          return (
+            <h3 key={i} className="text-base font-bold text-gray-800 mt-5 mb-1">
+              {t}
             </h3>
           );
+        if (/^[\-\+\*•]/.test(t))
+          return (
+            <div
+              key={i}
+              className="flex gap-2 text-sm text-gray-700 leading-relaxed pl-2"
+            >
+              <span className="text-[#F26739] font-bold shrink-0 mt-0.5">
+                •
+              </span>
+              <span>{t.replace(/^[\-\+\*•]\s*/, "")}</span>
+            </div>
+          );
+        if (/^\d+[.\)]/.test(t))
+          return (
+            <div
+              key={i}
+              className="flex gap-2 text-sm text-gray-700 leading-relaxed pl-2"
+            >
+              <span className="text-[#F26739] font-bold shrink-0">
+                {t.match(/^\d+/)[0]}.
+              </span>
+              <span>{t.replace(/^\d+[.\)]\s*/, "")}</span>
+            </div>
+          );
         return (
-          <p key={i} className="text-sm text-gray-700 leading-relaxed mb-3">
-            {trimmed}
+          <p key={i} className="text-sm text-gray-700 leading-7 text-justify">
+            {t}
           </p>
         );
       })}
-    </>
-  );
-}
-
-function LoadingScreen({ message = "Đang tải bài giảng..." }) {
-  return (
-    <div className="h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center space-y-3">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto" />
-        <p className="text-sm text-gray-400">{message}</p>
-      </div>
     </div>
   );
 }
 
-function ErrorScreen({ message, onBack }) {
-  return (
-    <div className="h-screen flex flex-col items-center justify-center gap-3 bg-gray-50">
-      <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-1">
-        <AlertTriangle className="w-6 h-6 text-red-400" />
-      </div>
-      <p className="text-sm font-medium text-gray-700">{message}</p>
-      <button
-        onClick={onBack}
-        className="mt-2 text-sm text-[#F26739] hover:underline font-medium"
+// ── Shared UI ──
+const LoadingScreen = ({ message = "Đang tải bài giảng..." }) => (
+  <div className="h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center space-y-3">
+      <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto" />
+      <p className="text-sm text-gray-400">{message}</p>
+    </div>
+  </div>
+);
+
+const ErrorScreen = ({ message, onBack }) => (
+  <div className="h-screen flex flex-col items-center justify-center gap-3 bg-gray-50">
+    <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+      <AlertTriangle className="w-6 h-6 text-red-400" />
+    </div>
+    <p className="text-sm font-medium text-gray-700">{message}</p>
+    <button
+      onClick={onBack}
+      className="mt-2 text-sm text-[#F26739] hover:underline font-medium"
+    >
+      ← Quay lại
+    </button>
+  </div>
+);
+
+const EmptyState = ({ icon, message, sub }) => (
+  <div className="flex flex-col items-center justify-center py-14 gap-3">
+    <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300">
+      {icon}
+    </div>
+    <p className="text-sm font-medium text-gray-500">{message}</p>
+    {sub && <p className="text-xs text-gray-400 text-center max-w-xs">{sub}</p>}
+  </div>
+);
+
+const ListItem = ({
+  index,
+  title,
+  sub,
+  badge,
+  badgeColor,
+  accent,
+  onClick,
+  rightSlot,
+}) => (
+  <div
+    onClick={onClick}
+    className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition cursor-pointer group border-b border-gray-50 last:border-0"
+  >
+    <div className="flex items-center gap-3 min-w-0">
+      <div
+        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${accent}`}
       >
-        ← Quay lại
-      </button>
-    </div>
-  );
-}
-
-function CompletionModal({ title, onBack, onGoToQuiz }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-[340px] p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-green-100">
-          <Check className="w-8 h-8 text-green-500" strokeWidth={2.5} />
-        </div>
-        <p className="text-lg font-bold text-gray-800 mb-1">Hoàn thành!</p>
-        <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-          Bạn đã hoàn thành bài giảng
-          <br />
-          <span className="font-medium text-gray-600">"{title}"</span>
-        </p>
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={onGoToQuiz}
-            className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2"
-          >
-            <ClipboardList size={15} /> Làm bài kiểm tra
-          </button>
-          <button
-            onClick={onBack}
-            className="w-full py-2.5 rounded-xl bg-[#F26739] text-white text-sm font-semibold hover:bg-orange-600 transition"
-          >
-            Quay về danh sách tài liệu
-          </button>
-        </div>
+        {index + 1}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">{title}</p>
+        <p className="text-xs text-gray-400">{sub}</p>
       </div>
     </div>
-  );
-}
+    <div className="flex items-center gap-2 shrink-0 ml-3">
+      {badge && (
+        <span
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}
+        >
+          {badge}
+        </span>
+      )}
+      {rightSlot}
+      <ArrowRight
+        size={15}
+        className="text-gray-300 group-hover:text-gray-500 transition"
+      />
+    </div>
+  </div>
+);
 
-/* ── Quiz Generate Modal ── */
-function QuizGenerateModal({ onConfirm, onCancel, loading }) {
+// ── Modals ──
+const CompletionModal = ({ title, onBack, onGoToQuiz }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl shadow-xl w-[340px] p-8 text-center">
+      <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-green-100">
+        <Check className="w-8 h-8 text-green-500" strokeWidth={2.5} />
+      </div>
+      <p className="text-lg font-bold text-gray-800 mb-1">Hoàn thành!</p>
+      <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+        Bạn đã hoàn thành bài giảng
+        <br />
+        <span className="font-medium text-gray-600">"{title}"</span>
+      </p>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={onGoToQuiz}
+          className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2"
+        >
+          <ClipboardList size={15} /> Làm bài kiểm tra
+        </button>
+        <button
+          onClick={onBack}
+          className="w-full py-2.5 rounded-xl bg-[#F26739] text-white text-sm font-semibold hover:bg-orange-600 transition"
+        >
+          Quay về danh sách tài liệu
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const QuizGenerateModal = ({ onConfirm, onCancel, loading }) => {
   const [title, setTitle] = useState("");
   const [numQuestions, setNumQuestions] = useState(5);
-
-  const handleChange = (e) => {
-    const val = e.target.value;
-    if (val === "") {
-      setNumQuestions("");
-      return;
-    }
-    const n = parseInt(val, 10);
-    if (!isNaN(n)) setNumQuestions(Math.min(10, Math.max(1, n)));
-  };
-
-  const isValid =
-    numQuestions !== "" && numQuestions >= 1 && numQuestions <= 10;
-
+  const isValid = numQuestions >= 1 && numQuestions <= 10;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -144,7 +228,6 @@ function QuizGenerateModal({ onConfirm, onCancel, loading }) {
         <p className="text-xs text-gray-400 mb-5 leading-relaxed">
           AI sẽ tự động phân tích nội dung tài liệu và tạo câu hỏi phù hợp.
         </p>
-
         <div className="mb-3 text-left">
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
             Tiêu đề bài kiểm tra
@@ -158,7 +241,6 @@ function QuizGenerateModal({ onConfirm, onCancel, loading }) {
             className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-[#F26739] bg-gray-50 focus:bg-white transition disabled:opacity-50"
           />
         </div>
-
         <div className="mb-6 text-left">
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
             Số câu hỏi{" "}
@@ -171,18 +253,15 @@ function QuizGenerateModal({ onConfirm, onCancel, loading }) {
             min={1}
             max={10}
             value={numQuestions}
-            onChange={handleChange}
+            onChange={(e) =>
+              setNumQuestions(
+                Math.min(10, Math.max(1, parseInt(e.target.value) || 1)),
+              )
+            }
             disabled={loading}
-            placeholder="1 – 10"
             className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-[#F26739] bg-gray-50 focus:bg-white transition disabled:opacity-50 text-center font-semibold text-gray-700"
           />
-          {numQuestions !== "" && (numQuestions < 1 || numQuestions > 10) && (
-            <p className="text-xs text-red-400 mt-1.5 text-center">
-              Vui lòng nhập từ 1 đến 10 câu
-            </p>
-          )}
         </div>
-
         <div className="flex gap-2">
           <button
             onClick={onCancel}
@@ -193,11 +272,7 @@ function QuizGenerateModal({ onConfirm, onCancel, loading }) {
           </button>
           <button
             onClick={() =>
-              isValid &&
-              onConfirm({
-                title: title.trim(),
-                numQuestions: Number(numQuestions),
-              })
+              isValid && onConfirm({ title: title.trim(), numQuestions })
             }
             disabled={loading || !isValid}
             className="flex-1 py-2.5 rounded-xl text-sm text-white font-medium bg-[#F26739] hover:bg-orange-600 transition flex items-center justify-center gap-2 disabled:opacity-60"
@@ -216,158 +291,71 @@ function QuizGenerateModal({ onConfirm, onCancel, loading }) {
       </div>
     </div>
   );
-}
+};
 
-/* ── Flashcard Generate Modal ── */
-function FlashGenerateModal({ onConfirm, onCancel, loading }) {
-  return (
+const FlashGenerateModal = ({ onConfirm, onCancel, loading }) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center"
+    style={{ background: "rgba(0,0,0,0.38)", backdropFilter: "blur(4px)" }}
+    onClick={() => !loading && onCancel()}
+  >
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.38)", backdropFilter: "blur(4px)" }}
-      onClick={() => !loading && onCancel()}
+      className="bg-white rounded-2xl shadow-xl w-[340px] p-6 text-center"
+      onClick={(e) => e.stopPropagation()}
     >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-[340px] p-6 text-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-11 h-11 mx-auto mb-4 flex items-center justify-center rounded-full bg-purple-50 border border-purple-100">
-          <CreditCard size={20} className="text-purple-500" />
-        </div>
-        <p className="text-sm font-semibold text-gray-800 mb-1.5">
-          Tạo bộ Flashcard bằng AI?
-        </p>
-        <p className="text-xs text-gray-400 mb-6 leading-relaxed">
-          AI sẽ tự động phân tích nội dung tài liệu và tạo bộ thẻ học phù hợp.
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
-          >
-            Huỷ
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl text-sm text-white font-medium bg-purple-500 hover:bg-purple-600 transition flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={15} className="animate-spin" /> Đang tạo...
-              </>
-            ) : (
-              <>
-                <Sparkles size={15} /> Tạo ngay
-              </>
-            )}
-          </button>
-        </div>
+      <div className="w-11 h-11 mx-auto mb-4 flex items-center justify-center rounded-full bg-purple-50 border border-purple-100">
+        <CreditCard size={20} className="text-purple-500" />
       </div>
-    </div>
-  );
-}
-
-/* ── Empty State ── */
-function EmptyState({ icon, message, sub }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-14 gap-3">
-      <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300">
-        {icon}
-      </div>
-      <p className="text-sm font-medium text-gray-500">{message}</p>
-      {sub && (
-        <p className="text-xs text-gray-400 text-center max-w-xs">{sub}</p>
-      )}
-    </div>
-  );
-}
-
-/* ── List Item ── */
-function ListItem({
-  index,
-  title,
-  sub,
-  badge,
-  badgeColor,
-  accent,
-  onClick,
-  rightSlot,
-}) {
-  return (
-    <div
-      onClick={onClick}
-      className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition cursor-pointer group border-b border-gray-50 last:border-0"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${accent}`}
+      <p className="text-sm font-semibold text-gray-800 mb-1.5">
+        Tạo bộ Flashcard bằng AI?
+      </p>
+      <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+        AI sẽ tự động phân tích nội dung tài liệu và tạo bộ thẻ học phù hợp.
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          disabled={loading}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
         >
-          {index + 1}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-800 truncate">{title}</p>
-          <p className="text-xs text-gray-400">{sub}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0 ml-3">
-        {badge && (
-          <span
-            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}
-          >
-            {badge}
-          </span>
-        )}
-        {rightSlot}
-        <ArrowRight
-          size={15}
-          className="text-gray-300 group-hover:text-gray-500 transition"
-        />
+          Huỷ
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          className="flex-1 py-2.5 rounded-xl text-sm text-white font-medium bg-purple-500 hover:bg-purple-600 transition flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {loading ? (
+            <>
+              <Loader2 size={15} className="animate-spin" /> Đang tạo...
+            </>
+          ) : (
+            <>
+              <Sparkles size={15} /> Tạo ngay
+            </>
+          )}
+        </button>
       </div>
     </div>
-  );
-}
+  </div>
+);
 
-/* ══════════════ DATA HELPERS ══════════════ */
-function buildChapters(chunks = []) {
-  if (!chunks.length) return [];
-  return [
-    {
-      id: 0,
-      title: "Nội dung bài giảng",
-      content: chunks.map((c) => c.content).join("\n\n"),
-    },
-  ];
-}
-function buildChaptersFromText(text) {
-  if (!text?.trim()) return [];
-  return [{ id: 0, title: "Nội dung bài giảng", content: text }];
-}
-
-/* ══════════════════════════════════════════════════════
-   MAIN PAGE
-══════════════════════════════════════════════════════ */
+// ══════════════ MAIN PAGE ══════════════
 export default function BaiGiangPage() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const raw = localStorage.getItem("token");
-  const token = raw ? (JSON.parse(raw).access_token ?? raw) : null;
-  const headers = { Authorization: `Bearer ${token}` };
 
   const [doc, setDoc] = useState(null);
-  const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [activeTab, setActiveTab] = useState("Bài giảng");
-
   const [quizList, setQuizList] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
-
   const [flashList, setFlashList] = useState([]);
   const [flashLoading, setFlashLoading] = useState(false);
   const [showFlashModal, setShowFlashModal] = useState(false);
@@ -378,29 +366,17 @@ export default function BaiGiangPage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await axios.get(`${API}/documents/${id}`, { headers });
-        const fetchedDoc = res.data.data;
-        
-        setDoc(fetchedDoc);
-        const status = fetchedDoc.status;
-        if (status === "failed") {
-          setError("Tài liệu bị lỗi xử lý. Vui lòng xóa và tải lên lại.");
-          return;
-        }
-        if (status === "processing") {
-          setError("Tài liệu đang được xử lý. Vui lòng thử lại sau.");
-          return;
-        }
-        if (status !== "ready") {
-          setError(`Trạng thái không hợp lệ: "${status}"`);
-          return;
-        }
-        if (fetchedDoc.chunks?.length)
-          setChapters(buildChapters(fetchedDoc.chunks));
-        else if (fetchedDoc.extractedText?.trim())
-          setChapters(buildChaptersFromText(fetchedDoc.extractedText));
-        else
-          setError("Tài liệu chưa có nội dung. Vui lòng xóa và tải lên lại.");
+        const res = await api.get(`/documents/${id}`);
+        const d = res.data.data;
+        setDoc(d);
+        if (d.status === "failed")
+          return setError(
+            "Tài liệu bị lỗi xử lý. Vui lòng xóa và tải lên lại.",
+          );
+        if (d.status === "processing")
+          return setError("Tài liệu đang được xử lý. Vui lòng thử lại sau.");
+        if (d.status !== "ready")
+          return setError(`Trạng thái không hợp lệ: "${d.status}"`);
       } catch (err) {
         if (err.response?.status === 404) setError("Không tìm thấy tài liệu.");
         else if (err.response?.status === 401)
@@ -423,28 +399,29 @@ export default function BaiGiangPage() {
   const loadQuizList = async () => {
     try {
       setQuizLoading(true);
-      const res = await axios.get(`${API}/quizzes/by-document/${id}`, {
-        headers,
-      });
-      const raw = res.data.data ?? res.data ?? [];
-      setQuizList(Array.isArray(raw) ? raw : []);
-    } catch (err) {
-      console.warn("Lỗi tải quiz:", err.message);
+      const res = await api.get(`/quizzes/by-document/${id}`);
+      setQuizList(
+        Array.isArray(res.data.data ?? res.data)
+          ? (res.data.data ?? res.data)
+          : [],
+      );
+    } catch {
       setQuizList([]);
     } finally {
       setQuizLoading(false);
     }
   };
 
-  // ✅ Đã sửa: dùng path param thay vì query param
   const loadFlashList = async () => {
     try {
       setFlashLoading(true);
-      const res = await axios.get(`${API}/flashcards/${id}`, { headers });
-      const raw = res.data.data ?? res.data ?? [];
-      setFlashList(Array.isArray(raw) ? raw : []);
-    } catch (err) {
-      console.warn("Lỗi tải flashcard:", err.message);
+      const res = await api.get(`/flashcards/by-document/${id}`);
+      setFlashList(
+        Array.isArray(res.data.data ?? res.data)
+          ? (res.data.data ?? res.data)
+          : [],
+      );
+    } catch {
       setFlashList([]);
     } finally {
       setFlashLoading(false);
@@ -454,11 +431,11 @@ export default function BaiGiangPage() {
   const handleGenerateQuiz = async ({ title, numQuestions }) => {
     try {
       setGeneratingQuiz(true);
-      await axios.post(
-        `${API}/ai/generate-quiz`,
-        { documentId: id, numQuestions, title: title || undefined },
-        { headers },
-      );
+      await api.post("/ai/generate-quiz", {
+        documentId: id,
+        numQuestions,
+        title: title || undefined,
+      });
       setShowQuizModal(false);
       await loadQuizList();
     } catch (err) {
@@ -471,11 +448,7 @@ export default function BaiGiangPage() {
   const handleGenerateFlash = async () => {
     try {
       setGeneratingFlash(true);
-      await axios.post(
-        `${API}/ai/generate-flashcards`,
-        { documentId: id, count: 10 },
-        { headers },
-      );
+      await api.post("/ai/generate-flashcards", { documentId: id, count: 10 });
       setShowFlashModal(false);
       await loadFlashList();
     } catch (err) {
@@ -487,12 +460,7 @@ export default function BaiGiangPage() {
     }
   };
 
-  const currentChapter = chapters[0] ?? null;
   const progress = completed ? 100 : 0;
-  const handleComplete = () => {
-    setCompleted(true);
-    setShowCompletionModal(true);
-  };
 
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} onBack={() => navigate(-1)} />;
@@ -524,7 +492,6 @@ export default function BaiGiangPage() {
             {doc?.title ?? "Đang tải..."}
           </span>
         </div>
-
         <div className="flex items-center gap-3">
           {activeTab === "Bài giảng" && (
             <div className="flex items-center gap-2">
@@ -562,9 +529,7 @@ export default function BaiGiangPage() {
                 src={doc?.coverImage ?? "/anh1.jpg"}
                 alt={doc?.title}
                 className="w-full h-28 object-cover rounded-xl mb-3"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
+                onError={(e) => (e.target.style.display = "none")}
               />
               <p className="text-sm font-semibold text-gray-800 line-clamp-2">
                 {doc?.title}
@@ -576,11 +541,7 @@ export default function BaiGiangPage() {
             <div className="flex-1 overflow-y-auto p-3">
               <div className="w-full text-left px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-200 flex items-start gap-2.5">
                 <div
-                  className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                    completed
-                      ? "bg-green-500 text-white"
-                      : "bg-[#F26739] text-white"
-                  }`}
+                  className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${completed ? "bg-green-500 text-white" : "bg-[#F26739] text-white"}`}
                 >
                   {completed ? (
                     <Check size={11} strokeWidth={3} />
@@ -624,53 +585,53 @@ export default function BaiGiangPage() {
             </div>
           </div>
 
-          {/* ════ BÀI GIẢNG ════ */}
+          {/* ── BÀI GIẢNG: hiển thị PDF gốc ── */}
           {activeTab === "Bài giảng" && (
-            <div className="max-w-3xl mx-auto px-8 py-8">
-              {currentChapter ? (
-                <>
-                  <div className="mb-6">
-                    <span className="text-xs font-medium text-[#F26739] bg-orange-50 px-2.5 py-1 rounded-full">
-                      Phần 1 / 1
-                    </span>
-                    <h2 className="text-xl font-bold text-gray-800 mt-2">
-                      {doc?.title}
-                    </h2>
-                  </div>
-                  <div className="border-t border-gray-100 mb-6" />
-                  <RenderChunkContent text={currentChapter.content} />
-                  <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-between">
-                    <p className="text-xs text-gray-400">
-                      Sau khi đọc xong, bấm hoàn thành để tiếp tục.
-                    </p>
-                    <button
-                      onClick={handleComplete}
-                      disabled={completed}
-                      className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 ${
-                        completed
-                          ? "bg-green-50 text-green-600 border border-green-200 cursor-default"
-                          : "bg-[#F26739] text-white hover:bg-orange-600"
-                      }`}
-                    >
-                      {completed ? (
-                        <>
-                          <Check size={14} strokeWidth={3} /> Đã hoàn thành
-                        </>
-                      ) : (
-                        "Hoàn thành bài giảng ✓"
-                      )}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
-                  Không có nội dung để hiển thị.
+            <div className="flex flex-col h-full">
+              <div className="flex-1 bg-black flex items-start justify-center overflow-auto py-6">
+                <div className="w-[680px] min-h-[900px] bg-white shadow-2xl px-12 py-10">
+                  <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
+                    {doc?.title}
+                  </h2>
+                  <div className="border-t border-gray-200 mb-6" />
+                  <RenderChunkContent
+                    text={
+                      doc?.chunks?.length
+                        ? doc.chunks.map((c) => c.content).join("\n\n")
+                        : (doc?.extractedText ?? "")
+                    }
+                  />
                 </div>
-              )}
+              </div>
+              <div className="bg-white border-t border-gray-100 px-8 py-4 flex items-center justify-between shrink-0">
+                <p className="text-xs text-gray-400">
+                  Sau khi đọc xong, bấm hoàn thành để tiếp tục.
+                </p>
+                <button
+                  onClick={() => {
+                    setCompleted(true);
+                    setShowCompletionModal(true);
+                  }}
+                  disabled={completed}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 ${
+                    completed
+                      ? "bg-green-50 text-green-600 border border-green-200 cursor-default"
+                      : "bg-[#F26739] text-white hover:bg-orange-600"
+                  }`}
+                >
+                  {completed ? (
+                    <>
+                      <Check size={14} strokeWidth={3} /> Đã hoàn thành
+                    </>
+                  ) : (
+                    "Hoàn thành bài giảng ✓"
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* ════ QUIZZ ════ */}
+          {/* ── QUIZZ ── */}
           {activeTab === "Quizz" && (
             <div className="max-w-3xl mx-auto px-6 py-6">
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -743,7 +704,7 @@ export default function BaiGiangPage() {
             </div>
           )}
 
-          {/* ════ FLASHCARD ════ */}
+          {/* ── FLASHCARD ── */}
           {activeTab === "FlashCard" && (
             <div className="max-w-3xl mx-auto px-6 py-6">
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

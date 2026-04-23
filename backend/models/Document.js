@@ -44,28 +44,21 @@ const documentSchema = new mongoose.Schema(
         },
       },
     ],
-    // uploadDate: {
-    //   type: Date,
-    //   default: Date.now,
-    // },
     lastAccessed: {
       type: Date,
       default: Date.now,
     },
     status: {
       type: String,
-      enum: ["processing", "ready", "failed"],
+      enum: ["processing", "ready", "failed"],  // ✅ bỏ "error"
       default: "processing",
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-//Index for faster queries
-documentSchema.index({userId: 1, createdAt: -1});
-
-const Document = mongoose.model('Document', documentSchema);
-
+documentSchema.index({ userId: 1, createdAt: -1 });
+const Document = mongoose.model("Document", documentSchema);
 export default Document;

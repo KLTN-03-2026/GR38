@@ -6,7 +6,7 @@ import * as geminiService from "../utils/geminiService.js";
 import { findRelevantChunks } from "../utils/textChunker.js";
 
 //@desc Tạo flashcard từ tài liệu
-//@router POST/api/ai/generate-flashcards
+//@router POST/api/v1/ai/generate-flashcards
 //@access Private
 export const generateFlashcards = async (req, res, next) => {
   try {
@@ -67,7 +67,7 @@ export const generateFlashcards = async (req, res, next) => {
 };
 
 //@desc Tạo Quiz từ tài liệu
-//@router POST/api/ai/generate-quiz
+//@router POST/api/v1/ai/generate-quiz
 //@access Private
 export const generateQuiz = async (req, res, next) => {
   try {
@@ -124,8 +124,7 @@ export const generateQuiz = async (req, res, next) => {
       title: title ||`${document.title} - Quiz`,
       questions: questions,
       totalQuestions : questions.length,
-      userAnswers: [],
-      score: 0
+      isAiGenerated: true
     });
 
     res.status(200).json({
@@ -140,7 +139,7 @@ export const generateQuiz = async (req, res, next) => {
 };
 
 //@desc Tóm tắt tài liệu
-//@router POST/api/ai/generate-summary
+//@router POST/api/v1/ai/generate-summary
 //@access Private
 export const generateSummary = async (req, res, next) => {
   try {
@@ -185,7 +184,7 @@ export const generateSummary = async (req, res, next) => {
 };
 
 //@desc Chat
-//@router POST/api/ai/chat
+//@router POST/api/v1/ai/chat
 //@access Private
 export const chat = async (req, res, next) => {
   try {
@@ -267,7 +266,7 @@ export const chat = async (req, res, next) => {
 };
 
 //@desc Giải thích khái niệm từ tài liệu
-//@router POST/api/ai/explain-concept
+//@router POST/api/v1/ai/explain-concept
 //@access Private
 export const explainConcept = async (req, res, next) => {
   try {
@@ -316,7 +315,7 @@ export const explainConcept = async (req, res, next) => {
 };
 
 //@desc Lịch sử chat
-//@router POST/api/ai/chat-history/:documentId
+//@router POST/api/v1/ai/chat-history/:documentId
 //@access Private
 export const getChatHistory = async (req, res, next) => {
   try {
@@ -338,7 +337,7 @@ export const getChatHistory = async (req, res, next) => {
     if (!chatHistory) {
       return res.status(200).json({
         success: true,
-        data: [], //Trả về mảng rỗng nếu không có lịch sử chat
+        data: [],
         message: 'Không tìm thấy lịch sử chat cho tài liệu này'
       });
     }

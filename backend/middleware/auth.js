@@ -2,22 +2,18 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { USER_ROLES } from "../models/User.js";
 
-// Thay đổi ở file: backend/middleware/auth.js
 const protect = async (req, res, next) => {
   let token;
 
-  //kiểm tra xem token có tồn tại trong header không
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     try {
-      // Lấy token từ header
       token = req.headers.authorization.split(" ")[1];
 
-      // Giải mã token để lấy user ID
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select("-password"); // Lấy thông tin người dùng, loại bỏ trường password
+      req.user = await User.findById(decoded.id).select("-password");
 
       if (!req.user) {
         return res.status(401).json({
@@ -46,6 +42,7 @@ const protect = async (req, res, next) => {
       });
     }
   }
+
   if (!token) {
     return res.status(401).json({
       success: false,
@@ -57,6 +54,11 @@ const protect = async (req, res, next) => {
 
 export const authorize = (...roles) => {
   return (req, res, next) => {
+    console.log("=== AUTHORIZE DEBUG ===");
+    console.log("req.user.role:", req.user?.role);
+    console.log("roles required:", roles);
+    console.log("includes?:", roles.includes(req.user?.role));
+
     if (!req.user) {
       return res.status(401).json({
         success: false,

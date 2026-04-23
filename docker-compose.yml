@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env.docker
+      - ./backend/.env
     volumes:
       - ./backend:/app 
       - /app/node_modules 
@@ -22,7 +22,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./frontend/ai-history-learning/.env.docker
+      - ./frontend/ai-history-learning/.env
     volumes:
       - ./frontend/ai-history-learning:/app 
       - /app/node_modules 

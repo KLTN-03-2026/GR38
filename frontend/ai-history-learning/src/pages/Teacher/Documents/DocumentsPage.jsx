@@ -66,8 +66,6 @@ const DEFAULT_COVERS = [
 ];
 const getCover = (doc, idx) =>
   DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
-
-
 const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
   <div
     className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"

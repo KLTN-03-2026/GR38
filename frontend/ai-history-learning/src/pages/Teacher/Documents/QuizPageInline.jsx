@@ -1,7 +1,7 @@
 // QuizPageInline.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { quizService } from "../../../services/QuizService";
+import { quizService } from "../../../services/quizService";
 
 const shuffle = (arr) => {
   const a = [...arr];

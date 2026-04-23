@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
-import { authService } from "../../services/AuthService";
+import { authService } from "../../services/authService";
 
 // CHỈ CẬP NHẬT ĐIỀU HƯỚNG 
 const ROLE_CONFIG = {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { authService } from "../../services/AuthService";
+import { authService } from "../../services/authService";
 
 function RegisterPage() {
   const [input, setInput] = useState({

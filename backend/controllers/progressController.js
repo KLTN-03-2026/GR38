@@ -1,6 +1,7 @@
-import Document from '../models/Document.js';
-import Flashcard from '../models/Flashcard.js';
-import Quiz from '../models/Quiz.js';
+import Document from '#models/Document.js';
+import Flashcard from '#models/Flashcard.js';
+import Quiz from '#models/Quiz.js';
+import QuizResult from '#models/QuizResult.js'; // Nhớ import thêm QuizResult nhé!
 
 //@desc Lấy thống kê tiến độ học tập của người dùng
 //@route GET /api/progress/dashboard
@@ -9,13 +10,11 @@ export const getDashboard = async (req, res, next) => {
     try {
         const userId = req.user._id; 
 
-        // Lấy tổng số tài liệu, flashcard và quiz của người dùng
+        // 1. Lấy tổng số liệu cơ bản
         const totalDocuments = await Document.countDocuments({ userId });
         const totalFlashcardSets = await Flashcard.countDocuments({ userId });
-        const totalQuizzes = await Quiz.countDocuments({ userId });
-        const completedQuizzes = await Quiz.countDocuments({ userId, completedAt : { $ne: null } });
-
-        //Lấy thống kê flashcard
+        
+        // 2. Thống kê Flashcard 
         const flashcardSets = await Flashcard.find({ userId });
         let totalFlashcards = 0;
         let reviewedFlashcards = 0;
@@ -27,48 +26,50 @@ export const getDashboard = async (req, res, next) => {
             starredFlashcards += set.cards.filter(c => c.isStarred).length;
         });
 
-        //Lấy thống kê quiz
-        const quizzes = await Quiz.find({ userId, completedAt: { $ne: null } });
-        const averageScore = quizzes.length > 0
-            ? Math.round(quizzes.reduce((sum, q) => sum + q.score, 0) / quizzes.length)
+        // 3. THỐNG KÊ QUIZ 
+        // Lấy tất cả bài quiz mà user này ĐÃ LÀM
+        const userResults = await QuizResult.find({ userId });
+        const completedQuizzes = userResults.length;
+        
+        const averageScore = completedQuizzes > 0
+            ? Math.round(userResults.reduce((sum, r) => sum + r.score, 0) / completedQuizzes)
             : 0;
 
-        //Hoạt động gần đây
+        // 4. Hoạt động gần đây
         const recentDocuments = await Document.find({ userId })
             .sort({ lastAccessed: -1})
             .limit(5)
             .select('title fileName lastAccessed status');
         
-        const recentQuizzes = await Quiz.find({ userId, completedAt: { $ne: null } })
+        // Lấy 5 BÀI NỘP gần nhất (Dùng QuizResult)
+        const recentQuizzes = await QuizResult.find({ userId })
             .sort({ createdAt: -1 })
             .limit(5)
-            .populate('documentId', 'title')
-            .select('title score totalQuestions completedAt');
+            .populate('quizId', 'title') 
+            .select('score totalQuestions createdAt');
 
-            //Chuỗi học tập [đơn giản hóa - trong sản xuất, theo dõi hoạt động hàng ngày]
-            const studyStreak = Math.floor(Math.random() * 7 ) + 1; // Giả lập chuỗi học tập từ 1 đến 7 ngày
+        // Chuỗi học tập
+        const studyStreak = Math.floor(Math.random() * 7 ) + 1; 
 
-            res.status(200).json({
-                success: true,
-                data: {
-                    overview: {
-                        totalDocuments,
-                        totalFlashcardSets,
-                        totalFlashcards,
-                        reviewedFlashcards,
-                        starredFlashcards,
-                        totalQuizzes,
-                        completedQuizzes,
-                        averageScore,
-                        studyStreak
-                    },
-                    recent: {
-                        documents: recentDocuments,
-                        quizzes: recentQuizzes
-
-                    }
+        res.status(200).json({
+            success: true,
+            data: {
+                overview: {
+                    totalDocuments,
+                    totalFlashcardSets,
+                    totalFlashcards,
+                    reviewedFlashcards,
+                    starredFlashcards,
+                    completedQuizzes, // Số bài đã làm
+                    averageScore,
+                    studyStreak
+                },
+                recent: {
+                    documents: recentDocuments,
+                    quizzes: recentQuizzes // Trả về 5 bài làm gần nhất
                 }
-            });
+            }
+        });
     } catch (error) {
         next(error);
     }

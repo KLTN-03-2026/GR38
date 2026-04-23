@@ -11,6 +11,13 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "imports": {
+    "#models/*": "./models/*",
+    "#controllers/*": "./controllers/*",
+    "#middleware/*": "./middleware/*",
+    "#config/*": "./config/*",
+    "#utils/*": "./utils/*"
+  },
   "dependencies": {
     "@google/genai": "^1.50.0",
     "@google/generative-ai": "^0.24.1",

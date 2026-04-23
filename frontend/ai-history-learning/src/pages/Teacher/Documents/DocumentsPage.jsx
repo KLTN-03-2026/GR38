@@ -1,7 +1,7 @@
 // DocumentsPage.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { documentService } from "../../../services/DocumentService";
+import { documentService } from "../../../services/documentService";
 
 const banners = ["/anh6.jpg", "/anh1.jpg", "/anh2.jpg", "/anh3.jpg"];
 

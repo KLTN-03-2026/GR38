@@ -1,129 +1,118 @@
-import React, { useState, useEffect } from "react";
-import { Search, Clock, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-// IMPORT HÌNH ẢNH ASSETS
-import imgDienBien from "../../assets/Chien-Thang-Dien-Bie.jpg";
-import imgChongMy from "../../assets/khangchienchongmy.webp";
-import imgBatThuoc from "../../assets/thoikybatthuoc.webp";
-import imgHienDai from "../../assets/thoikyhiendai.webp";
-import imgQuanChu from "../../assets/thoikyquanchu.jpg";
-import imgTienSu from "../../assets/thoitiensu.jpg";
-
-import banner1 from "../../assets/HinhChinh1.png";
-import banner2 from "../../assets/Hinhchinh2.jpg";
-import banner3 from "../../assets/Hinhchinh3.jpg"; 
-import banner4 from "../../assets/Hinhchinh4.jpg";
-import banner5 from "../../assets/Hinhchinh5.jpg";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import axiosClient from "../../lib/axios";
 
 const Documents = () => {
   const navigate = useNavigate();
+  const [allDocuments, setAllDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentBanner, setCurrentBanner] = useState(0);
-
-  const banners = [banner1, banner2, banner3, banner4, banner5];
-
-  const allDocuments = [
-    { id: "dien-bien-phu", title: "Chiến tranh điện biên phủ", time: "158h50p", image: imgDienBien },
-    { id: "khang-chien-chong-my", title: "Kháng chiến chống mỹ", time: "158h50p", image: imgChongMy },
-    { id: "tien-su", title: "Lịch sử Việt Nam thời tiền sử", time: "158h50p", image: imgTienSu },
-    { id: "quan-chu", title: "Thời kỳ quân chủ (939 – 1945)", time: "158h50p", image: imgQuanChu },
-    { id: "bac-thuoc", title: "Thời Bắc thuộc (180 TCN – 938)", time: "158h50p", image: imgBatThuoc },
-    { id: "hien-dai", title: "Thời kỳ hiện đại (1858 – nay)", time: "158h50p", image: imgHienDai },
-  ];
-
-  const [filteredDocs, setFilteredDocs] = useState(allDocuments);
-
-  const handleSearch = () => {
-    const results = allDocuments.filter(doc => 
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredDocs(results);
-  };
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6; // 3 cột x 2 hàng
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBanner(prev => (prev === banners.length - 1 ? 0 : prev + 1));
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [banners.length]);
+    const fetchDocuments = async () => {
+      try {
+        setLoading(true);
+        const res = await axiosClient.get("/documents");
+        const data = (res.success && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []);
+        setAllDocuments(data);
+      } catch (err) {
+        console.error("Lỗi lấy danh sách tài liệu:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocuments();
+  }, []);
+
+  const filteredDocs = allDocuments.filter(doc => 
+    doc.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredDocs.length / itemsPerPage) || 1;
+  const currentItems = filteredDocs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="flex-1 bg-[#FAFAFA] p-8 font-['Inter'] min-h-screen flex flex-col items-center">
-      <div className="w-full max-w-[1404px]"> 
-        
-        {/* Thanh tìm kiếm */}
-        <div className="w-full bg-white border border-black rounded-[10px] mb-8 flex items-center justify-between h-[53px] px-[18px]">
-          <div className="flex items-center bg-[#FAFAFA] border border-[#E4E4E7] rounded-[6px] px-3 py-2 w-[625px] h-[40px] gap-2">
-            <Search size={16} className="text-[#9E9EA7]" />
-            <input
+    <div className="bg-[#FFFFFF] rounded-[6px] p-[20px] flex flex-col gap-[20px] w-[1113px] min-h-[700px] mx-auto shadow-sm border border-gray-100">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4 bg-white p-2 rounded-lg border border-gray-200 shadow-sm mt-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input 
               type="text"
+              placeholder="Tìm kiếm tài liệu học tập..."
+              className="w-full pl-10 pr-4 py-2 rounded-md outline-none bg-gray-50 focus:bg-white border border-transparent focus:border-orange-500 text-[14px]"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm khóa học"
-              className="bg-transparent border-none outline-none text-[14px] w-full text-[#71717A]"
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
           </div>
-          <button onClick={handleSearch} className="bg-[#F26739] text-white text-[14px] font-medium rounded-[6px] w-[57px] h-[36px] hover:bg-orange-600 transition-colors">
-            Tìm
-          </button>
+          <button className="bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 transition text-[14px]">Tìm kiếm</button>
         </div>
+        <h2 className="font-semibold text-[26px] text-black">Tài liệu của tôi</h2>
+      </div>
 
-        {/* Banner */}
-        <div className="w-full h-[350px] rounded-xl overflow-hidden mb-10 shadow-sm relative bg-gray-200">
-          <div className="w-full h-full flex transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentBanner * 100}%)` }}>
-            {banners.map((bn, index) => (
-              <img key={index} src={bn} className="w-full h-full object-cover flex-shrink-0" alt="banner" />
-            ))}
-          </div>
-        </div>
-
-        <h2 className="text-[26px] font-bold text-black mb-8">Tài liệu của tôi</h2>
-        
-        {/* Grid Danh sách tài liệu */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-[40px] gap-y-[40px]">
-          {filteredDocs.map((doc) => (
-            <div key={doc.id} className="bg-white rounded-[6px] p-[10px] flex flex-col gap-4 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-              <div className="w-full h-[180px] bg-gray-100 rounded-[6px] overflow-hidden">
-                <img src={doc.image} alt={doc.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="flex flex-col gap-3 px-1">
-                <h3 className="text-[18px] font-semibold text-black line-clamp-1">{doc.title}</h3>
-                <div className="flex items-center gap-2 text-black text-[16px]">
-                  <Clock size={16} /> <span>{doc.time}</span>
-                </div>
-                <div className="flex gap-3 mt-2">
-                  <button 
-                    onClick={() => navigate(`/learner/bai-giang/${doc.id}`)} 
-                    className="bg-[#1473E6] text-white text-[12px] font-semibold px-4 py-2 rounded-full hover:bg-blue-700 flex-1 transition-colors"
-                  >
-                    Bài giảng
-                  </button>
-                  <button 
-                    onClick={() => navigate(`/learner/baikiemtra/${doc.id}`)}
-                    className="bg-[#1473E6] text-white text-[12px] font-semibold px-4 py-2 rounded-full hover:bg-blue-700 flex-1 transition-colors"
-                  >
-                    Bài kiểm tra
-                  </button>
+      {/* GRID LAYOUT: 3 CỘT - 2 HÀNG */}
+      <div className="grid grid-cols-3 grid-rows-2 gap-[20px] w-full min-h-[460px]">
+        {loading ? (
+          <div className="col-span-3 text-center py-20 font-medium text-gray-500">Đang tải dữ liệu...</div>
+        ) : currentItems.length === 0 ? (
+          <div className="col-span-3 text-center py-20 text-gray-500">Không tìm thấy tài liệu phù hợp.</div>
+        ) : (
+          currentItems.map((doc) => (
+            <div 
+              key={doc._id} 
+              className="bg-white rounded-[10px] flex flex-col p-[12px] gap-[12px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-200"
+              onClick={() => navigate(`/learner/bai-giang/${doc._id}`)}
+            >
+              <div 
+                className="w-full h-[130px] bg-cover bg-center rounded-[6px] bg-gray-100"
+                style={{ backgroundImage: `url(${doc.image || 'https://via.placeholder.com/350x130?text=History+Learning'})` }}
+              />
+              <div className="flex flex-col gap-2">
+                <h3 className="font-bold text-[17px] text-gray-800 line-clamp-1">{doc.title}</h3>
+                <div className="flex justify-between items-center mt-1">
+                  <div className="px-3 py-1 bg-[#1473E6] rounded-full text-white text-[10px] font-bold uppercase">Tài liệu</div>
+                  <span className="text-[11px] text-gray-500 font-medium">{doc.quizCount || 0} Quizzes</span>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          ))
+        )}
+      </div>
 
-        {/* Phân trang */}
-        <div className="mt-16 flex flex-row justify-between items-center px-[20px] w-full h-[40px] border-t border-gray-100 pt-10 mb-10">
-          <span className="text-[16px] font-medium text-black">1 trang</span>
-          <div className="flex flex-row items-center gap-[4px]">
-            <button className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-gray-600">
-              <ChevronLeft size={14} /> <span className="text-[14px] font-medium">Previous</span>
+      {/* PHÂN TRANG */}
+      <div className="flex items-center justify-between px-2 py-4 border-t border-gray-100 mt-auto">
+        <span className="text-[14px] text-gray-500 font-medium">{currentPage} / {totalPages} trang</span>
+        <div className="flex items-center gap-2">
+          <button 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            className="flex items-center gap-1 px-3 py-1 text-[14px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
+          >
+            <ChevronLeft size={18} /> Previous
+          </button>
+          
+          {[...Array(totalPages)].map((_, i) => (
+            <button
+              key={i + 1}
+              onClick={() => setCurrentPage(i + 1)}
+              className={`w-8 h-8 rounded-md text-[14px] font-bold transition-all ${
+                currentPage === i + 1 ? "bg-orange-500 text-white shadow-md" : "text-gray-400 hover:text-black"
+              }`}
+            >
+              {i + 1}
             </button>
-            <button className="w-10 h-10 border border-[#E4E4E7] rounded-[6px] flex items-center justify-center text-[14px] font-medium text-[#F26739]">1</button>
-            <div className="px-2"><MoreHorizontal size={16} className="text-gray-400" /></div>
-            <button className="flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded text-gray-600">
-              <span className="text-[14px] font-medium">Next</span> <ChevronRight size={14} />
-            </button>
-          </div>
+          ))}
+
+          <button 
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            className="flex items-center gap-1 px-3 py-1 text-[14px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
+          >
+            Next <ChevronRight size={18} />
+          </button>
         </div>
       </div>
     </div>

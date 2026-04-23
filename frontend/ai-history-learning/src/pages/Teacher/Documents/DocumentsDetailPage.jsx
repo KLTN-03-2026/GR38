@@ -6,6 +6,7 @@ import api from "../../../lib/api";
 import QuizPageInline from "./QuizPageInline";
 import FlashcardPageInline from "./FlashcardPageInline";
 
+
 const tabs = ["Thông tin", "Chat", "Quizz", "FlashCard"];
 const DEFAULT_COVERS = ["/anh1.jpg", "/anh2.jpg", "/anh3.jpg", "/anh6.jpg"];
 

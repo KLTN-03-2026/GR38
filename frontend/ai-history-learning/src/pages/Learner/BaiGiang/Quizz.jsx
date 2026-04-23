@@ -1,285 +1,138 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Save, Send } from "lucide-react";
+import axiosClient from "../../../lib/axios";
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 
-const Quizz = () => {
-  const questions = [
-    { id: 1, question: "Chiến dịch Điện Biên Phủ diễn ra vào năm nào?", options: ["1953", "1954", "1955", "1956"], answer: "1954" },
-    { id: 2, question: "Chiến thắng Điện Biên Phủ kết thúc vào ngày nào?", options: ["6/5/1954", "7/5/1954", "8/5/1954", "9/5/1954"], answer: "7/5/1954" },
-    { id: 3, question: "Ai là Tổng chỉ huy quân đội Việt Nam trong chiến dịch Điện Biên Phủ?", options: ["Trường Chinh", "Võ Nguyên Giáp", "Hồ Chí Minh", "Phạm Văn Đồng"], answer: "Võ Nguyên Giáp" },
-    { id: 4, question: "Đối thủ chính của quân đội Việt Nam trong trận Điện Biên Phủ là nước nào?", options: ["Mỹ", "Pháp", "Nhật", "Anh"], answer: "Pháp" },
-    { id: 5, question: "Tướng chỉ huy quân Pháp tại Điện Biên Phủ là ai?", options: ["Salan", "De Castries", "Navarre", "Bigeard"], answer: "De Castries" },
-    { id: 6, question: "Chiến dịch Điện Biên Phủ thuộc cuộc kháng chiến nào?", options: ["Kháng chiến chống Mỹ", "Kháng chiến chống Pháp", "Kháng chiến chống Nhật", "Nội chiến"], answer: "Kháng chiến chống Pháp" },
-    { id: 7, question: "Điện Biên Phủ thuộc khu vực nào của Việt Nam?", options: ["Đồng bằng Bắc Bộ", "Tây Nguyên", "Tây Bắc", "Nam Bộ"], answer: "Tây Bắc" },
-    { id: 8, question: "Phương châm tác chiến của ta trong chiến dịch là gì?", options: ["Đánh nhanh thắng nhanh", "Đánh chắc tiến chắc", "Phòng thủ là chính", "Rút lui chiến lược"], answer: "Đánh chắc tiến chắc" },
-    { id: 9, question: "Chiến dịch Điện Biên Phủ kéo dài bao nhiêu ngày?", options: ["45 ngày", "56 ngày", "60 ngày", "30 ngày"], answer: "56 ngày" },
-    { id: 10, question: "Chiến thắng Điện Biên Phủ có ý nghĩa gì?", options: ["Mở đầu chiến tranh", "Kết thúc chiến tranh Đông Dương lần thứ nhất", "Thống nhất đất nước", "Bắt đầu công nghiệp hóa"], answer: "Kết thúc chiến tranh Đông Dương lần thứ nhất" },
-  ];
-
+const Quizz = ({ lessonId, lectureTitle }) => {
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [savedAnswers, setSavedAnswers] = useState({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      if (!lessonId) return;
+      try {
+        setLoading(true);
+        // Lưu ý: Nếu vẫn 404, Phúc hãy check lại router backend xem có phải /quizzes hay /quiz
+        const res = await axiosClient.get(`/quizzes/document/${lessonId}`);
+        
+        console.log("Dữ liệu nhận được:", res);
+
+        // Bóc tách theo cấu trúc success: true, data: [...]
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          setQuestions(res.data[0].questions || []);
+        } else if (res?.questions) {
+          setQuestions(res.questions);
+        } else {
+          setQuestions([]);
+        }
+      } catch (err) {
+        console.error("Lỗi kết nối API Quiz:", err);
+        setQuestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, [lessonId]);
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center p-20 gap-3">
+      <Loader2 className="animate-spin text-[#f26739]" size={40} />
+      <p className="text-gray-500 italic font-medium">Đang tìm bộ câu hỏi...</p>
+    </div>
+  );
+
+  if (!questions || questions.length === 0) return (
+    <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 text-center">
+      <AlertCircle className="text-gray-300 mb-4" size={48} />
+      <h3 className="text-[18px] font-bold text-gray-400 uppercase">Chưa có dữ liệu Quizz</h3>
+      <p className="text-gray-500 mt-2 font-medium">Tài liệu: {lectureTitle}</p>
+      <div className="mt-4 p-3 bg-red-50 text-red-500 text-xs rounded-lg border border-red-100">
+        Lỗi 404: Không tìm thấy nội dung cho ID: {lessonId}
+      </div>
+    </div>
+  );
 
   const currentQuestion = questions[currentQuestionIndex];
 
-  useEffect(() => {
-    if (showSaveSuccess) {
-      const timer = setTimeout(() => setShowSaveSuccess(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSaveSuccess]);
-
-  const handleSelectOption = (option) => {
-    setSelectedAnswers({ ...selectedAnswers, [currentQuestion.id]: option });
-  };
-
-  const handleSaveAnswer = () => {
-    if (selectedAnswers[currentQuestion.id]) {
-      setSavedAnswers({ ...savedAnswers, [currentQuestion.id]: selectedAnswers[currentQuestion.id] });
-      setShowSaveSuccess(true);
-    }
-  };
-
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-  };
-
-  const handleRetry = () => {
-    setSelectedAnswers({});
-    setSavedAnswers({});
-    setCurrentQuestionIndex(0);
-    setIsSubmitted(false);
-  };
-
-  // Hàm quay lại câu 1
-  const handleBackToFirst = () => {
-    setCurrentQuestionIndex(0);
-  };
-
-  const correctCount = questions.filter(q => savedAnswers[q.id] === q.answer).length;
-  const scorePercentage = (correctCount / questions.length) * 100;
-
-  if (isSubmitted) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#F8F9FA]">
-        <div className="w-full max-w-[1061px] bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center text-center">
-          <div className="bg-[#22C55E] text-white text-[16px] px-6 py-2 rounded-full font-bold mb-6 uppercase tracking-wider">
-            Hoàn Thành
+  return (
+    <div className="p-6 bg-white rounded-xl min-h-[500px]">
+      <div className="mb-8 px-2">
+        <div className="flex justify-between items-end mb-3">
+          <div>
+            <p className="text-[12px] text-[#f26739] font-bold uppercase tracking-widest">Học tập & Rèn luyện</p>
+            <p className="text-sm text-gray-400 font-medium italic truncate max-w-[250px]">{lectureTitle}</p>
           </div>
-          <h2 className="text-[28px] font-bold text-[#09090B] mb-2">Cuộc chiến tranh Điện Biên Phủ</h2>
-          <div className="text-[64px] font-bold text-[#EF4444] mb-8">{scorePercentage} %</div>
-          <div className="flex gap-4 mb-10">
-            <div className="bg-[#FBBF24] text-white px-6 py-2 rounded-lg font-bold text-sm">
-              Hoàn thành {Object.keys(savedAnswers).length}/{questions.length} câu
-            </div>
-            <div className="bg-[#22C55E] text-white px-6 py-2 rounded-lg font-bold text-sm">
-              Đúng {correctCount} câu
-            </div>
-            <div className="bg-[#EF4444] text-white px-6 py-2 rounded-lg font-bold text-sm">
-              Sai {questions.length - correctCount} câu
-            </div>
-          </div>
-          <button 
-            onClick={handleRetry} 
-            className="text-[#1473E6] font-bold text-lg hover:underline transition-all"
-          >
-            Làm lại bài tập
-          </button>
+          <span className="text-[#f26739] font-black text-xl">
+            {currentQuestionIndex + 1}<span className="text-gray-300 text-sm font-normal">/{questions.length}</span>
+          </span>
+        </div>
+        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+           <div className="h-full bg-[#f26739] transition-all duration-500" style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}></div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="p-6 bg-[#F8F9FA] min-h-full flex flex-col gap-6 font-['Inter']">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="bg-[#1473E6] text-white px-4 py-1 rounded-full text-[12px] font-bold">
-            Câu {currentQuestionIndex + 1}
-          </span>
-          <h2 className="text-lg font-semibold text-[#1F2937]">
-            {currentQuestion.question}
+      <div className="bg-[#F9FAFB] p-8 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+        <div className="flex items-start gap-4 mb-8">
+          <div className="bg-[#1473E6] text-white min-w-[36px] h-[36px] flex items-center justify-center rounded-lg font-bold shadow-md">
+            {currentQuestionIndex + 1}
+          </div>
+          <h2 className="text-[20px] font-bold text-gray-800 leading-snug">
+            {currentQuestion.question} 
           </h2>
         </div>
-
-        <div className="grid grid-cols-1 gap-3">
-          {currentQuestion.options.map((option, index) => (
-            <label
-              key={index}
-              className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                selectedAnswers[currentQuestion.id] === option
-                  ? "border-[#1473E6] bg-blue-50"
-                  : "border-gray-100 hover:border-gray-200 bg-white"
+        
+        <div className="grid grid-cols-1 gap-4">
+          {(currentQuestion.options || []).map((opt, idx) => (
+            <button 
+              key={idx}
+              onClick={() => setSelectedOption(opt)}
+              className={`group flex items-center p-5 text-left border-2 rounded-xl transition-all ${
+                selectedOption === opt 
+                ? "border-[#f26739] bg-orange-50 shadow-sm" 
+                : "border-gray-100 bg-white hover:border-gray-200"
               }`}
             >
-              <input
-                type="radio"
-                name={`question-${currentQuestion.id}`}
-                className="w-4 h-4 accent-[#1473E6]"
-                checked={selectedAnswers[currentQuestion.id] === option}
-                onChange={() => handleSelectOption(option)}
-              />
-              <span className="text-[#4B5563] font-medium">{option}</span>
-            </label>
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mr-4 text-sm font-bold transition-colors ${
+                selectedOption === opt ? "border-[#f26739] text-[#f26739]" : "border-gray-200 text-gray-400"
+              }`}>
+                {String.fromCharCode(65 + idx)}
+              </div>
+              <span className={`text-[16px] font-semibold ${selectedOption === opt ? "text-orange-800" : "text-gray-700"}`}>
+                {opt}
+              </span>
+            </button>
           ))}
         </div>
-
-        <div className="absolute right-8 top-8 flex items-center gap-3">
-          {showSaveSuccess && (
-            <span className="text-green-600 text-[12px] font-bold animate-pulse">
-              Lưu thành công!
-            </span>
-          )}
+        
+        <div className="flex justify-between mt-12 pt-6 border-t border-gray-200">
           <button 
-            onClick={handleSaveAnswer}
-            className="flex items-center gap-2 bg-[#1473E6] text-white px-4 py-2 rounded-lg text-[12px] font-semibold hover:bg-blue-600 transition-colors shadow-md"
+            disabled={currentQuestionIndex === 0}
+            onClick={() => {
+              setCurrentQuestionIndex(prev => prev - 1);
+              setSelectedOption(null);
+            }}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 text-gray-500 rounded-xl font-bold hover:bg-gray-50 disabled:opacity-30 transition-all"
           >
-            <Save size={16} /> Lưu câu trả lời
+            <ChevronLeft size={20} /> Quay lại
           </button>
-        </div>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-6">
-        <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-4">
-             <span className="text-sm font-medium text-gray-500">
-                {currentQuestionIndex + 1} / {questions.length} Câu
-             </span>
-             <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                    className="h-full bg-[#1473E6] transition-all duration-300"
-                    style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                ></div>
-             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              disabled={currentQuestionIndex === 0}
-              onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            
-            <div className="flex gap-1">
-                {questions.map((q, idx) => {
-                    const isSaved = savedAnswers[q.id];
-                    const isSelectedButNotSaved = selectedAnswers[q.id] && !savedAnswers[q.id];
-                    
-                    return (
-                        <button
-                            key={idx}
-                            onClick={() => setCurrentQuestionIndex(idx)}
-                            className={`w-8 h-8 rounded-md text-xs font-medium transition-all ${
-                                currentQuestionIndex === idx 
-                                ? "bg-[#1473E6] text-white" 
-                                : isSaved 
-                                ? "bg-green-100 text-green-600" 
-                                : isSelectedButNotSaved 
-                                ? "bg-yellow-100 text-yellow-600 border border-yellow-400" 
-                                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                            }`}
-                        >
-                            {idx + 1}
-                        </button>
-                    );
-                })}
-            </div>
-
-            <button
-              disabled={currentQuestionIndex === questions.length - 1}
-              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div style={{
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'flex-end',
-            alignItems: 'flex-start',
-            padding: '0px',
-            gap: '8px',
-            width: '1061px',
-            height: '36px',
-            margin: '0 auto'
-        }}>
-            <button 
-                onClick={handleBackToFirst}
-                style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    padding: '8px 16px',
-                    width: '137px',
-                    height: '36px',
-                    background: '#F26739',
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    flex: 'none',
-                    order: 0,
-                    flexGrow: 0
-                }}
-            >
-                <span style={{
-                    width: '105px',
-                    height: '20px',
-                    fontFamily: 'Inter',
-                    fontWeight: '600',
-                    fontSize: '12px',
-                    lineHeight: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    justifyContent: 'center',
-                    color: '#FAFAFA'
-                }}>
-                    Quay lại trang đầu
-                </span>
-            </button>
-
-            <button 
-                onClick={handleSubmit}
-                style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    padding: '8px 16px',
-                    width: '77px',
-                    height: '36px',
-                    background: '#F26739',
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    flex: 'none',
-                    order: 1,
-                    flexGrow: 0
-                }}
-            >
-                <span style={{
-                    width: '45px',
-                    height: '20px',
-                    fontFamily: 'Inter',
-                    fontWeight: '600',
-                    fontSize: '12px',
-                    lineHeight: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    justifyContent: 'center',
-                    color: '#FAFAFA'
-                }}>
-                    Nộp Bài
-                </span>
-            </button>
+          
+          <button 
+            onClick={() => {
+              if (currentQuestionIndex < questions.length - 1) {
+                setCurrentQuestionIndex(prev => prev + 1);
+                setSelectedOption(null);
+              } else {
+                alert("Hoàn thành bài tập!");
+              }
+            }}
+            style={{ backgroundColor: '#f26739' }}
+            className="flex items-center gap-2 px-8 py-2.5 text-white rounded-xl font-bold hover:opacity-90 shadow-lg transition-all"
+          > 
+            {currentQuestionIndex === questions.length - 1 ? "Kết thúc bài" : "Tiếp theo"} 
+            {currentQuestionIndex !== questions.length - 1 && <ChevronRight size={20} />}
+          </button>
         </div>
       </div>
     </div>

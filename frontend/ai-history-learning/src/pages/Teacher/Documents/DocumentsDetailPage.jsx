@@ -1,7 +1,7 @@
 // DocumentsDetailPage.jsx
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { documentService } from "../../../services/DocumentService";
+import { documentService } from "../../../services/documentService";
 import api from "../../../lib/api";
 import QuizPageInline from "./QuizPageInline";
 import FlashcardPageInline from "./FlashcardPageInline";

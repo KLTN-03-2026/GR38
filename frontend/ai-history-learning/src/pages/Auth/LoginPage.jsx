@@ -3,13 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import axios from "axios";
 
-// CHỈ CẬP NHẬT ĐIỀU HƯỚNG TẠI ĐÂY
-const ROLE_CONFIG = {
-  Admin:   { path: "/admin",   label: "Quản trị viên" },
-  Teacher: { path: "/teacher", label: "Giáo viên" },
-  Learner: { path: "/learner", label: "Học sinh" },
-};
-
 function LoginPage() {
   const [input, setInput] = useState({ email: "", pass: "" });
   const [errors, setErrors] = useState({});
@@ -25,134 +18,135 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     const err = {};
-    if (!input.email) err.email = "Vui lòng nhập email";
-    if (!input.pass)  err.pass  = "Vui lòng nhập mật khẩu";
-    if (Object.keys(err).length) { setErrors(err); return; }
+    if (!input.email.trim()) err.email = "Vui lòng nhập email";
+    if (!input.pass.trim())  err.pass  = "Vui lòng nhập mật khẩu";
+    
+    if (Object.keys(err).length) { 
+      setErrors(err); 
+      return; 
+    }
 
     setLoading(true);
-
     try {
-      const res = await axios.post(
-        "http://localhost:8000/api/v1/auth/login", // ✅ port 8000
-        { email: input.email, password: input.pass }
-      );
+      const res = await axios.post("http://localhost:8000/api/v1/auth/login", { 
+        email: input.email, 
+        password: input.pass 
+      });
 
-      // API trả về: { success, token, data: { _id, fullName, email, role, ... } }
       const { token, data: user } = res.data;
-
-      // Lưu token + thông tin user
-      localStorage.setItem("token", token);
+      localStorage.setItem("token", token); 
       localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("role", user.role);
-
-      const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
+      localStorage.setItem("role", user.role.toLowerCase());
 
       await Swal.fire({
         icon: "success",
         title: "ĐĂNG NHẬP THÀNH CÔNG",
-        html: `Xin chào <b>${user.fullName}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
+        text: `Chào mừng ${user.fullName} quay trở lại!`,
         confirmButtonColor: "#f97316",
-        timer: 1800,
+        timer: 2000,
         timerProgressBar: true,
       });
 
-      const path = ROLE_CONFIG[user.role]?.path;
-      if (path) navigate(path);
+      const role = user.role.toLowerCase();
+      navigate(role === "admin" ? "/admin" : role === "teacher" ? "/teacher" : "/learner");
 
     } catch (error) {
-      const msg = error.response?.data?.error ?? "Lỗi server, vui lòng thử lại";
-
+      const msg = error.response?.data?.error || "Email hoặc mật khẩu không chính xác";
+      
       Swal.fire({
         icon: "error",
         title: "Đăng nhập thất bại",
         text: msg,
         confirmButtonColor: "#f97316",
       });
-      setErrors({ pass: msg });
-
     } finally {
       setLoading(false);
     }
   };
 
+  const inputClass = (field) =>
+    `w-full px-3 py-2 text-sm rounded-md border outline-none transition
+    ${errors[field]
+      ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100"
+      : "border-gray-200 bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+    }`;
+
   return (
-    <div
+    <div 
       className="min-h-screen flex items-center justify-center relative"
       style={{
-        backgroundImage: `url('/thumnail.jpg')`,
+        backgroundImage: `url('${process.env.PUBLIC_URL}/thumnail.jpg')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
     >
       <div className="absolute inset-0 bg-black/40" />
-
-      <div className="relative z-10 w-full max-w-[360px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-7 mx-4 shadow-xl">
-        <div className="flex flex-col items-center mb-5">
-          <img
-            src="/Logo.jpg"
-            alt="logo"
-            className="w-12 h-12 rounded-full object-cover mb-2 shadow"
+      
+      <div className="relative z-10 w-full max-w-[400px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-8 shadow-xl mx-4">
+        <div className="flex flex-col items-center mb-6">
+          {/* ĐÃ SỬA: Trỏ đúng tên file Logo.jpg của bạn */}
+          <img 
+            src={`${process.env.PUBLIC_URL}/Logo.jpg`} 
+            alt="Logo" 
+            className="w-20 h-20 mb-2 object-contain rounded-full shadow-sm" 
           />
-          <h1 className="text-base font-semibold text-gray-800">Lịch sử Việt Nam</h1>
-          <p className="text-xs text-gray-400 mt-1">Nhập thông tin Email và Mật khẩu</p>
+          <h1 className="text-lg font-semibold text-gray-800 text-center mb-1">ĐĂNG NHẬP</h1>
+          <p className="text-sm text-gray-400 text-center">Nhập thông tin Email và Mật khẩu</p>
         </div>
 
-        <label className="block text-sm text-gray-500 mb-1.5">Email</label>
-        <input
-          type="email"
-          name="email"
-          placeholder="m@example.com"
-          value={input.email}
-          onChange={handleChange}
-          autoComplete="off"
-          className={`w-full px-3 py-2 text-sm rounded-md border outline-none transition mb-1
-            ${errors.email
-              ? "border-red-400 bg-red-50"
-              : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
-            }`}
-        />
-        {errors.email && <p className="text-xs text-red-500 mb-3">{errors.email}</p>}
+        <form onSubmit={handleLogin} noValidate>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 mb-1.5">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input 
+              type="email" 
+              name="email"
+              placeholder="m@example.com"
+              className={inputClass("email")}
+              value={input.email}
+              onChange={handleChange}
+              autoComplete="off"
+            />
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          </div>
 
-        <label className="block text-sm text-gray-500 mb-1.5">Mật khẩu</label>
-        <input
-          type="password"
-          name="pass"
-          placeholder="••••••••"
-          value={input.pass}
-          onChange={handleChange}
-          autoComplete="new-password"
-          className={`w-full px-3 py-2 text-sm rounded-md border outline-none transition mb-1
-            ${errors.pass
-              ? "border-red-400 bg-red-50"
-              : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
-            }`}
-        />
-        {errors.pass && <p className="text-xs text-red-500 mb-3">{errors.pass}</p>}
+          <div className="mb-6">
+            <label className="block text-sm text-gray-600 mb-1.5">
+              Mật khẩu <span className="text-red-400">*</span>
+            </label>
+            <input 
+              type="password" 
+              name="pass"
+              placeholder="••••••••"
+              className={inputClass("pass")}
+              value={input.pass}
+              onChange={handleChange}
+            />
+            {errors.pass && <p className="text-xs text-red-500 mt-1">{errors.pass}</p>}
+          </div>
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full mt-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-3"
-        >
-          {loading ? "Đang xử lý..." : "Đăng nhập"}
-        </button>
-
-        <p className="text-center text-sm text-gray-500 mb-2">
-          Bạn chưa có tài khoản?{" "}
-          <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition">
-            Đăng ký
-          </Link>
-        </p>
-
-        <p className="text-center">
-          <button
-            type="button"
-            className="text-xs text-orange-500 hover:text-orange-600 transition"
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
           >
-            Bạn quên mật khẩu?
+            {loading ? "Đang xác thực..." : "ĐĂNG NHẬP"}
           </button>
-        </p>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-500">
+            Bạn chưa có tài khoản?{" "}
+            <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition underline">
+              Đăng ký ngay
+            </Link>
+          </p>
+          <button className="text-gray-400 text-xs mt-3 hover:text-gray-600 transition">
+            Quên mật khẩu?
+          </button>
+        </div>
       </div>
     </div>
   );

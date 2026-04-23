@@ -40,24 +40,21 @@ import FlashcardsLearner from "./pages/Learner/Flashcards";
 import QuizzesLearner from "./pages/Learner/Quizzes";
 import SuCo from "./pages/Learner/SuCo";
 
-// PRIVATE ROUTE 
 function PrivateRoute({ allowedRole }) {
-  const raw = localStorage.getItem("user");
-  const user = raw ? JSON.parse(raw) : null;
-  const currentRole = (user?.role || localStorage.getItem("role") || "").toLowerCase();
-  
-  return currentRole === allowedRole.toLowerCase() ? <Outlet /> : <Navigate to="/" replace />;
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  if (!token || role !== allowedRole.toLowerCase()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Outlet />;
 }
 
-// Layout Components
 function AdminLayout() {
   return (
     <div className="flex min-h-screen bg-[#FAFAFA] font-sans">
       <Sidebar />
-      <div className="flex-1 flex flex-col ml-[240px] min-w-0">
-        <Header />
-        <main className="flex-1 p-8 mt-16"><Outlet /></main>
-      </div>
+      <div className="flex-1 flex flex-col ml-[240px] min-w-0"><Header /><main className="flex-1 p-8 mt-16"><Outlet /></main></div>
     </div>
   );
 }
@@ -66,10 +63,7 @@ function TeacherLayout() {
   return (
     <div className="flex min-h-screen bg-[#FAFAFA] font-sans">
       <TeacherSidebar />
-      <div className="flex-1 flex flex-col ml-[240px] min-w-0">
-        <Header />
-        <main className="flex-1 p-6 mt-16"><Outlet /></main>
-      </div>
+      <div className="flex-1 flex flex-col ml-[240px] min-w-0"><Header /><main className="flex-1 p-6 mt-16"><Outlet /></main></div>
     </div>
   );
 }
@@ -89,10 +83,34 @@ function LearnerLayout() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* --- ADMIN --- */}
+      {/* --- LEARNER --- */}
+      <Route element={<PrivateRoute allowedRole="learner" />}>
+        <Route path="/learner" element={<LearnerLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="documents" element={<DocumentsLearner />} />
+          <Route path="bai-giang/:id" element={<BaiGiang />} />
+          <Route path="baikiemtra/:id" element={<BaiKiemTra />} />
+          <Route path="flashcards" element={<FlashcardsLearner />} />
+          <Route path="quizzes" element={<QuizzesLearner />} />
+          <Route path="hoc-quizz/:id" element={<HocQuiz />} />
+          <Route path="profile" element={<ThongTinNguoiHoc />} />
+          <Route path="suco" element={<SuCo />} />
+          <Route path="chat-ai" element={<ChatAI />} />
+          
+          {/* CẬP NHẬT: Thêm :id để nhận dữ liệu từ DB */}
+          <Route path="hoc-flashcard/:id" element={<FlashcardDetail />} />
+          
+          {/* Các route cũ nếu bạn vẫn cần dùng bổ trợ */}
+          <Route path="flashcard" element={<FlashCard />} />
+          <Route path="quiz" element={<Quiz />} />
+        </Route>
+      </Route>
+
+      {/* --- ADMIN (Giữ nguyên) --- */}
       <Route element={<PrivateRoute allowedRole="admin" />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -101,7 +119,7 @@ function App() {
         </Route>
       </Route>
 
-      {/* --- GIÁO VIÊN --- */}
+      {/* --- TEACHER (Giữ nguyên) --- */}
       <Route element={<PrivateRoute allowedRole="teacher" />}>
         <Route path="/teacher" element={<TeacherLayout />}>
           <Route index element={<Teacher />} />
@@ -114,33 +132,7 @@ function App() {
         </Route>
       </Route>
 
-      {/* --- LEARNER --- */}
-      <Route element={<PrivateRoute allowedRole="learner" />}>
-        <Route path="/learner" element={<LearnerLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="documents" element={<DocumentsLearner />} />
-          
-          <Route path="bai-giang/:id" element={<BaiGiang />} />
-          <Route path="baikiemtra/:id" element={<BaiKiemTra />} />
-          
-          <Route path="flashcards" element={<FlashcardsLearner />} />
-          <Route path="quizzes" element={<QuizzesLearner />} />
-          
-          {/* SỬA LỖI TẠI ĐÂY: Thêm :id và sửa tên route khớp với Quizzes.jsx */}
-          <Route path="hoc-quizz/:id" element={<HocQuiz />} />
-          
-          <Route path="profile" element={<ThongTinNguoiHoc />} />
-          <Route path="suco" element={<SuCo />} />
-          
-          {/* Các route phụ */}
-          <Route path="chat-ai" element={<ChatAI />} />
-          <Route path="flashcard" element={<FlashCard />} />
-          <Route path="quiz" element={<Quiz />} />
-          <Route path="hoc-flashcard" element={<FlashcardDetail />} />
-        </Route>
-      </Route>
-
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

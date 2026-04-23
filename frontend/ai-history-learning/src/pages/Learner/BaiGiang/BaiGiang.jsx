@@ -1,72 +1,84 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import axiosClient from "../../../lib/axios";
 
-// IMPORT CÁC COMPONENT CON
+// Import các component con
 import ChatAI from "./ChatAI"; 
 import Quizz from "./Quizz"; 
 import FlashCard from "./FlashCard"; 
 
-// DỮ LIỆU GIẢ (MOCK DATA)
-const MOCK_LECTURE_DATA = {
-  "dien-bien-phu": {
-    id: "dien-bien-phu",
-    title: "Chiến tranh điện biên phủ",
-    contentTitle: "Trận Chiến Điện Biên Phủ",
-    tabs: ["Thông tin", "Chat", "Quizzes", "FlashCard"],
-    content: {
-      text: `Trận Điện Biên Phủ (tiếng Pháp: Bataille de Diên Biên Phu; phát âm [bataj də djɛ̃ bjɛ̃ fy]), còn gọi là Chiến dịch Điện Biên Phủ, là trận đánh lớn nhất trong Chiến tranh Đông Dương lần thứ nhất diễn ra tại lòng chảo Mường Thanh... \n\nĐây là chiến thắng quân sự lớn nhất trong cuộc Chiến tranh Đông Dương (1945 – 1954) của Việt Nam. Với thắng lợi quyết định này, lực lượng Quân đội Nhân dân Việt Nam do Đại tướng Võ Nguyên Giáp chỉ huy đã buộc quân đội Pháp và Quốc Gia Việt Nam tại Điện Biên Phủ phải đầu hàng vào ngày 7 tháng 5 năm 1954.`,
-    }
-  }
-};
-
 const BaiGiang = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); 
+  const { id } = useParams();
   
   const [activeTab, setActiveTab] = useState("Thông tin");
   const [lectureData, setLectureData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const tabs = ["Thông tin", "Chat", "Quizzes", "FlashCard"];
 
   useEffect(() => {
-    const data = MOCK_LECTURE_DATA[id] || MOCK_LECTURE_DATA["dien-bien-phu"];
-    setLectureData(data);
+    const fetchDetailDocument = async () => {
+      try {
+        setLoading(true);
+        // Gọi API Xem chi tiết tài liệu theo tài liệu ID
+        const response = await axiosClient.get(`/documents/${id}`);
+        
+        if (response.success) {
+          setLectureData(response.data);
+        } else {
+          setError("Không tìm thấy dữ liệu bài giảng.");
+        }
+      } catch (err) {
+        console.error("Lỗi lấy chi tiết tài liệu:", err);
+        setError("Có lỗi xảy ra khi kết nối máy chủ.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchDetailDocument();
   }, [id]);
 
-  if (!lectureData) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] gap-4">
+      <Loader2 className="animate-spin text-[#F26739]" size={48} />
+      <p className="text-gray-500 font-medium">Đang tải nội dung...</p>
+    </div>
+  );
+
+  if (error || !lectureData) return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] gap-4 p-5 text-center">
+      <AlertCircle className="text-red-500" size={60} />
+      <h2 className="text-2xl font-bold text-gray-800">{error}</h2>
+      <button onClick={() => navigate("/learner/documents")} className="mt-4 bg-[#F26739] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#d8562c] transition-all">
+        Quay lại danh sách
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex flex-col items-center w-full min-h-screen bg-[#FAFAFA] p-5 font-['Inter']">
-      
-      {/* 1. Nút Trở về */}
-      <div className="w-full max-w-[1134px] h-[53px] bg-white border-[0.1px] border-black rounded-[10px] flex items-center px-[18px] mb-5 shadow-sm">
-        <button 
-          onClick={() => navigate("/learner/documents")}
-          className="flex items-center gap-2 text-[20px] font-semibold leading-[20px] text-black hover:opacity-60 transition-all"
-        >
-          <ArrowLeft size={24} /> Trở về
+      <div className="w-full max-w-[1113px] h-[53px] bg-white border border-gray-200 rounded-[10px] flex items-center px-[18px] mb-5 shadow-sm">
+        <button onClick={() => navigate("/learner/documents")} className="flex items-center gap-2 text-[18px] font-semibold text-black hover:text-[#1473E6] transition-colors">
+          <ArrowLeft size={20} /> Trở về tài liệu
         </button>
       </div>
 
-      {/* 2. Khung chứa chính */}
-      <div className="w-full max-w-[1113px] min-h-[1071px] bg-white rounded-[6px] p-[10px] flex flex-col gap-4 shadow-md mb-10">
-        
-        {/* Tiêu đề bài học */}
-        <div className="w-full h-[40px] flex items-center px-2">
-          <h1 className="text-[26px] font-semibold leading-[20px] text-black uppercase">
-            {lectureData.title}
-          </h1>
-        </div>
+      <div className="w-full max-w-[1113px] min-h-[800px] bg-white rounded-[6px] p-[20px] flex flex-col gap-4 shadow-sm border border-gray-100 mb-10">
+        <h1 className="text-[24px] md:text-[28px] font-bold text-black uppercase border-b border-gray-100 pb-4">
+          {lectureData.title}
+        </h1>
 
-        {/* 3. Thanh Tabs */}
-        <div className="w-full max-w-[1081px] h-[50px] bg-[#F4F4F5] rounded-[6px] p-1 flex items-center mx-auto">
-          {lectureData.tabs.map((tab) => (
+        <div className="w-full h-[50px] bg-[#F4F4F5] rounded-[6px] p-1 flex items-center">
+          {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 h-[42px] flex items-center justify-center rounded-[4px] text-[14px] font-medium transition-all duration-300 ${
-                activeTab === tab 
-                ? "bg-white shadow-sm text-[#09090B]" 
-                : "text-[#09090B] opacity-50 hover:opacity-100"
+              className={`flex-1 h-[42px] flex items-center justify-center rounded-[4px] text-[14px] font-bold transition-all ${
+                activeTab === tab ? "bg-white shadow-sm text-[#09090B]" : "text-[#09090B] opacity-50 hover:opacity-100"
               }`}
             >
               {tab}
@@ -74,39 +86,24 @@ const BaiGiang = () => {
           ))}
         </div>
 
-        {/* 4. Vùng hiển thị nội dung động */}
-        <div className="w-full flex-1 bg-white flex flex-col items-center py-6">
-          
+        <div className="w-full flex-1 bg-white pt-4">
           {activeTab === "Thông tin" && (
-            <div className="relative w-full max-w-[1051px] min-h-[883px] bg-black flex justify-center items-start pt-10 rounded-sm overflow-y-auto">
-              <div className="w-full max-w-[711px] min-h-[821px] bg-white shadow-2xl p-14 mb-10">
-                <h2 className="text-[22px] font-bold text-center mb-10 leading-[27px] border-b pb-4">
-                  {lectureData.contentTitle}
+            <div className="w-full min-h-[600px] bg-gray-900 flex justify-center items-start pt-6 md:pt-10 rounded-[6px] overflow-y-auto">
+              <div className="w-full max-w-[800px] min-h-[700px] bg-white p-8 md:p-16 mb-10 shadow-2xl rounded-sm">
+                <h2 className="text-[24px] font-bold text-center mb-8 border-b pb-6 text-gray-800">
+                  {lectureData.title}
                 </h2>
-                <div className="text-[17px] font-medium leading-[26px] text-justify whitespace-pre-line text-black">
-                  {lectureData.content.text}
+                {/* Sử dụng extractedText từ API kết quả trả về */}
+                <div className="text-[17px] leading-[30px] text-justify whitespace-pre-line text-[#18181B]">
+                  {lectureData.extractedText || "Nội dung bài học này đang được cập nhật..."}
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === "Chat" && (
-            <div className="w-full px-2">
-               <ChatAI />
-            </div>
-          )}
-
-          {activeTab === "Quizzes" && (
-            <div className="w-full h-full">
-              <Quizz lessonId={id} /> 
-            </div>
-          )}
-
-          {activeTab === "FlashCard" && (
-            <div className="w-full h-full">
-              <FlashCard />
-            </div>
-          )}
+          {activeTab === "Chat" && <ChatAI documentId={id} />}
+          {activeTab === "Quizzes" && <Quizz lessonId={id} lectureTitle={lectureData.title} />}
+          {activeTab === "FlashCard" && <FlashCard documentId={id} lectureTitle={lectureData.title} />}
         </div>
       </div>
     </div>

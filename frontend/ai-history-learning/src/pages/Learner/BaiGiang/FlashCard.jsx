@@ -1,111 +1,113 @@
-import React, { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import axiosClient from "../../../lib/axios";
+import { Loader2, RefreshCcw, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 
-const FlashCard = () => {
-  // Dữ liệu 10 câu hỏi về Điện Biên Phủ
-  const flashcards = [
-    { id: 1, q: "Chiến dịch Điện Biên Phủ diễn ra vào thời gian nào?", a: "Từ ngày 13/3/1954 đến 7/5/1954." },
-    { id: 2, q: "Ai là tổng chỉ huy quân đội Việt Nam trong chiến dịch Điện Biên Phủ?", a: "Đại tướng Võ Nguyên Giáp." },
-    { id: 3, q: "Đối thủ chính của quân đội Việt Nam trong chiến dịch là ai?", a: "Quân đội thực dân Pháp." },
-    { id: 4, q: "Tập đoàn cứ điểm Điện Biên Phủ nằm ở đâu?", a: "Ở Điện Biên Phủ (Tây Bắc Việt Nam)." },
-    { id: 5, q: "Chiến dịch Điện Biên Phủ gồm mấy đợt tấn công chính?", a: "Gồm 3 đợt tấn công." },
-    { id: 6, q: "Kết quả cuối cùng của chiến dịch Điện Biên Phủ là gì?", a: "Quân ta tiêu diệt và bắt sống toàn bộ quân địch, thắng lợi hoàn toàn." },
-    { id: 7, q: "Chiến thắng Điện Biên Phủ đã dẫn đến hiệp định nào?", a: "Hiệp định Genève 1954." },
-    { id: 8, q: "Ý nghĩa lớn nhất của chiến thắng Điện Biên Phủ là gì?", a: "Chấm dứt ách thống trị của thực dân Pháp ở Việt Nam." },
-    { id: 9, q: "Phương châm tác chiến nổi bật của ta trong chiến dịch là gì?", a: "“Đánh chắc, tiến chắc”." },
-    { id: 10, q: "Chiến thắng Điện Biên Phủ có ảnh hưởng như thế nào trên thế giới?", a: "Cổ vũ mạnh mẽ phong trào giải phóng dân tộc trên toàn thế giới." },
-  ];
-
+const FlashCard = ({ documentId, lectureTitle }) => {
+  const [cards, setCards] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
+  useEffect(() => {
+    const fetchFlashcards = async () => {
+      if (!documentId) return;
+      try {
+        setLoading(true);
+        const res = await axiosClient.get(`/flashcards/${documentId}`);
+        if (res.success && res.data?.cards) {
+          setCards(res.data.cards);
+        } else {
+          setCards([]);
+        }
+      } catch (err) {
+        console.error("Lỗi lấy Flashcard:", err);
+        setCards([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFlashcards();
+  }, [documentId]);
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center p-20 gap-3 text-[#f26739]">
+      <Loader2 className="animate-spin" size={40} />
+      <p className="text-gray-500 font-medium italic">Đang chuẩn bị thẻ ghi nhớ...</p>
+    </div>
+  );
+
+  if (!cards || cards.length === 0) return (
+    <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+      <BookOpen className="text-gray-300 mb-4" size={56} />
+      <h3 className="text-[18px] font-bold text-gray-400 uppercase tracking-widest">Chưa có Flashcards</h3>
+      <p className="text-gray-500 font-semibold text-lg text-center mt-2">{lectureTitle}</p>
+    </div>
+  );
+
+  const currentCard = cards[currentIndex];
+
   const handleNext = () => {
-    if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setShowAnswer(false); // Reset trạng thái khi sang câu mới
-    }
+    setShowAnswer(false);
+    setCurrentIndex((prev) => (prev + 1) % cards.length);
   };
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setShowAnswer(false);
-    }
+    setShowAnswer(false);
+    setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length);
   };
 
   return (
     <div className="w-full flex flex-col items-center p-6 bg-white min-h-[500px]">
-      
-      {/* Container của Flashcard */}
-      <div 
-        className={`relative w-full max-w-[1051px] h-[350px] rounded-[20px] shadow-sm transition-all duration-500 flex flex-col items-center justify-center px-10 text-center
-          ${showAnswer ? "bg-[#4ADE80]" : "bg-[#F4F4F5]"} 
-        `}
-      >
-        {/* Badge "Câu X" */}
-        <div className="absolute top-6 left-6 bg-[#1473E6] text-white px-4 py-1 rounded-full text-[14px] font-bold">
-          Câu {flashcards[currentIndex].id}
+      <div className="text-center mb-8">
+        <div className="px-4 py-1 bg-orange-50 text-[#f26739] rounded-full text-[12px] font-bold uppercase inline-block mb-2">
+          Ghi nhớ nhanh
         </div>
-
-        {/* Nội dung text */}
-        <h2 className={`text-[32px] font-bold leading-tight transition-colors duration-300
-          ${showAnswer ? "text-[#064E3B]" : "text-[#09090B]"}
-        `}>
-          {showAnswer ? flashcards[currentIndex].a : flashcards[currentIndex].q}
-        </h2>
-
-        {/* Nút lật thẻ (Chỉ hiện khi chưa lật) */}
-        {!showAnswer && (
-          <button
-            onClick={() => setShowAnswer(true)}
-            className="mt-8 bg-[#F26739] text-white px-6 py-2 rounded-[8px] font-semibold text-[14px] hover:opacity-90 transition-all shadow-md"
-          >
-            Ấn vào đây để hiện câu trả lời
-          </button>
-        )}
+        <h4 className="text-[20px] font-bold text-gray-800">{lectureTitle}</h4>
+      </div>
+      
+      <div 
+        className="relative w-full max-w-[550px] h-[320px] cursor-pointer"
+        onClick={() => setShowAnswer(!showAnswer)}
+      >
+        <div className={`w-full h-full rounded-[32px] shadow-2xl flex flex-col items-center justify-center p-10 text-center transition-all duration-500 transform ${
+          showAnswer ? "bg-[#f26739] text-white rotate-y-10 scale-[1.02]" : "bg-white border-2 border-gray-100 text-gray-800"
+        }`}>
+          <span className={`text-[11px] font-black uppercase tracking-[3px] mb-4 opacity-60 ${showAnswer ? "text-white" : "text-[#f26739]"}`}>
+            {showAnswer ? "Đáp án chính xác" : "Câu hỏi gợi ý"}
+          </span>
+          <h2 className="text-[22px] md:text-[26px] font-bold leading-tight px-4">
+            {showAnswer ? currentCard.back : currentCard.front}
+          </h2>
+          <div className={`absolute bottom-8 flex items-center gap-2 text-[12px] font-bold opacity-50 ${showAnswer ? "text-white" : "text-gray-400"}`}>
+            <RefreshCcw size={14} className={showAnswer ? "animate-reverse-spin" : ""} /> 
+            Chạm để lật thẻ
+          </div>
+        </div>
       </div>
 
-      {/* Thanh điều hướng và Pagination */}
-      <div className="w-full max-w-[1051px] mt-10 flex items-center justify-between">
-        <span className="text-[16px] font-medium text-gray-500">
-          {currentIndex + 1} / {flashcards.length} Câu
-        </span>
+      <div className="flex flex-col items-center gap-6 mt-10 w-full max-w-[550px]">
+         <div className="flex items-center gap-4 w-full px-2">
+            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+               <div className="h-full bg-[#f26739] transition-all duration-300" style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}></div>
+            </div>
+            <span className="text-gray-400 font-bold text-xs whitespace-nowrap">{currentIndex + 1} / {cards.length} thẻ</span>
+         </div>
 
-        <div className="flex items-center gap-6">
-          <button
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-            className="flex items-center gap-2 text-[18px] font-medium disabled:opacity-30 hover:text-[#1473E6] transition-colors"
-          >
-            <ChevronLeft size={24} /> Previous
-          </button>
-
-          {/* Danh sách số trang */}
-          <div className="flex items-center gap-2">
-            {flashcards.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setCurrentIndex(idx);
-                  setShowAnswer(false);
-                }}
-                className={`w-8 h-8 rounded-md flex items-center justify-center text-[14px] font-medium transition-all
-                  ${currentIndex === idx ? "bg-[#1473E6] text-white shadow-md" : "bg-gray-50 text-gray-400 hover:bg-gray-100"}
-                `}
-              >
-                {idx + 1}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleNext}
-            disabled={currentIndex === flashcards.length - 1}
-            className="flex items-center gap-2 text-[18px] font-medium disabled:opacity-30 hover:text-[#1473E6] transition-colors"
-          >
-            Next <ChevronRight size={24} />
-          </button>
-        </div>
+         <div className="flex gap-4 w-full">
+            <button 
+              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+              className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-gray-900 text-gray-900 py-3.5 rounded-2xl font-bold hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+            >
+              <ChevronLeft size={20} /> Thẻ trước
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              style={{ backgroundColor: '#f26739' }}
+              className="flex-[2] flex items-center justify-center gap-2 text-white py-3.5 rounded-2xl font-bold hover:opacity-90 transition-all shadow-xl active:scale-95"
+            >
+              Thẻ tiếp theo <ChevronRight size={20} />
+            </button>
+         </div>
       </div>
     </div>
   );

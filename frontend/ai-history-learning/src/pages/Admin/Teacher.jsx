@@ -37,13 +37,6 @@ const activities = [
     time: "12 phút trước",
   },
   {
-    Icon: Wrench,
-    color: "#F26739",
-    title: "Báo cáo sự cố",
-    subtitle: "Không Chat AI được",
-    time: "30 phút trước",
-  },
-  {
     Icon: CreditCard,
     color: "#8B5CF6",
     title: "Thêm bộ Flashcard mới",
@@ -124,7 +117,7 @@ export default function TeacherDashboard() {
   const stats = [
     {
       label: "Tổng bài TestQuiz",
-      value: "450,000,000",
+      value: loading ? "..." : String(quizCount),
       Icon: ClipboardList,
       color: "#F26739",
       bg: "#FFF3EE",
@@ -145,14 +138,6 @@ export default function TeacherDashboard() {
       color: "#0EA472",
       bg: "#EEFAF5",
       trend: "+8%",
-    },
-    {
-      label: "Sự cố báo cáo",
-      value: "0",
-      Icon: AlertTriangle,
-      color: "#F59E0B",
-      bg: "#FFFBEB",
-      trend: "–",
     },
   ];
 
@@ -351,14 +336,14 @@ export default function TeacherDashboard() {
         {[
           {
             label: "Tổng Người đọc",
-            value: "1,048,588,576",
+            value: "500",
             Icon: Users,
             color: "#1473E6",
             note: "Đang hoạt động",
           },
           {
             label: "Người đọc làm bài kiểm tra",
-            value: "11,550,447",
+            value: "200",
             Icon: GraduationCap,
             color: "#10B981",
             note: "Trong tháng này",

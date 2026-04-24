@@ -11,14 +11,24 @@ const LogoutModal = ({ onConfirm, onCancel }) => (
       onClick={(e) => e.stopPropagation()}
     >
       <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-100">
-        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        <svg
+          className="w-5 h-5 text-red-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
           />
         </svg>
       </div>
       <p className="text-base font-semibold text-gray-800 mb-1">Đăng xuất?</p>
-      <p className="text-sm text-gray-400 mb-6">Bạn có chắc chắn muốn đăng xuất không?</p>
+      <p className="text-sm text-gray-400 mb-6">
+        Bạn có chắc chắn muốn đăng xuất không?
+      </p>
       <div className="flex gap-2">
         <button
           onClick={onCancel}
@@ -40,7 +50,7 @@ const LogoutModal = ({ onConfirm, onCancel }) => (
 const Header = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem("user") || "{}")
+    JSON.parse(localStorage.getItem("user") || "{}"),
   );
   const [open, setOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -49,22 +59,22 @@ const Header = () => {
   const avatarUrl =
     user.avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      user.name || "User"
+      user.name || "User",
     )}&background=F26739&color=fff&rounded=true&size=128`;
 
   const profilePath =
     user.role === "admin"
       ? "/admin/profile"
       : user.role === "teacher"
-      ? "/teacher/profile"
-      : "/student/profile";
+        ? "/teacher/profile"
+        : "/student/profile";
 
   const roleLabel =
     user.role === "admin"
       ? "Quản trị viên"
       : user.role === "teacher"
-      ? "Giáo viên"
-      : "Học sinh";
+        ? "Giáo viên"
+        : "Học sinh";
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -128,11 +138,14 @@ const Header = () => {
       `}</style>
 
       {/* left-[220px] — aligns with the 220px sidebar */}
-      <header className="h-14 fixed top-0 left-[220px] right-0 bg-white border-b border-gray-100 flex items-center justify-end px-6 z-20"
-        style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}
-      >
+      <header
+        className="h-14 fixed top-0 left-0 right-0 bg-white flex items-center justify-end px-6 z-20"   
+      > <div className="w-[220px]" />
+      <div className="flex-1 flex justify-end">
+        <div className="relative" ref={dropdownRef}></div>
+      </div>
+      
         <div className="relative" ref={dropdownRef}>
-
           {/* Avatar button */}
           <button
             onClick={() => setOpen(!open)}
@@ -149,15 +162,23 @@ const Header = () => {
             <svg
               className="w-3.5 h-3.5 text-gray-400 transition-transform duration-200"
               style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </button>
 
           {/* Dropdown */}
           {open && (
-            <div className="dropdown-enter absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden"
+            <div
+              className="dropdown-enter absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden"
               style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.10)" }}
             >
               {/* User info */}
@@ -171,7 +192,9 @@ const Header = () => {
                   <p className="text-[13px] font-semibold text-gray-800 truncate">
                     {user.name || "Người dùng"}
                   </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{roleLabel}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {roleLabel}
+                  </p>
                 </div>
               </div>
 
@@ -179,22 +202,46 @@ const Header = () => {
               <div className="p-1.5">
                 <button
                   className="dropdown-item"
-                  onClick={() => { navigate(profilePath); setOpen(false); }}
+                  onClick={() => {
+                    navigate(profilePath);
+                    setOpen(false);
+                  }}
                 >
-                  <svg className="w-4 h-4 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                      d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  <svg
+                    className="w-4 h-4 opacity-50 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.8}
+                      d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                    />
                   </svg>
                   Quản lý tài khoản
                 </button>
 
                 <button
                   className="dropdown-item danger"
-                  onClick={() => { setShowLogoutModal(true); setOpen(false); }}
+                  onClick={() => {
+                    setShowLogoutModal(true);
+                    setOpen(false);
+                  }}
                 >
-                  <svg className="w-4 h-4 opacity-70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                      d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                  <svg
+                    className="w-4 h-4 opacity-70 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.8}
+                      d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+                    />
                   </svg>
                   Đăng xuất
                 </button>
@@ -213,5 +260,4 @@ const Header = () => {
     </>
   );
 };
-
 export default Header;

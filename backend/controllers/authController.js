@@ -203,8 +203,10 @@ export const updateProfile = async (req, res, next) => {
             });
         }
 
+        // 1. Cập nhật tên
         if (fullName) user.fullName = fullName;
 
+        // 2. Cập nhật email (Kiểm tra trùng lặp)
         if (email) {
             const normalizedEmail = email.toLowerCase();
             const existingUser = await User.findOne({
@@ -222,13 +224,14 @@ export const updateProfile = async (req, res, next) => {
             user.email = normalizedEmail;
         }
 
+        // 3. Cập nhật ảnh đại diện 
         if (req.file) {
-            const baseUrl = `${req.protocol}://${req.get('host')}`;
-            user.profileImage = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+            user.profileImage = req.file.path; 
         } else if (profileImage !== undefined) {
             user.profileImage = profileImage;
         }
 
+        // Lưu thông tin
         await user.save();
 
         return res.status(200).json({
@@ -240,7 +243,7 @@ export const updateProfile = async (req, res, next) => {
                 role: user.role,
                 teacherApprovalStatus: user.teacherApprovalStatus,
                 isActive: user.isActive,
-                profileImage: user.profileImage,
+                profileImage: user.profileImage, 
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt
             },

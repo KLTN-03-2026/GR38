@@ -16,6 +16,9 @@ components:
         fileName:
           type: string
           example: lich_su_12.pdf
+        thumbnail:
+          type: string
+          example: https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg
 
     UserRef:
       type: object

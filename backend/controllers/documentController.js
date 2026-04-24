@@ -5,6 +5,7 @@ import Quiz from "../models/Quiz.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import fs from "fs/promises";
+import path from "path"; 
 
 export const uploadsDocument = async (req, res, next) => {
   try {
@@ -12,37 +13,40 @@ export const uploadsDocument = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: "Vui lòng tải file PDF",
-        statusCode: 400,
       });
     }
 
-    const { title } = req.body;
+
+    const { title, thumbnail } = req.body;
+    
     if (!title) {
       await fs.unlink(req.file.path);
       return res.status(400).json({
         success: false,
         error: "Vui lòng cung cấp tiêu đề cho tài liệu",
-        statusCode: 400,
       });
     }
 
-    const baseUrl = `http://localhost:${process.env.PORT || 8000}`;
-    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const fileUrl = `${baseUrl}/uploads/documents/${req.file.filename}`; 
 
-    // ✅ Fix encoding tên file tiếng Việt
+    // Fix encoding tên file tiếng Việt
     const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
 
     const document = new Document({
       userId: req.user._id,
       title,
+      thumbnail: thumbnail || null, // Lưu link Cloudinary vào database
       fileName: originalName,
       filePath: fileUrl,
+      localPath: req.file.path, // Nên lưu thêm đường dẫn cục bộ để sau này dễ xóa file
       fileSize: req.file.size,
       status: "processing",
     });
 
     await document.save();
 
+    // Xử lý PDF chạy ngầm (Không dùng await để block request)
     processPDF(document.id, req.file.path).catch((err) => {
       console.error("Lỗi xử lý PDF:", err);
     });
@@ -51,7 +55,6 @@ export const uploadsDocument = async (req, res, next) => {
       success: true,
       data: document,
       message: "Tài liệu đang được xử lý. Vui lòng kiểm tra lại sau vài phút.",
-      statusCode: 201,
     });
   } catch (error) {
     if (req.file) {
@@ -153,14 +156,12 @@ export const getDocument = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         error: 'Không tìm thấy tài liệu',
-        statusCode: 404
       });
     }
 
     const flashcardCount = await Flashcard.countDocuments({ documentId: document._id });
     const quizCount = await Quiz.countDocuments({ documentId: document._id });
 
-    // ✅ Dùng updateOne thay vì save() để tránh lỗi validation
     await Document.updateOne(
       { _id: document._id },
       { $set: { lastAccessed: Date.now() } }
@@ -183,23 +184,37 @@ export const deleteDocument = async (req, res, next) => {
   try {
     const document = await Document.findOne({
       _id: req.params.id,
-      userId: req.user._id
+      userId: req.user._id 
     });
 
     if (!document) {
       return res.status(404).json({
         success: false,
-        error: 'Không tìm thấy tài liệu',
-        statusCode: 404
+        error: 'Không tìm thấy tài liệu hoặc không có quyền xóa',
       });
     }
 
-    await fs.unlink(document.filePath).catch(() => {});
+    // Cập nhật lại logic xóa file PDF cục bộ
+    if (document.localPath) {
+      // Nếu có lưu localPath, dùng luôn
+      await fs.unlink(document.localPath).catch((err) => console.log("File PDF không tồn tại trên ổ cứng:", err.message));
+    } else if (document.filePath) {
+      // Logic dự phòng: trích xuất tên file từ URL để xóa
+      const fileName = document.filePath.split('/').pop(); 
+      const localFilePath = path.resolve('upload/documents', fileName);
+      await fs.unlink(localFilePath).catch(() => {});
+    }
+
+    // Xóa tài liệu khỏi database
     await document.deleteOne();
+
+    // Xóa các flashcard và quiz liên quan
+    await Flashcard.deleteMany({ documentId: document._id });
+    await Quiz.deleteMany({ documentId: document._id });
 
     res.status(200).json({
       success: true,
-      message: 'Xóa tài liệu thành công'
+      message: 'Xóa tài liệu và các bài tập liên quan thành công'
     });
   } catch (error) {
     next(error);

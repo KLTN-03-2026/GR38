@@ -9,6 +9,7 @@ components:
       properties:
         _id:
           type: string
+          example: 66a1f2c9b8d4e01f12345678
         fullName:
           type: string
           example: Nguyễn Văn A
@@ -17,13 +18,24 @@ components:
           example: nguyenvana@gmail.com
         role:
           type: string
+          enum: [ADMIN, TEACHER, LEARNER]
           example: LEARNER
         teacherApprovalStatus:
           type: string
+          enum: [pending, approved, rejected]
           example: approved
         isActive:
           type: boolean
           example: true
+        profileImage:
+          type: string
+          nullable: true
+          description: "URL ảnh đại diện (lưu trên Cloudinary)"
+          example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v123/avatar.jpg"
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
 
 paths:
   /api/v1/auth/register:
@@ -45,42 +57,28 @@ paths:
               properties:
                 fullName:
                   type: string
-                  description: Họ và tên người dùng (tối thiểu 3 ký tự)
+                  minLength: 3
                   example: Nguyễn Văn A
                 email:
                   type: string
-                  description: Địa chỉ email hợp lệ
+                  format: email
                   example: nguyenvana@gmail.com
                 password:
                   type: string
-                  description: Mật khẩu (tối thiểu 6 ký tự)
+                  minLength: 6
                   example: "123456"
                 passwordConfirm:
                   type: string
-                  description: Xác nhận lại mật khẩu (phải khớp với password)
                   example: "123456"
                 role:
                   type: string
-                  description: Vai trò của người dùng
                   enum: [ADMIN, TEACHER, LEARNER]
                   example: LEARNER
       responses:
         '201':
-          description: Đăng ký tài khoản thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  user:
-                    $ref: '#/components/schemas/UserResponse'
+          description: Đăng ký thành công
         '400':
-          description: Lỗi Validation (thiếu trường, email sai định dạng, mật khẩu ngắn...)
-        '409':
-          description: Email đã tồn tại trong hệ thống
+          description: Lỗi validation hoặc mật khẩu xác nhận không khớp
 
   /api/v1/auth/login:
     post:
@@ -104,24 +102,21 @@ paths:
                   example: "123456"
       responses:
         '200':
-          description: Đăng nhập thành công, trả về Token
-        '400':
-          description: Dữ liệu gửi lên không hợp lệ
+          description: Trả về thông tin user và JWT Token
         '401':
-          description: Sai email hoặc mật khẩu
+          description: Sai thông tin đăng nhập
         '403':
-          description: Tài khoản bị vô hiệu hóa hoặc chờ duyệt
+          description: "Tài khoản bị khóa hoặc Giáo viên chưa được duyệt (teacherApprovalStatus: pending)"
 
   /api/v1/auth/profile:
     get:
       summary: Lấy thông tin cá nhân hiện tại
-      description: Yêu cầu phải gửi kèm Token trong Header (Bearer Token)
       tags: [Authentication]
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Lấy thông tin thành công
+          description: Thành công
           content:
             application/json:
               schema:
@@ -132,45 +127,49 @@ paths:
                     example: true
                   data:
                     $ref: '#/components/schemas/UserResponse'
-        '401':
-          description: Chưa đăng nhập hoặc Token hết hạn
-        '404':
-          description: Không tìm thấy người dùng
 
     put:
       summary: Cập nhật thông tin cá nhân
-      description: Cho phép cập nhật tên, email và ảnh đại diện (Yêu cầu Token)
+      description: "Có thể cập nhật văn bản (JSON) hoặc gửi kèm file ảnh (Multipart). Nếu gửi file ảnh, sử dụng field name là 'avatar'."
       tags: [Authentication]
       security:
         - bearerAuth: []
       requestBody:
-        required: true
         content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  example: Nguyễn Văn A (Mới)
+                email:
+                  type: string
+                  example: newemail@gmail.com
+                avatar:
+                  type: string
+                  format: binary
+                  description: "File ảnh đại diện mới để tải lên Cloudinary"
           application/json:
             schema:
               type: object
               properties:
                 fullName:
                   type: string
-                  example: Nguyễn Văn B
                 email:
                   type: string
-                  example: nguyenvanb_new@gmail.com
                 profileImage:
                   type: string
-                  example: "https://example.com/avatar.jpg"
+                  description: "URL ảnh nếu đã có sẵn"
       responses:
         '200':
           description: Cập nhật thành công
-        '400':
-          description: Lỗi Validation hoặc Email đã được người khác sử dụng
         '401':
           description: Chưa đăng nhập
 
   /api/v1/auth/change-password:
     post:
       summary: Đổi mật khẩu
-      description: Yêu cầu nhập mật khẩu cũ, mật khẩu mới và xác nhận (Yêu cầu Token)
       tags: [Authentication]
       security:
         - bearerAuth: []
@@ -187,17 +186,12 @@ paths:
               properties:
                 currentPassword:
                   type: string
-                  example: "123456"
                 newPassword:
                   type: string
-                  example: "12345678"
                 newPasswordConfirm:
                   type: string
-                  example: "12345678"
       responses:
         '200':
           description: Đổi mật khẩu thành công
-        '400':
-          description: Mật khẩu xác nhận không khớp
         '401':
-          description: Mật khẩu hiện tại không đúng hoặc chưa đăng nhập
+          description: Mật khẩu hiện tại không đúng

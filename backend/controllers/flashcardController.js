@@ -14,17 +14,17 @@ const resolveFlashcardSetId = async ({ setId, cardId }) => {
     return flashcardSet?._id || null;
 };
 
-//@desc Tải tất cả flashcard của tài liệu
+//@desc Tải tất cả flashcard của tài liệu (Kèm ảnh tài liệu)
 // @route GET /api/flashcards/:documentId
 // @access Private
 export const getFlashcards = async (req, res, next) => {
-    try{
+    try {
         const { documentId } = req.params;
 
-        // 1. Tìm bộ Flashcard gốc (Không quan trọng ai tạo, miễn là đúng documentId)
+        // 1. Tìm bộ Flashcard gốc và "kéo" theo title, thumbnail của Document
         const flashcardSet = await Flashcard.findOne({ 
             documentId: documentId 
-        });
+        }).populate('documentId', 'title thumbnail'); // ✅ THÊM POPULATE Ở ĐÂY
 
         if (!flashcardSet) {
             return res.status(200).json({
@@ -34,13 +34,13 @@ export const getFlashcards = async (req, res, next) => {
             });
         }
 
-        // 2. Tìm TIẾN ĐỘ CÁ NHÂN của người đang đăng nhập (nếu có)
+        // 2. Tìm TIẾN ĐỘ CÁ NHÂN
         const progress = await FlashcardProgress.findOne({
             userId: req.user._id,
             flashcardSetId: flashcardSet._id
         });
 
-        // 3. TRỘN DỮ LIỆU: Lấy thẻ gốc + gắn thêm trạng thái cá nhân
+        // 3. TRỘN DỮ LIỆU
         const cardsWithUserStatus = flashcardSet.cards.map(card => {
             const cardProg = progress?.cardProgress.find(
                 cp => cp.cardId.toString() === card._id.toString()
@@ -48,10 +48,9 @@ export const getFlashcards = async (req, res, next) => {
 
             return {
                 _id: card._id,
-                front: card.front, 
-                back: card.back,
+                front: card.front, // Hoặc question tuỳ vào schema của bạn
+                back: card.back,   // Hoặc answer tuỳ vào schema của bạn
                 difficulty: card.difficulty,
-                // Nếu học sinh đã từng học thì lấy data đó, không thì mặc định
                 isStarred: cardProg ? cardProg.isStarred : false,
                 reviewCount: cardProg ? cardProg.reviewCount : 0,
                 memoryStatus: cardProg ? cardProg.memoryStatus : 'Chưa học',
@@ -64,7 +63,8 @@ export const getFlashcards = async (req, res, next) => {
             count: cardsWithUserStatus.length,
             data: {
                 _id: flashcardSet._id,
-                title: flashcardSet.title || "Bộ Flashcard",
+                title: flashcardSet.documentId?.title || "Bộ Flashcard", 
+                thumbnail: flashcardSet.documentId?.thumbnail || null, // ✅ TRẢ VỀ LINK ẢNH CHO FRONTEND
                 cards: cardsWithUserStatus
             }
         });
@@ -73,19 +73,18 @@ export const getFlashcards = async (req, res, next) => {
         next(error);
     }
 };
-
-//@desc Tải tất cả bộ flashcard cho người dùng
+//@desc Tải tất cả bộ flashcard cho người dùng (Danh sách)
 // @route GET /api/flashcards
 // @access Private
 export const getAllFlashcardSets = async (req, res, next) => {
-    try{
+    try {
         let query = {};
         if (req.user.role === USER_ROLES.TEACHER) {
             query = { teacherId: req.user._id }; 
         }
 
         const flashcardSets = await Flashcard.find(query)
-            .populate('documentId', 'title')
+            .populate('documentId', 'title thumbnail') // ✅ THÊM POPULATE THUMBNAIL
             .sort({ createdAt: -1 });
     
         res.status(200).json({
@@ -216,27 +215,24 @@ export const getFlashcardSetWithProgress = async (req, res, next) => {
     try {
         const { setId } = req.params;
 
-        // 1. Lấy dữ liệu GỐC của Giáo viên
-        const flashcardSet = await Flashcard.findById(setId).populate('documentId', 'title');
+        // 1. Lấy dữ liệu GỐC của Giáo viên (Kèm ảnh tài liệu)
+        const flashcardSet = await Flashcard.findById(setId)
+            .populate('documentId', 'title thumbnail'); // ✅ THÊM THUMBNAIL
         
         if (!flashcardSet) {
             return res.status(404).json({ success: false, error: 'Không tìm thấy bộ flashcard' });
         }
 
-        // 2. Lấy TIẾN ĐỘ CÁ NHÂN của Học sinh (nếu có)
         const progress = await FlashcardProgress.findOne({
             userId: req.user._id,
             flashcardSetId: setId
         });
 
-        // 3. Lắp ghép (Map) dữ liệu tiến độ vào từng thẻ gốc
         const cardsWithProgress = flashcardSet.cards.map(card => {
-            // Tìm xem thẻ này học sinh đã tương tác bao giờ chưa
             const cardProg = progress?.cardProgress.find(
                 cp => cp.cardId.toString() === card._id.toString()
             );
 
-            // Gộp data gốc và data tiến độ
             return {
                 _id: card._id,
                 question: card.question,
@@ -253,7 +249,9 @@ export const getFlashcardSetWithProgress = async (req, res, next) => {
             success: true,
             data: {
                 _id: flashcardSet._id,
-                documentId: flashcardSet.documentId,
+                documentId: flashcardSet.documentId?._id, // Tách nhỏ data cho Front-end dễ lấy
+                documentTitle: flashcardSet.documentId?.title,
+                documentThumbnail: flashcardSet.documentId?.thumbnail, // ✅ LINK ẢNH HIỂN THỊ
                 teacherId: flashcardSet.teacherId, 
                 totalCards: flashcardSet.cards.length,
                 cards: cardsWithProgress 

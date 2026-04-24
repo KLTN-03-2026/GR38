@@ -60,7 +60,7 @@ const quizSchema = new mongoose.Schema(
       default: false, 
     },
     questions: {
-      type: [questionSchema], // Nhúng Sub-schema vào đây
+      type: [questionSchema], 
       validate: [
         (val) => val.length >= 5,
         "Một bài trắc nghiệm phải có ít nhất 5 câu hỏi."

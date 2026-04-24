@@ -12,12 +12,20 @@ components:
         title:
           type: string
           example: "Lịch sử lớp 12 - Kháng chiến chống Pháp"
+        thumbnail:
+          type: string
+          description: "URL ảnh bìa lưu trên Cloudinary"
+          example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg"
         fileName:
           type: string
           example: "lich_su_12.pdf"
         filePath:
           type: string
-          example: "http://localhost:8000/uploads/lich_su_12.pdf"
+          example: "http://localhost:8000/uploads/documents/lich_su_12.pdf"
+        localPath:
+          type: string
+          description: "Đường dẫn vật lý trên server (Dùng nội bộ để xóa file)"
+          example: "D:/DATN/AIHistoryLearning/backend/upload/documents/lich_su_12.pdf"
         fileSize:
           type: integer
           description: Kích thước file (bytes)
@@ -59,10 +67,49 @@ components:
               format: date-time
 
 paths:
-  /api/v1/documents/upload:
+  /api/v1/documents/upload-thumbnail:
+    post:
+      summary: Tải lên ảnh bìa cho tài liệu
+      description: API này tải ảnh lên Cloudinary và trả về URL. Dùng URL này để truyền vào biến `thumbnail` khi gọi API upload-pdf.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - thumbnail
+              properties:
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: File ảnh bìa (jpg, jpeg, png, webp)
+      responses:
+        '200':
+          description: Tải ảnh lên thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  url:
+                    type: string
+                    example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg"
+        '400':
+          description: Thiếu file ảnh
+        '401':
+          description: Chưa đăng nhập
+
+  /api/v1/documents/upload-pdf:
     post:
       summary: Tải lên tài liệu PDF mới
-      description: API này sử dụng `multipart/form-data`. Sau khi tải lên, hệ thống sẽ xử lý PDF ở dưới nền (background).
+      description: Tải lên file PDF và tạo mới tài liệu. Có thể truyền kèm URL ảnh bìa đã upload từ API upload-thumbnail.
       tags: [Document]
       security:
         - bearerAuth: []
@@ -80,6 +127,10 @@ paths:
                   type: string
                   description: Tiêu đề của tài liệu
                   example: "Tài liệu ôn tập Lịch sử"
+                thumbnail:
+                  type: string
+                  description: URL ảnh bìa (lấy từ API upload-thumbnail)
+                  example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg"
                 file:
                   type: string
                   format: binary

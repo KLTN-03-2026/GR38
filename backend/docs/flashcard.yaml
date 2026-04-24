@@ -49,6 +49,9 @@ components:
         title:
           type: string
           example: Lịch sử Việt Nam lớp 12
+        thumbnail: 
+          type: string
+          example: https://res.cloudinary.com/dynbuqe3g/image/upload/v123/thumbnail.jpg
 
     FlashcardSetBase:
       type: object
@@ -107,6 +110,9 @@ components:
         title:
           type: string
           example: Bộ flashcard Ôn tập Pháp thuộc
+        thumbnail:
+          type: string
+          example: https://res.cloudinary.com/dynbuqe3g/image/upload/v123/thumbnail.jpg
         cards:
           type: array
           items:

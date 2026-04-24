@@ -9,7 +9,7 @@ import {
 } from '../controllers/authController.js';
 import { USER_ROLES } from '../models/User.js';
 import protect from '../middleware/auth.js';
-import uploadAvatar from '../config/avatarMulter.js';
+import {uploadAvatar} from '../config/uploadImage.js';
 
 const router = express.Router();
 

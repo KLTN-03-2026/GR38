@@ -82,10 +82,15 @@ console.log("QuizPageInline mounted, quiz:", quiz); // ← thêm ngay đây
 
   const handleSubmit = () => {
   const score = Object.entries(answers).filter(([i, a]) => {
-    const q = questions[+i];
-    console.log(`Câu ${+i + 1}: chọn=${a}, đúng=${q?.answer}`);
-    return q?.answer === a;
-  }).length;
+  const q = questions[Number(i)];
+  if (!q) return false;
+  const selectedText = q.options[a];          
+  return (
+    selectedText === q.answer ||     
+    String(a) === String(q.answer) ||     
+    Number(a) === Number(q.answer)          
+  );
+}).length;
   
   console.log("Tổng đúng:", score);
   

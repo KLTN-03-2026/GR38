@@ -10,8 +10,8 @@ export const getQuizzes = async (req, res, next) => {
     const quizzes = await Quiz.find({
       documentId: req.params.documentId,
     })
-
-      .populate("documentId", "title fileName")
+      // ✅ THÊM "thumbnail" VÀO HÀM POPULATE ĐỂ LẤY LINK ẢNH TỪ BẢNG DOCUMENT
+      .populate("documentId", "title fileName thumbnail") 
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -31,7 +31,7 @@ export const getQuizById = async (req, res, next) => {
   try {
     const quiz = await Quiz.findById(req.params.id).populate(
       "documentId",
-      "title fileName",
+      "title fileName thumbnail" 
     );
 
     if (!quiz) {

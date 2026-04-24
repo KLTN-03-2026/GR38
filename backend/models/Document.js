@@ -12,13 +12,22 @@ const documentSchema = new mongoose.Schema(
       required: [true, "Vui lòng nhập tiêu đề tài liệu"],
       trim: true,
     },
+    // BỔ SUNG: Trường lưu ảnh bìa từ Cloudinary
+    thumbnail: {
+      type: String,
+      default: null, 
+    },
     fileName: {
       type: String,
       required: true,
     },
     filePath: {
-      type: String,
+      type: String, // Trả về URL để Frontend tải/xem file (VD: http://localhost:8000/uploads/...)
       required: true,
+    },
+    // BỔ SUNG: Trường lưu đường dẫn vật lý trên ổ cứng để backend gọi lệnh fs.unlink xóa file
+    localPath: {
+      type: String, 
     },
     fileSize: {
       type: Number,
@@ -50,7 +59,7 @@ const documentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["processing", "ready", "failed"],  // ✅ bỏ "error"
+      enum: ["processing", "ready", "failed"],  
       default: "processing",
     },
   },

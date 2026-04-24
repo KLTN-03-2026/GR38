@@ -48,6 +48,7 @@ import DocumentsLearner from "./pages/Learner/Documents";
 import FlashcardsLearner from "./pages/Learner/Flashcards.jsx";
 import QuizzesLearner from "./pages/Learner/Quizzes";
 import SuCo from "./pages/Learner/SuCo";
+import TienDo from "./pages/Learner/TienDo"; // Import TienDo
 
 // ================= HELPER =================
 const getUser = () => {
@@ -188,6 +189,7 @@ export default function AppRouter() {
           <Route path="flashcard" element={<FlashCard />} />
           <Route path="quiz" element={<Quiz />} />
           <Route path="hoc-flashcard" element={<FlashcardDetailLearner />} />
+          <Route path="tiendo" element={<TienDo />} />
         </Route>
       </Route>
 

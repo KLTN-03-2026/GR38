@@ -1,14 +1,19 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import api from "../../../lib/api";
 
-const initialData = [
-  { ma: 101, ten: "Trận chiến điện biên phủ",          ngay: "18/10/2004", sl: "0/108",   diem: "0/10",   tt: "Chưa làm bài" },
-  { ma: 110, ten: "Chiến tranh giải phóng miền nam",    ngay: "12/01/2004", sl: "108/108", diem: "8.5/10", tt: "Đã làm bài"   },
-  { ma: 220, ten: "Kháng chiến chống phát xít Nhật",    ngay: "17/09/2004", sl: "108/108", diem: "9/10",   tt: "Đã làm bài"   },
-  { ma: 430, ten: "Nạn đói 1945",                       ngay: "24/10/2004", sl: "108/108", diem: "9/10",   tt: "Đã làm bài"   },
-  { ma: 550, ten: "Bác hồ đọc bảng tuyên ngôn",         ngay: "19/12/2004", sl: "108/108", diem: "2/10",   tt: "Đã làm bài"   },
-  { ma: 601, ten: "100 năm kháng chiến chống Pháp",     ngay: "16/03/2004", sl: "108/108", diem: "7.5/10", tt: "Đã làm bài"   },
-  { ma: 602, ten: "Cuộc đời của chủ tịch Hồ Chí Minh", ngay: "18/10/2004", sl: "88/108",  diem: "0/10",   tt: "Đang làm"     },
-];
+// ─── Helpers map dữ liệu API → shape UI ────────────────────────────────────
+
+// Map overview → 4 stat cards
+function mapStats(overview = {}) {
+  const avg = overview.averageScore ?? 0;
+  return {
+    totalQuizzes:     overview.totalQuizzes     ?? 0,
+    completedQuizzes: overview.completedQuizzes ?? 0,
+    averageScore:     isNaN(Number(avg)) ? 0 : Number(avg),
+    studyStreak:      overview.studyStreak      ?? 0,
+  };
+}
+// ───────────────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
   "Chưa làm bài": { bg: "#FEF2F2", color: "#DC2626", dot: "#EF4444" },
@@ -16,120 +21,100 @@ const STATUS_CONFIG = {
   "Đang làm":     { bg: "#FFFBEB", color: "#D97706", dot: "#F59E0B" },
 };
 
-const STATS = [
-  {
-    label: "Tổng học sinh",
-    value: 108,
-    icon: (
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-          d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-      </svg>
-    ),
-    accent: "#F26739",
-    lightBg: "#FFF4EF",
-  },
-  {
-    label: "Đã làm bài kiểm tra",
-    value: 70,
-    icon: (
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    accent: "#16A34A",
-    lightBg: "#F0FDF4",
-  },
-  {
-    label: "Chưa làm bài",
-    value: 2,
-    icon: (
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-          d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-      </svg>
-    ),
-    accent: "#DC2626",
-    lightBg: "#FEF2F2",
-  },
-  {
-    label: "Đang làm",
-    value: 5,
-    icon: (
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    accent: "#D97706",
-    lightBg: "#FFFBEB",
-  },
-];
+function buildStats(s) {
+  return [
+    {
+      label: "Tổng số quiz",
+      value: s.totalQuizzes,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h.75" />
+        </svg>
+      ),
+      accent: "#F26739",
+      lightBg: "#FFF4EF",
+    },
+    {
+      label: "Đã hoàn thành",
+      value: s.completedQuizzes,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      accent: "#16A34A",
+      lightBg: "#F0FDF4",
+    },
+    {
+      label: "Điểm trung bình",
+      value: s.averageScore + "%",
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M3 13.5l5-5 4 4 5-6 4 3" />
+        </svg>
+      ),
+      accent: "#3B82F6",
+      lightBg: "#EFF6FF",
+    },
+    {
+      label: "Chuỗi ngày học",
+      value: s.studyStreak,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+        </svg>
+      ),
+      accent: "#D97706",
+      lightBg: "#FFFBEB",
+    },
+  ];
+}
 
+// ─── Custom Select ──────────────────────────────────────────────────────────
 function CustomSelect({ value, onChange, options, placeholder }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = options.find((o) => o.value === value);
 
-  // Chỉ đóng khi click ra ngoài component
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const handleSelect = (val) => {
-    onChange(val);
-    setOpen(false);
-  };
-
   return (
     <div ref={ref} style={{ position: "relative", userSelect: "none" }}>
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => setOpen((p) => !p)}
         className={`custom-select-btn${open ? " open" : ""}`}
       >
         {selected?.dot && (
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: selected.dot, flexShrink: 0, display: "inline-block" }} />
         )}
-        <span style={{ flex: 1, textAlign: "left" }}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <svg
-          width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          style={{
-            flexShrink: 0,
-            color: "#9CA3AF",
-            transition: "transform 0.18s",
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-        >
+        <span style={{ flex: 1, textAlign: "left" }}>{selected ? selected.label : placeholder}</span>
+        <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          style={{ flexShrink: 0, color: "#9CA3AF", transition: "transform 0.18s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      {/* ── Menu chỉ render khi open === true ── */}
       {open && (
         <div className="custom-select-menu">
           {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
+            <button key={opt.value} type="button"
               className={`custom-select-option${value === opt.value ? " selected" : ""}`}
-              onClick={() => handleSelect(opt.value)}
-            >
-              {opt.dot ? (
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: opt.dot, flexShrink: 0, display: "inline-block" }} />
-              ) : (
-                <span style={{ width: 7, display: "inline-block", flexShrink: 0 }} />
-              )}
+              onClick={() => { onChange(opt.value); setOpen(false); }}>
+              {opt.dot
+                ? <span style={{ width: 7, height: 7, borderRadius: "50%", background: opt.dot, flexShrink: 0, display: "inline-block" }} />
+                : <span style={{ width: 7, display: "inline-block", flexShrink: 0 }} />}
               <span>{opt.label}</span>
               {value === opt.value && (
                 <svg width="13" height="13" fill="none" stroke="#F26739" viewBox="0 0 24 24" style={{ marginLeft: "auto", flexShrink: 0 }}>
@@ -144,25 +129,92 @@ function CustomSelect({ value, onChange, options, placeholder }) {
   );
 }
 
+// ─── Skeleton loader ────────────────────────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <tr>
+      {[60, 200, 100, 100, 120, 110, 70].map((w, i) => (
+        <td key={i} style={{ padding: "14px 16px" }}>
+          <div style={{ height: 14, width: w, borderRadius: 6, background: "#F3F4F6", animation: "pulse 1.4s ease-in-out infinite" }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 export default function AssignmentStatistics() {
-  const [data, setData]                 = useState(initialData);
+  const [data, setData]                 = useState([]);
+  const [statsValues, setStatsValues]   = useState({ totalQuizzes: 0, completedQuizzes: 0, averageScore: 0, studyStreak: 0 });
+  const [loading, setLoading]           = useState(true);
+
   const [search, setSearch]             = useState("");
   const [filterScore, setFilterScore]   = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [editRow, setEditRow]           = useState(null);
   const [editForm, setEditForm]         = useState({});
   const [deleteRow, setDeleteRow]       = useState(null);
+  const [saving, setSaving]             = useState(false);
+  const [deleting, setDeleting]         = useState(false);
 
+  // ── Fetch dashboard ────────────────────────────────────────────────────
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Chỉ gọi dashboard — /quizzes/my-history bị 403 với Teacher
+      const dashRes = await api.get("/progress/dashboard");
+      const payload  = dashRes.data?.data ?? dashRes.data;
+      const overview = payload?.overview ?? {};
+      setStatsValues(mapStats(overview));
+
+      // Backend chưa có API lấy danh sách bài làm học sinh
+      // → bảng rỗng, chờ API mới từ backend
+      setData([]);
+    } catch (err) {
+      // Ẩn lỗi khỏi UI, chỉ log console
+      console.warn("[AssignmentStatistics] fetch error:", err?.response?.data?.message ?? err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  // ── Edit ───────────────────────────────────────────────────────────────
   const handleEditOpen = (row) => { setEditRow(row); setEditForm({ ...row }); };
-  const handleEditSave = () => {
-    setData((prev) => prev.map((r) => (r.ma === editForm.ma ? { ...editForm } : r)));
-    setEditRow(null);
-  };
-  const handleDeleteConfirm = () => {
-    setData((prev) => prev.filter((r) => r.ma !== deleteRow.ma));
-    setDeleteRow(null);
+
+  const handleEditSave = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/progress/dashboard/${editForm.ma}`, {
+        title:  editForm.ten,
+        date:   editForm.ngay,
+        status: editForm.tt,
+      });
+      setData((prev) => prev.map((r) => (r.ma === editForm.ma ? { ...editForm } : r)));
+      setEditRow(null);
+    } catch (err) {
+      alert(err?.response?.data?.message ?? "Lưu thất bại, vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // ── Delete ─────────────────────────────────────────────────────────────
+  const handleDeleteConfirm = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/progress/dashboard/${deleteRow.ma}`);
+      setData((prev) => prev.filter((r) => r.ma !== deleteRow.ma));
+      setDeleteRow(null);
+    } catch (err) {
+      alert(err?.response?.data?.message ?? "Xóa thất bại, vui lòng thử lại.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // ── Filter ─────────────────────────────────────────────────────────────
   const filtered = data.filter((row) => {
     const matchSearch = row.ten.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus ? row.tt === filterStatus : true;
@@ -174,281 +226,136 @@ export default function AssignmentStatistics() {
     return matchSearch && matchStatus && matchScore;
   });
 
+  const STATS = buildStats(statsValues);
+
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.45; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         .stats-page { font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
         .stat-card {
-          background: #fff;
-          border: 1px solid #F3F4F6;
-          border-radius: 14px;
-          padding: 18px 20px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
+          background: #fff; border: 1px solid #F3F4F6; border-radius: 14px;
+          padding: 18px 20px; display: flex; align-items: center; gap: 14px;
           transition: box-shadow 0.18s ease, transform 0.18s ease;
         }
-        .stat-card:hover {
-          box-shadow: 0 4px 16px rgba(0,0,0,0.07);
-          transform: translateY(-1px);
-        }
-        .stat-icon {
-          width: 44px; height: 44px;
-          border-radius: 11px;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
+        .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); transform: translateY(-1px); }
+        .stat-icon { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .filter-bar {
-          background: #fff;
-          border: 1px solid #F3F4F6;
-          border-radius: 14px;
-          padding: 16px 20px;
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-          /* z-index cao hơn table để dropdown không bị che */
-          position: relative;
-          z-index: 10;
+          background: #fff; border: 1px solid #F3F4F6; border-radius: 14px;
+          padding: 16px 20px; display: flex; gap: 10px; flex-wrap: wrap;
+          align-items: center; position: relative; z-index: 10;
         }
-        .search-wrap {
-          position: relative;
-          flex: 1;
-          min-width: 200px;
-        }
-        .search-wrap svg {
-          position: absolute;
-          left: 11px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #9CA3AF;
-          pointer-events: none;
-        }
+        .search-wrap { position: relative; flex: 1; min-width: 200px; }
+        .search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none; }
         .search-input {
-          width: 100%;
-          height: 38px;
-          padding: 0 12px 0 36px;
-          border: 1px solid #E5E7EB;
-          border-radius: 9px;
-          font-size: 13px;
-          color: #374151;
-          outline: none;
-          transition: border-color 0.15s;
-          background: #FAFAFA;
+          width: 100%; height: 38px; padding: 0 12px 0 36px;
+          border: 1px solid #E5E7EB; border-radius: 9px; font-size: 13px;
+          color: #374151; outline: none; transition: border-color 0.15s; background: #FAFAFA;
         }
         .search-input:focus { border-color: #F26739; background: #fff; }
         .custom-select-btn {
-          height: 38px;
-          padding: 0 12px;
-          border: 1px solid #E5E7EB;
-          border-radius: 9px;
-          font-size: 13px;
-          color: #374151;
-          background: #FAFAFA;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          min-width: 148px;
-          transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-          white-space: nowrap;
+          height: 38px; padding: 0 12px; border: 1px solid #E5E7EB; border-radius: 9px;
+          font-size: 13px; color: #374151; background: #FAFAFA; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 7px; min-width: 148px;
+          transition: border-color 0.18s, box-shadow 0.18s, background 0.18s; white-space: nowrap;
         }
-        .custom-select-btn:hover {
-          border-color: #D1D5DB;
-          background: #fff;
-        }
-        .custom-select-btn.open {
-          border-color: #F26739;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(242,103,57,0.1);
-        }
+        .custom-select-btn:hover { border-color: #D1D5DB; background: #fff; }
+        .custom-select-btn.open { border-color: #F26739; background: #fff; box-shadow: 0 0 0 3px rgba(242,103,57,0.1); }
         .custom-select-menu {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0;
-          min-width: 100%;
-          background: #fff;
-          border: 1px solid #E5E7EB;
-          border-radius: 11px;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.10);
-          /* Đảm bảo luôn hiện trên mọi thứ */
-          z-index: 9999;
-          padding: 4px;
+          position: absolute; top: calc(100% + 6px); left: 0; min-width: 100%;
+          background: #fff; border: 1px solid #E5E7EB; border-radius: 11px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.10); z-index: 9999; padding: 4px;
         }
         .custom-select-option {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          width: 100%;
-          padding: 8px 10px;
-          border: none;
-          background: transparent;
-          border-radius: 7px;
-          font-size: 13px;
-          color: #374151;
-          cursor: pointer;
-          text-align: left;
-          transition: background 0.12s ease, color 0.12s ease;
-          white-space: nowrap;
+          display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px;
+          border: none; background: transparent; border-radius: 7px; font-size: 13px;
+          color: #374151; cursor: pointer; text-align: left;
+          transition: background 0.12s, color 0.12s; white-space: nowrap;
         }
         .custom-select-option:hover { background: #F9FAFB; color: #111827; }
         .custom-select-option.selected { color: #F26739; font-weight: 600; background: #FFF4EF; }
         .btn-primary {
-          height: 38px;
-          padding: 0 18px;
-          background: #F26739;
-          color: #fff;
-          border: none;
-          border-radius: 9px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          transition: background 0.15s, transform 0.1s;
-          white-space: nowrap;
+          height: 38px; padding: 0 18px; background: #F26739; color: #fff; border: none;
+          border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 6px;
+          transition: background 0.15s, transform 0.1s; white-space: nowrap;
         }
         .btn-primary:hover { background: #e05525; transform: translateY(-1px); }
-        /* Bỏ overflow:hidden khỏi table wrapper để dropdown không bị cắt */
-        .table-wrapper {
-          background: #fff;
-          border: 1px solid #F3F4F6;
-          border-radius: 14px;
-        }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .table-wrapper { background: #fff; border: 1px solid #F3F4F6; border-radius: 14px; }
         .data-table { width: 100%; border-collapse: collapse; }
         .data-table thead th {
-          padding: 11px 16px;
-          font-size: 11.5px;
-          font-weight: 600;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          color: #9CA3AF;
-          background: #FAFAFA;
-          border-bottom: 1px solid #F3F4F6;
-          white-space: nowrap;
+          padding: 11px 16px; font-size: 11.5px; font-weight: 600;
+          letter-spacing: 0.05em; text-transform: uppercase; color: #9CA3AF;
+          background: #FAFAFA; border-bottom: 1px solid #F3F4F6; white-space: nowrap;
         }
         .data-table thead tr th:first-child { border-radius: 14px 0 0 0; }
         .data-table thead tr th:last-child  { border-radius: 0 14px 0 0; }
-        .data-table tbody tr {
-          border-bottom: 1px solid #F9FAFB;
-          transition: background 0.12s;
-        }
+        .data-table tbody tr { border-bottom: 1px solid #F9FAFB; transition: background 0.12s; }
         .data-table tbody tr:last-child { border-bottom: none; }
         .data-table tbody tr:hover { background: #FAFAFA; }
-        .data-table tbody td {
-          padding: 12px 16px;
-          font-size: 13px;
-          color: #374151;
-        }
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          padding: 3px 10px;
-          border-radius: 20px;
-          font-size: 11.5px;
-          font-weight: 600;
-          white-space: nowrap;
-        }
-        .status-dot {
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
+        .data-table tbody td { padding: 12px 16px; font-size: 13px; color: #374151; }
+        .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .action-btn {
-          width: 30px; height: 30px;
-          border-radius: 7px;
-          border: 1px solid #E5E7EB;
-          background: transparent;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.14s;
-          padding: 0;
+          width: 30px; height: 30px; border-radius: 7px; border: 1px solid #E5E7EB;
+          background: transparent; display: inline-flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: all 0.14s; padding: 0;
         }
         .action-btn:hover { background: #EFF6FF; border-color: #BFDBFE; }
         .action-btn.danger:hover { background: #FEF2F2; border-color: #FECACA; }
         .action-btn svg { color: #9CA3AF; width: 14px; height: 14px; }
         .action-btn:hover svg { color: #3B82F6; }
         .action-btn.danger:hover svg { color: #EF4444; }
+        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .pagination-btn {
-          height: 30px;
-          min-width: 30px;
-          padding: 0 8px;
-          border: 1px solid #E5E7EB;
-          border-radius: 7px;
-          font-size: 12px;
-          background: #fff;
-          color: #6B7280;
-          cursor: pointer;
-          transition: all 0.13s;
+          height: 30px; min-width: 30px; padding: 0 8px; border: 1px solid #E5E7EB;
+          border-radius: 7px; font-size: 12px; background: #fff; color: #6B7280;
+          cursor: pointer; transition: all 0.13s;
         }
         .pagination-btn:hover { background: #F9FAFB; color: #111827; }
         .pagination-btn.active { background: #F26739; color: #fff; border-color: #F26739; font-weight: 600; }
         .modal-backdrop {
           position: fixed; inset: 0; z-index: 50;
           display: flex; align-items: center; justify-content: center;
-          background: rgba(0,0,0,0.4);
-          backdrop-filter: blur(3px);
+          background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
         }
         .modal-box {
-          background: #fff;
-          border-radius: 16px;
-          padding: 28px;
-          width: 100%;
-          box-sizing: border-box;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+          background: #fff; border-radius: 16px; padding: 28px; width: 100%;
+          box-sizing: border-box; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         }
         .modal-input {
-          width: 100%;
-          height: 40px;
-          padding: 0 12px;
-          border: 1px solid #E5E7EB;
-          border-radius: 9px;
-          font-size: 13px;
-          color: #111827;
-          outline: none;
-          box-sizing: border-box;
-          background: #FAFAFA;
-          transition: border-color 0.15s;
+          width: 100%; height: 40px; padding: 0 12px; border: 1px solid #E5E7EB;
+          border-radius: 9px; font-size: 13px; color: #111827; outline: none;
+          box-sizing: border-box; background: #FAFAFA; transition: border-color 0.15s;
         }
         .modal-input:focus { border-color: #F26739; background: #fff; }
         .modal-select {
-          width: 100%;
-          height: 40px;
-          padding: 0 12px;
-          border: 1px solid #E5E7EB;
-          border-radius: 9px;
-          font-size: 13px;
-          color: #111827;
-          outline: none;
-          box-sizing: border-box;
-          background: #FAFAFA;
+          width: 100%; height: 40px; padding: 0 12px; border: 1px solid #E5E7EB;
+          border-radius: 9px; font-size: 13px; color: #111827; outline: none;
+          box-sizing: border-box; background: #FAFAFA;
         }
-        .modal-label {
-          display: block;
-          font-size: 12px;
-          font-weight: 600;
-          color: #6B7280;
-          margin-bottom: 6px;
-          letter-spacing: 0.02em;
+        .modal-label { display: block; font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 6px; letter-spacing: 0.02em; }
+        .score-bar-wrap { height: 4px; background: #F3F4F6; border-radius: 2px; overflow: hidden; margin-top: 5px; width: 60px; }
+        .score-bar { height: 100%; border-radius: 2px; background: #F26739; transition: width 0.3s; }
+        .spinner {
+          width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent;
+          border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
         }
-        .score-bar-wrap {
-          height: 4px;
-          background: #F3F4F6;
-          border-radius: 2px;
-          overflow: hidden;
-          margin-top: 5px;
-          width: 60px;
+        .empty-state {
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          padding: 48px 16px; gap: 10px;
         }
-        .score-bar {
-          height: 100%;
-          border-radius: 2px;
-          background: #F26739;
-          transition: width 0.3s;
-        }
+        .empty-state svg { color: #E5E7EB; }
+        .empty-state p { font-size: 13px; color: #9CA3AF; margin: 0; }
+        .empty-state span { font-size: 12px; color: #D1D5DB; }
       `}</style>
 
       <div className="stats-page">
@@ -462,6 +369,23 @@ export default function AssignmentStatistics() {
               Quản lý và theo dõi tiến độ học sinh
             </p>
           </div>
+          <button
+            className="btn-primary"
+            style={{ background: "#F9FAFB", color: "#374151", border: "1px solid #E5E7EB", fontWeight: 500 }}
+            onClick={fetchDashboard}
+            disabled={loading}
+          >
+            {loading
+              ? <><div className="spinner" style={{ borderColor: "#9CA3AF", borderTopColor: "transparent" }} /> Đang tải...</>
+              : <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Làm mới
+                </>
+            }
+          </button>
         </div>
 
         {/* Stat Cards */}
@@ -473,11 +397,11 @@ export default function AssignmentStatistics() {
               </div>
               <div>
                 <p style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1 }}>
-                  {s.value}
+                  {loading
+                    ? <span style={{ display: "inline-block", width: 40, height: 22, borderRadius: 6, background: "#F3F4F6", animation: "pulse 1.4s ease-in-out infinite" }} />
+                    : s.value}
                 </p>
-                <p style={{ fontSize: 12, color: "#9CA3AF", margin: "5px 0 0", lineHeight: 1.4 }}>
-                  {s.label}
-                </p>
+                <p style={{ fontSize: 12, color: "#9CA3AF", margin: "5px 0 0", lineHeight: 1.4 }}>{s.label}</p>
               </div>
             </div>
           ))}
@@ -490,18 +414,14 @@ export default function AssignmentStatistics() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
             </svg>
             <input
-              type="text"
-              className="search-input"
+              type="text" className="search-input"
               placeholder="Tìm kiếm tên bài làm..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={search} onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
           <CustomSelect
-            value={filterScore}
-            onChange={setFilterScore}
-            placeholder="Lọc theo điểm"
+            value={filterScore} onChange={setFilterScore} placeholder="Lọc theo điểm"
             options={[
               { value: "",     label: "Tất cả điểm" },
               { value: "0-5",  label: "Điểm 0 – 5",  dot: "#EF4444" },
@@ -511,9 +431,7 @@ export default function AssignmentStatistics() {
           />
 
           <CustomSelect
-            value={filterStatus}
-            onChange={setFilterStatus}
-            placeholder="Trạng thái"
+            value={filterStatus} onChange={setFilterStatus} placeholder="Trạng thái"
             options={[
               { value: "",             label: "Tất cả trạng thái" },
               { value: "Đã làm bài",   label: "Đã làm bài",   dot: "#22C55E" },
@@ -533,13 +451,13 @@ export default function AssignmentStatistics() {
           )}
         </div>
 
-        {/* Table — dùng class riêng, KHÔNG có overflow:hidden */}
+        {/* Table */}
         <div className="table-wrapper">
           <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>
               Danh sách bài làm
               <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 500, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 8px", borderRadius: 20 }}>
-                {filtered.length} bài
+                {loading ? "..." : `${filtered.length} bài`}
               </span>
             </p>
           </div>
@@ -557,8 +475,12 @@ export default function AssignmentStatistics() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((row) => {
-                const cfg = STATUS_CONFIG[row.tt];
+              {/* Loading skeletons */}
+              {loading && [1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
+
+              {/* Data rows */}
+              {!loading && filtered.map((row) => {
+                const cfg = STATUS_CONFIG[row.tt] ?? STATUS_CONFIG["Chưa làm bài"];
                 const scoreNum = parseFloat(row.diem);
                 const scorePct = isNaN(scoreNum) ? 0 : (scoreNum / 10) * 100;
                 return (
@@ -568,16 +490,14 @@ export default function AssignmentStatistics() {
                         #{row.ma}
                       </span>
                     </td>
-                    <td>
-                      <span style={{ fontWeight: 500, color: "#111827" }}>{row.ten}</span>
-                    </td>
+                    <td><span style={{ fontWeight: 500, color: "#111827" }}>{row.ten}</span></td>
                     <td style={{ color: "#9CA3AF", fontSize: 12.5 }}>{row.ngay}</td>
                     <td style={{ textAlign: "center" }}>
                       <span style={{ fontSize: 13, color: "#374151", fontVariantNumeric: "tabular-nums" }}>{row.sl}</span>
                     </td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 600, color: scoreNum >= 8 ? "#16A34A" : scoreNum >= 5 ? "#D97706" : "#DC2626", fontSize: 13 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: scoreNum >= 8 ? "#16A34A" : scoreNum >= 5 ? "#D97706" : "#DC2626" }}>
                           {row.diem}
                         </span>
                         <div className="score-bar-wrap">
@@ -614,10 +534,24 @@ export default function AssignmentStatistics() {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {/* Empty state */}
+              {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "#9CA3AF", fontSize: 13 }}>
-                    Không tìm thấy bài làm nào
+                  <td colSpan={7}>
+                    <div className="empty-state">
+                      <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2}
+                          d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h.75" />
+                      </svg>
+                      <p>
+                        {data.length === 0
+                          ? "Chưa có dữ liệu thống kê học sinh"
+                          : "Không tìm thấy bài làm nào"}
+                      </p>
+                      {data.length === 0 && (
+                        <span>Dữ liệu sẽ xuất hiện khi học sinh hoàn thành bài làm</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )}
@@ -626,7 +560,9 @@ export default function AssignmentStatistics() {
 
           {/* Pagination */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid #F3F4F6" }}>
-            <span style={{ fontSize: 12, color: "#9CA3AF" }}>Hiển thị {filtered.length} / {data.length} bài làm</span>
+            <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+              Hiển thị {loading ? "..." : filtered.length} / {loading ? "..." : data.length} bài làm
+            </span>
             <div style={{ display: "flex", gap: 4 }}>
               {["‹", "1", "2", "3", "…", "›"].map((p, i) => (
                 <button key={i} className={`pagination-btn${p === "1" ? " active" : ""}`}>{p}</button>
@@ -636,9 +572,9 @@ export default function AssignmentStatistics() {
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ──────────────────────────────────────────────────────── */}
       {editRow && (
-        <div className="modal-backdrop" onClick={() => setEditRow(null)}>
+        <div className="modal-backdrop" onClick={() => !saving && setEditRow(null)}>
           <div className="modal-box" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -678,24 +614,22 @@ export default function AssignmentStatistics() {
             <div style={{ display: "flex", gap: 8, marginTop: 22, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setEditRow(null)}
+                disabled={saving}
                 style={{ height: 38, padding: "0 18px", border: "1px solid #E5E7EB", borderRadius: 9, fontSize: 13, fontWeight: 500, color: "#6B7280", background: "#fff", cursor: "pointer" }}
               >
                 Hủy
               </button>
-              <button
-                onClick={handleEditSave}
-                style={{ height: 38, padding: "0 18px", background: "#F26739", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-              >
-                Lưu thay đổi
+              <button onClick={handleEditSave} disabled={saving} className="btn-primary">
+                {saving ? <><div className="spinner" /> Đang lưu...</> : "Lưu thay đổi"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Modal */}
+      {/* ── Delete Modal ────────────────────────────────────────────────────── */}
       {deleteRow && (
-        <div className="modal-backdrop" onClick={() => setDeleteRow(null)}>
+        <div className="modal-backdrop" onClick={() => !deleting && setDeleteRow(null)}>
           <div className="modal-box" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: 14, background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
@@ -712,15 +646,17 @@ export default function AssignmentStatistics() {
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   onClick={() => setDeleteRow(null)}
+                  disabled={deleting}
                   style={{ flex: 1, height: 40, border: "1px solid #E5E7EB", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#6B7280", background: "#fff", cursor: "pointer" }}
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleDeleteConfirm}
-                  style={{ flex: 1, height: 40, background: "#EF4444", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  disabled={deleting}
+                  style={{ flex: 1, height: 40, background: deleting ? "#FCA5A5" : "#EF4444", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
-                  Xóa bài làm
+                  {deleting ? <><div className="spinner" /> Đang xóa...</> : "Xóa bài làm"}
                 </button>
               </div>
             </div>

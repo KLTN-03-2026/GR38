@@ -44,33 +44,35 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
     }, 140);
   };
 
-  const handleSubmit = async () => {
-  console.log("=== SUBMIT ==="); // ← thêm
-  console.log("answers:", answers); // ← thêm
-  console.log("questions:", questions.map(q => ({answer: q.answer, options: q.options}))); // ← thêm
+const handleSubmit = async () => {
   const quizId = quiz._id ?? quiz.id;
-  const submittedAnswers = questions.map((q, i) => ({
-    questionId:     q._id ?? q.id ?? i,
-    selectedAnswer: answers[i] ?? null,
-  }));
-
-  // Tính điểm local (dùng chung)
-  const score    = Object.entries(answers).filter(([i, a]) => questions[Number(i)]?.answer === a).length;
   const answered = Object.keys(answers).length;
 
-  // Nếu là TEACHER → không gọi API submit (403), tính local luôn
+  // Tính điểm: so sánh options[selectedIndex] với correctAnswer
+  const score = Object.entries(answers).filter(([i, selectedIndex]) => {
+    const q = questions[Number(i)];
+    if (!q) return false;
+    const selectedText = q.options[selectedIndex];
+    return selectedText === q.correctAnswer; // ← đúng field rồi
+  }).length;
+
+  const submittedAnswers = questions.map((q, i) => ({
+    questionId:     q._id ?? q.id ?? i,
+    selectedAnswer: answers[i] !== undefined ? q.options[answers[i]] : null,
+  }));
+
+  // TEACHER
   try {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const role = (user.role || "").toUpperCase();
-    if (role === "TEACHER") {
+    if ((user.role || "").toUpperCase() === "TEACHER") {
       onFinish({ quiz, answers, score, total, questions, answered, resultId: null });
       return;
     }
   } catch {}
 
   try {
-    const res      = await quizService.submit(quizId, { answers: submittedAnswers });
-    const result   = res.data?.data ?? res.data;
+    const res    = await quizService.submit(quizId, { answers: submittedAnswers });
+    const result = res.data?.data ?? res.data;
     const resultId = result?.resultId ?? result?._id ?? result?.id ?? null;
     onFinish({ quiz, answers, score, total, questions, answered, resultId });
   } catch (err) {
@@ -78,7 +80,6 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
     onFinish({ quiz, answers, score, total, questions, answered, resultId: null });
   }
 };
-
   const progress        = ((currentQ + 1) / total) * 100;
   const pageNums        = Array.from({ length: total }, (_, i) => i).filter(
     (i) => i === 0 || i === total - 1 || Math.abs(i - currentQ) <= 1

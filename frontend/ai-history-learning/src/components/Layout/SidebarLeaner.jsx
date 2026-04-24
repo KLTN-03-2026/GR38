@@ -9,8 +9,6 @@ import logoWeb from "../../assets/logo.jpg";
 const SidebarLearner = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Cập nhật đường dẫn dựa trên cấu trúc file trong hình ảnh:
   // Dashboard.jsx, Documents.jsx, Flashcards.jsx, Quizzes.jsx, SuCo.jsx, ThongTinNguoiHoc.jsx
   const menuItems = [
     { icon: <Home size={20} />, label: "Trang chủ", path: "/learner" },

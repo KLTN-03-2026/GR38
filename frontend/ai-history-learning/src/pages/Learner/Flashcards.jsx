@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Loader2, ImageOff, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axiosClient from "../../lib/axios";
+// Đổi import sang api.js mới
+import api from "../../lib/api"; 
 
 const Flashcards = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [flashcardSets, setFlashcardSets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); // Quản lý trạng thái lỗi
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -16,12 +18,29 @@ const Flashcards = () => {
     const fetchFlashcards = async () => {
       try {
         setLoading(true);
-        const res = await axiosClient.get("/flashcards");
-        if (res.success && Array.isArray(res.data)) {
-          setFlashcardSets(res.data);
+        setError(null);
+        
+        // Sử dụng api thay vì axiosClient
+        const res = await api.get("/flashcards");
+        
+        // Kiểm tra cấu trúc dữ liệu linh hoạt (giống bên Documents)
+        let data = [];
+        if (res?.data?.success && Array.isArray(res.data.data)) {
+          data = res.data.data;
+        } else if (res?.success && Array.isArray(res.data)) {
+          data = res.data;
+        } else if (Array.isArray(res)) {
+          data = res;
         }
+        
+        setFlashcardSets(data);
       } catch (err) {
         console.error("Lỗi lấy danh sách Flashcards:", err);
+        if (err.response?.status === 401) {
+          setError("Phiên đăng nhập đã hết hạn.");
+        } else {
+          setError("Không thể tải danh sách Flashcards. Vui lòng thử lại.");
+        }
       } finally {
         setLoading(false);
       }
@@ -40,7 +59,6 @@ const Flashcards = () => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // Hàm render số trang (1 2 3 ... Next)
   const renderPageNumbers = () => {
     const pages = [];
     for (let i = 1; i <= totalPages; i++) {
@@ -64,6 +82,23 @@ const Flashcards = () => {
     }
     return pages;
   };
+
+  // Nếu gặp lỗi kết nối hoặc token
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] p-10">
+        <AlertCircle className="text-red-500 w-12 h-12 mb-4" />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Thông báo</h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="bg-[#F26739] text-white px-8 py-2 rounded-md font-bold hover:bg-orange-600 transition"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-[#FAFAFA] min-h-screen p-8 font-sans">
@@ -92,14 +127,27 @@ const Flashcards = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-14 mb-14">
           {loading ? (
-            <div className="col-span-full text-center py-20"><Loader2 className="animate-spin inline-block text-orange-500 w-10 h-10" /></div>
+            <div className="col-span-full text-center py-20 flex flex-col items-center gap-3">
+              <Loader2 className="animate-spin text-orange-500 w-10 h-10" />
+              <p className="text-gray-500 font-medium">Đang tải bộ thẻ học...</p>
+            </div>
+          ) : currentItems.length === 0 ? (
+            <div className="col-span-full text-center py-20 text-gray-400 bg-white rounded-[24px] border border-dashed border-gray-200">
+              Không tìm thấy bộ thẻ học nào.
+            </div>
           ) : currentItems.map((item) => (
-            <div key={item._id} className="flex flex-col bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 hover:shadow-md transition-all">
-              <div className="w-full h-[210px] overflow-hidden rounded-[18px] mb-5 bg-gray-100 flex items-center justify-center">
-                <ImageOff size={48} className="text-gray-300 opacity-50" />
+            <div key={item._id} className="flex flex-col bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+              <div className="w-full h-[210px] overflow-hidden rounded-[18px] mb-5 bg-gray-100 flex items-center justify-center transition-transform group-hover:scale-[1.01]">
+                {item.image ? (
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                ) : (
+                  <ImageOff size={48} className="text-gray-300 opacity-50" />
+                )}
               </div>
               <div className="px-2">
-                <h3 className="text-[19px] font-bold mb-4 h-[54px] line-clamp-2 text-[#18181B]">{item.title}</h3>
+                <h3 className="text-[19px] font-bold mb-4 h-[54px] line-clamp-2 text-[#18181B] group-hover:text-[#F26739] transition-colors">
+                  {item.title}
+                </h3>
                 <div className="flex items-center gap-4 mb-6">
                   <span className="bg-[#1473E6] text-white text-[12px] px-3 py-1 rounded-full font-bold">
                     {item.cards?.length || 0} Thẻ
@@ -110,7 +158,7 @@ const Flashcards = () => {
                 </div>
                 <button 
                   onClick={() => navigate(`/learner/hoc-flashcard/${item.documentId?._id || item.documentId}`)} 
-                  className="w-full bg-[#F26739] text-white py-3.5 rounded-xl font-bold hover:bg-[#d9562d] transition-colors shadow-lg"
+                  className="w-full bg-[#F26739] text-white py-3.5 rounded-xl font-bold hover:bg-[#d9562d] transition-colors shadow-lg active:scale-[0.98]"
                 >
                   Bắt đầu học ngay
                 </button>
@@ -119,15 +167,13 @@ const Flashcards = () => {
           ))}
         </div>
 
-        {/* --- PAGINATION UI UPDATED (FIGMA STYLE) --- */}
+        {/* --- PAGINATION UI --- */}
         {!loading && totalPages > 0 && (
           <div className="mt-auto flex justify-between items-center w-full h-10 px-5 mb-10">
-            {/* Left: Page count */}
             <div className="text-[16px] font-medium text-black">
               {currentPage}/{totalPages} trang
             </div>
 
-            {/* Right: Pagination Controls */}
             <div className="flex items-center gap-1">
               <button 
                 disabled={currentPage === 1} 

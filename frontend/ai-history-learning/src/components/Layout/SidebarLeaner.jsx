@@ -18,6 +18,7 @@ const SidebarLearner = () => {
     { icon: <Book size={20} />, label: "Tài liệu", path: "/learner/documents" },
     { icon: <Zap size={20} />, label: "Flashcards", path: "/learner/flashcards" },
     { icon: <QuizIcon size={20} />, label: "Quizzes", path: "/learner/quizzes" }, 
+    { icon: <AlertTriangle size={20} />, label: "Sự cố", path: "/learner/suco" },
     { icon: <BarChart size={20} />, label: "Tiến độ Học Tập", path: "/learner/tiendo" }, 
   ];
 

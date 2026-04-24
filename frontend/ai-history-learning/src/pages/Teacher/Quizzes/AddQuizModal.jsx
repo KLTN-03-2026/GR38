@@ -161,7 +161,6 @@ export default function AddQuizModal({ onClose, onSave }) {
             ×
           </button>
         </div>
-
         {/* ── Body ── */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
           {step === 1 ? (

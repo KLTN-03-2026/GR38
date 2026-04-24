@@ -1,3 +1,4 @@
+
 import React from "react";
 import { 
   Home, Book, Zap, Layout as QuizIcon, 
@@ -9,13 +10,14 @@ import logoWeb from "../../assets/logo.jpg";
 const SidebarLearner = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Cập nhật đường dẫn dựa trên cấu trúc file trong hình ảnh:
   // Dashboard.jsx, Documents.jsx, Flashcards.jsx, Quizzes.jsx, SuCo.jsx, ThongTinNguoiHoc.jsx
   const menuItems = [
     { icon: <Home size={20} />, label: "Trang chủ", path: "/learner" },
     { icon: <Book size={20} />, label: "Tài liệu", path: "/learner/documents" },
     { icon: <Zap size={20} />, label: "Flashcards", path: "/learner/flashcards" },
     { icon: <QuizIcon size={20} />, label: "Quizzes", path: "/learner/quizzes" }, 
-    { icon: <AlertTriangle size={20} />, label: "Sự cố", path: "/learner/suco" },
     { icon: <BarChart size={20} />, label: "Tiến độ Học Tập", path: "/learner/tiendo" }, 
   ];
 
@@ -39,7 +41,7 @@ const SidebarLearner = () => {
           // Kiểm tra isActive chính xác cho route con /learner/...
           const isActive = location.pathname === item.path || 
                           (item.path !== "/learner" && location.pathname.startsWith(item.path));
-          
+        
           return (
             <div
               key={index}
@@ -67,5 +69,4 @@ const SidebarLearner = () => {
     </aside>
   );
 };
-
 export default SidebarLearner;

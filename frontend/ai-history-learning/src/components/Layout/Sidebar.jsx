@@ -38,7 +38,7 @@ const Sidebar = () => {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-[240px] fixed top-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col z-30">
+    <aside className="w-[220px] fixed top-0 left-0 h-screen bg-gray-100 border-r border-gray-100 flex flex-col z-30">
       <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2">
         <img src="/Logo.jpg" alt="Logo" className="w-8 h-8 object-contain rounded" />
         <span className="text-sm font-semibold text-gray-800">Lịch sử Việt Nam</span>

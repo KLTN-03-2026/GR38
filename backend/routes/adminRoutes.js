@@ -2,7 +2,8 @@ import express from 'express';
 import {
   getUsers,
   getUserById,
-  updateUserStatus,
+  createUser, 
+  updateUser,
   deleteUser
 } from '../controllers/adminController.js';
 import protect, { authorize } from '../middleware/auth.js';
@@ -14,9 +15,12 @@ router.use(protect);
 router.use(authorize(USER_ROLES.ADMIN));
 
 // Định tuyến các API
-router.get('/users', getUsers);
-router.get('/users/:id', getUserById);
-router.put('/users/:id', updateUserStatus);
-router.delete('/users/:id', deleteUser);
+router.route('/users')
+  .get(getUsers)
+  .post(createUser);
+router.route('/users/:id')
+  .get(getUserById)
+  .put(updateUser)  
+  .delete(deleteUser);
 
 export default router;

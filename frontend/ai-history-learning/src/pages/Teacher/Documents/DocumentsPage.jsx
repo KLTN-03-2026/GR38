@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { documentService } from "../../../services/documentService";
+import api from "../../../lib/api"; 
 
 const banners = ["/anh6.jpg", "/anh1.jpg", "/anh2.jpg", "/anh3.jpg"];
 
@@ -64,8 +65,7 @@ const DEFAULT_COVERS = [
   "/anh5.jpg",
   "/anh6.jpg",
 ];
-const getCover = (doc, idx) =>
-  DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
+const getCover = (doc, idx) => DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
 const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
   <div
     className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -268,29 +268,45 @@ export default function DocumentsPage() {
   };
 
   const handleAddSubmit = async () => {
-    const err = {};
-    if (!addForm.title.trim()) err.title = "Vui lòng nhập tên tài liệu";
-    if (!addForm.file) err.file = "Vui lòng chọn file PDF";
-    if (Object.keys(err).length) {
-      setAddErrors(err);
-      return;
+  const err = {};
+  if (!addForm.title.trim()) err.title = "Vui lòng nhập tên tài liệu";
+  if (!addForm.file) err.file = "Vui lòng chọn file PDF";
+  if (Object.keys(err).length) {
+    setAddErrors(err);
+    return;
+  }
+  setAddLoading(true);
+  try {
+    const result = await documentService.upload(addForm.file, {
+      title: addForm.title,
+    });
+    if (addForm.thumbFile && result?.data?._id) {
+      try {
+        const thumbForm = new FormData();
+        thumbForm.append("thumbnail", addForm.thumbFile);
+        await api.post("/documents/upload-thumbnail", thumbForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        // Cập nhật thumbnail cho document vừa tạo
+        await api.put(`/documents/${result.data._id}`, {
+          thumbnail: result.thumbnailUrl,
+        });
+      } catch (thumbErr) {
+        console.warn("Upload thumbnail thất bại:", thumbErr.message);
+      }
     }
-
-    setAddLoading(true);
-    try {
-      await documentService.upload(addForm.file, { title: addForm.title });
-      await fetchDocs();
-      closeModal();
-      setGridKey((k) => k + 1);
-    } catch (err) {
-      console.error("Lỗi upload:", err);
-      setAddErrors({
-        file: err.response?.data?.error ?? "Lỗi khi upload tài liệu",
-      });
-    } finally {
-      setAddLoading(false);
-    }
-  };
+    await fetchDocs();
+    closeModal();
+    setGridKey((k) => k + 1);
+  } catch (err) {
+    console.error("Lỗi upload:", err);
+    setAddErrors({
+      file: err.response?.data?.error ?? "Lỗi khi upload tài liệu",
+    });
+  } finally {
+    setAddLoading(false);
+  }
+};
 
   const handleFileChange = (file) => {
     if (file && file.type === "application/pdf") {
@@ -303,11 +319,10 @@ export default function DocumentsPage() {
 
   const closeModal = () => {
     setShowAddModal(false);
-    setAddForm({ title: "", file: null });
+    setAddForm({ title: "", file: null, thumbFile: null, thumbPreview: null }); // ← thêm 2 field
     setAddErrors({});
     setDragOver(false);
   };
-
   const filtered = docs.filter((d) =>
     d.title.toLowerCase().includes(search.toLowerCase()),
   );
@@ -452,8 +467,7 @@ export default function DocumentsPage() {
                 currentPage * ITEMS_PER_PAGE,
               )
               .map((doc, localIdx) => {
-                const globalIdx =
-                  (currentPage - 1) * ITEMS_PER_PAGE + localIdx;
+                const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + localIdx;
                 return (
                   <div
                     key={doc._id}
@@ -527,7 +541,7 @@ export default function DocumentsPage() {
       {/* Modal thêm */}
       {showAddModal && (
         <div className="modal-overlay fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="modal-box bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl">
+          <div className="modal-box bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between px-6 pt-5 pb-3">
               <div>
                 <h2 className="text-base font-semibold text-gray-800">
@@ -546,6 +560,7 @@ export default function DocumentsPage() {
             </div>
 
             <div className="px-6 pb-4 space-y-4">
+              {/* 1. Tên tài liệu */}
               <div>
                 <label className="block text-sm text-gray-700 mb-1.5">
                   Tên tài liệu
@@ -567,6 +582,130 @@ export default function DocumentsPage() {
                 )}
               </div>
 
+              {/* 2. Ảnh bìa */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Ảnh bìa{" "}
+                  <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
+                </label>
+
+                {/* Preview */}
+                <div
+                  className="relative w-full h-32 rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 mb-2 group cursor-pointer"
+                  onClick={() =>
+                    document.getElementById("thumb-input-add")?.click()
+                  }
+                >
+                  {addForm.thumbPreview ? (
+                    <>
+                      <img
+                        src={addForm.thumbPreview}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        <p className="text-xs text-white font-medium">
+                          Đổi ảnh
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-gray-400 group-hover:text-orange-400 transition">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <p className="text-xs font-medium">
+                        Nhấn để chọn ảnh bìa
+                      </p>
+                      <p className="text-[10px] text-gray-300">
+                        JPG, PNG, WEBP · Tối đa 5MB
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  id="thumb-input-add"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith("image/")) {
+                      setAddErrors((prev) => ({
+                        ...prev,
+                        thumb: "Chỉ chấp nhận file ảnh",
+                      }));
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      setAddErrors((prev) => ({
+                        ...prev,
+                        thumb: "Ảnh không được vượt quá 5MB",
+                      }));
+                      return;
+                    }
+                    setAddErrors((prev) => ({ ...prev, thumb: "" }));
+                    setAddForm((prev) => ({
+                      ...prev,
+                      thumbFile: file,
+                      thumbPreview: URL.createObjectURL(file),
+                    }));
+                  }}
+                />
+
+                {addForm.thumbFile && (
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-[10px] text-gray-400">
+                      📎 {addForm.thumbFile.name} ·{" "}
+                      {(addForm.thumbFile.size / 1024).toFixed(0)} KB
+                    </p>
+                    <button
+                      onClick={() =>
+                        setAddForm((prev) => ({
+                          ...prev,
+                          thumbFile: null,
+                          thumbPreview: null,
+                        }))
+                      }
+                      className="text-[10px] text-red-400 hover:text-red-600 transition"
+                    >
+                      Xoá ảnh
+                    </button>
+                  </div>
+                )}
+                {addErrors.thumb && (
+                  <p className="text-xs text-red-500 mt-1">{addErrors.thumb}</p>
+                )}
+              </div>
+
+              {/* 3. File PDF */}
               <div>
                 <label className="block text-sm text-gray-700 mb-2">
                   File PDF
@@ -605,7 +744,7 @@ export default function DocumentsPage() {
                     setDragOver(false);
                     handleFileChange(e.dataTransfer.files?.[0]);
                   }}
-                  className={`w-full h-44 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300 ${
+                  className={`w-full h-36 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300 ${
                     dragOver
                       ? "border-orange-400 bg-orange-50 scale-[1.01]"
                       : "border-gray-200 bg-white"

@@ -3,8 +3,19 @@ import api from "../lib/api";
 export const getDocs = () => api.get("/documents");
 
 export const documentService = {
+  // Upload PDF (endpoint đúng)
+  upload: async (file, { title }) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", title);
+    const response = await api.post("/documents/upload-pdf", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
   uploadDocument: async (formData) => {
-    const response = await api.post("/documents/upload", formData, {
+    const response = await api.post("/documents/upload-pdf", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
@@ -37,16 +48,6 @@ export const documentService = {
 
   delete: async (id) => {
     const response = await api.delete(`/documents/${id}`);
-    return response.data;
-  },
-
-  upload: async (file, { title }) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", title);
-    const response = await api.post("/documents/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
     return response.data;
   },
 };

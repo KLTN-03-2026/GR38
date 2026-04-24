@@ -19,6 +19,7 @@ const shuffleOpts = (q) => {
 };
 
 export default function QuizPageInline({ quiz, onBack, documentId }) {
+console.log("QuizPageInline mounted, quiz:", quiz); // ← thêm ngay đây
   const navigate = useNavigate();
   const [questions, setQuestions] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -29,25 +30,31 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
   const animRef = useRef(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await quizService.getById(quiz._id ?? quiz.id);
-        const d = res.data ?? res;
-        const raw = d.questions ?? [];
-        if (!raw.length) { alert("Quiz này chưa có câu hỏi!"); onBack(); return; }
-        const normalized = raw.map((q) => ({
-          question: q.question ?? q.q,
-          options: q.options,
-          answer: q.correctAnswer ?? q.answer,
-        }));
-        setDetail(d);
-        setQuestions(shuffle(normalized).map(shuffleOpts));
-      } catch {
-        alert("Không tải được câu hỏi.");
-        onBack();
-      }
-    })();
-  }, [quiz._id]);
+  (async () => {
+    try {
+      const qid = quiz._id ?? quiz.id;
+      console.log("Quiz ID:", qid); // ← thêm
+      const res = await quizService.getById(qid);
+      console.log("Response:", res); // ← thêm
+      const d = res.data?.data ?? res.data ?? res; // ← thêm .data.data
+      console.log("Detail:", d); // ← thêm
+      const raw = d.questions ?? [];
+      console.log("Raw questions:", raw[0]); // ← thêm
+      if (!raw.length) { alert("Quiz này chưa có câu hỏi!"); onBack(); return; }
+      const normalized = raw.map((q) => ({
+        question: q.question ?? q.q,
+        options: q.options,
+        answer: q.correctAnswer ?? q.answer,
+      }));
+      setDetail(d);
+      setQuestions(shuffle(normalized).map(shuffleOpts));
+    } catch (err) { // ← thêm err
+      console.error("Lỗi:", err); // ← thêm
+      alert("Không tải được câu hỏi: " + err.message);
+      onBack();
+    }
+  })();
+}, [quiz._id]);
 
   if (!questions) return (
     <div className="flex items-center justify-center py-16 gap-3">
@@ -74,7 +81,14 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
   };
 
   const handleSubmit = () => {
-  const score = Object.entries(answers).filter(([i, a]) => questions[+i]?.answer === a).length;
+  const score = Object.entries(answers).filter(([i, a]) => {
+    const q = questions[+i];
+    console.log(`Câu ${+i + 1}: chọn=${a}, đúng=${q?.answer}`);
+    return q?.answer === a;
+  }).length;
+  
+  console.log("Tổng đúng:", score);
+  
   navigate("/teacher/quiz-result", {
     state: { quiz: detail, answers, score, total, questions, answered: Object.keys(answers).length, documentId },
   });

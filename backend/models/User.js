@@ -54,7 +54,7 @@ const userSchema = new mongoose.Schema({
     },
     profileImage: {
         type: String,
-        default: null
+        default: 'https://res.cloudinary.com/dynbuqe3g/image/upload/v1777091786/user-a-solid-svgrepo-com_qsu3s6.png'
     }, 
 }, {
     timestamps: true

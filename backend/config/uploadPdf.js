@@ -18,8 +18,7 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        
-        // ✅ Fix encoding tên file tiếng Việt
+
         const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
         
         cb(null, `${uniqueSuffix}-${originalName}`);

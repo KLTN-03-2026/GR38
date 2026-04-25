@@ -7,10 +7,10 @@ import imagesList from "../../../images";
 const IMAGES = {
   imgKhangChien: "/anh1.jpg",
   imgThoiTienSu: "/anh2.jpg",
-  imgQuanChu:    "/anh3.jpg",
-  imgBacThuoc:   "/anh4.jpg",
-  imgHienDai:    "/anh5.jpg",
-  imgDienBienPhu:"/anh6.jpg",
+  imgQuanChu: "/anh3.jpg",
+  imgBacThuoc: "/anh4.jpg",
+  imgHienDai: "/anh5.jpg",
+  imgDienBienPhu: "/anh6.jpg",
 };
 
 const DEFAULT_FLASHCARD = [
@@ -160,24 +160,29 @@ const Flashcards = () => {
       try {
         const res = await api.get("/flashcards");
         const raw = res.data.data ?? res.data ?? [];
-        aiSets = raw.map((item, index) => ({
-          id: item._id ?? item.id,
-          title: item.title ?? item.documentTitle ?? "Flashcard AI",
-          cards: Array.isArray(item.cards)
-            ? item.cards.length
-            : Array.isArray(item.items)
-              ? item.items.length
-              : (item.count ?? item.total ?? 0),
-          progress: item.progress ?? 0,
-          image:
-            item.coverImage ??
-            item.documentCover ??
-            imagesList[index % imagesList.length]?.image ??
-            null,
-          source: "ai",
-          documentId: item.documentId,
-          createdAt: item.createdAt,
-        }));
+        aiSets = raw.map((item, index) => {
+          const docId =
+            typeof item.documentId === "object" && item.documentId !== null
+              ? item.documentId?._id
+              : item.documentId;
+
+          return {
+            id: item._id ?? item.id,
+            title: item.title ?? item.documentTitle ?? "Flashcard AI",
+            cards: Array.isArray(item.cards)
+              ? item.cards.length
+              : (item.count ?? 0),
+            progress: item.progress ?? 0,
+            image:
+              item.coverImage ??
+              item.documentCover ??
+              imagesList[index % imagesList.length]?.image ??
+              null,
+            source: "ai",
+            documentId: docId ?? null,
+            createdAt: item.createdAt,
+          };
+        });
       } catch (err) {
         console.warn("Không tải được flashcard từ API:", err.message);
       }

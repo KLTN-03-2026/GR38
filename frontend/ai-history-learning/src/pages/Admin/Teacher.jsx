@@ -335,14 +335,14 @@ export default function TeacherDashboard() {
       >
         {[
           {
-            label: "Tổng Người đọc",
+            label: "Tổng Người học",
             value: "500",
             Icon: Users,
             color: "#1473E6",
             note: "Đang hoạt động",
           },
           {
-            label: "Người đọc làm bài kiểm tra",
+            label: "Người học làm bài kiểm tra",
             value: "200",
             Icon: GraduationCap,
             color: "#10B981",

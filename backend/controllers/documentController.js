@@ -6,7 +6,9 @@ import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import fs from "fs/promises";
 import path from "path"; 
-
+// @desc Tải lên tài liệu PDF mới
+// @route POST /api/documents/upload-pdf
+// @access Private (Teacher)
 export const uploadsDocument = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -36,10 +38,10 @@ export const uploadsDocument = async (req, res, next) => {
     const document = new Document({
       userId: req.user._id,
       title,
-      thumbnail: thumbnail || null, // Lưu link Cloudinary vào database
+      thumbnail: thumbnail || null, 
       fileName: originalName,
       filePath: fileUrl,
-      localPath: req.file.path, // Nên lưu thêm đường dẫn cục bộ để sau này dễ xóa file
+      localPath: req.file.path, 
       fileSize: req.file.size,
       status: "processing",
     });
@@ -84,6 +86,53 @@ const processPDF = async (documentId, filePath) => {
   }
 };
 
+//@desc Chỉnh sửa thông tin tài liệu (Tiêu đề, ảnh bìa)
+// @route PUT /api/documents/:id
+// @access Private (Teacher)
+export const updateDocument = async (req, res, next) => {
+  try {
+    const { title } = req.body;
+
+    // 1. Tìm tài liệu và kiểm tra quyền sở hữu (chỉ người tải lên mới được sửa)
+    const document = await Document.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy tài liệu hoặc bạn không có quyền chỉnh sửa",
+        statusCode: 404,
+      });
+    }
+
+    // 2. Cập nhật tiêu đề nếu có gửi lên
+    if (title) {
+      document.title = title;
+    }
+
+    // 3. Nếu có file ảnh bìa mới được upload qua Multer/Cloudinary
+    if (req.file) {
+      document.thumbnail = req.file.path;
+    }
+
+    // 4. Lưu thay đổi vào Database
+    await document.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Đã cập nhật thông tin tài liệu thành công",
+      data: document,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc Lấy danh sách tài liệu của người dùng (Teacher: tất cả, Learner: chỉ ready)
+// @route GET /api/documents
+// @access Private
 export const getDocuments = async (req, res, next) => {
   try {
     let matchQuery = {};
@@ -138,7 +187,9 @@ export const getDocuments = async (req, res, next) => {
     next(error);
   }
 };
-
+// @desc Lấy chi tiết một tài liệu (kèm số lượng flashcard/quiz)
+// @route GET /api/documents/:id
+// @access Private (Teacher: chỉ tài liệu của mình, Learner: chỉ tài liệu ready)
 export const getDocument = async (req, res, next) => {
   try {
     let query = { _id: req.params.id };
@@ -179,7 +230,9 @@ export const getDocument = async (req, res, next) => {
     next(error);
   }
 };
-
+// @desc Xóa tài liệu (và các flashcard/quiz liên quan)
+// @route DELETE /api/documents/:id
+// @access Private (Teacher: chỉ tài liệu của mình, Admin: tất cả)
 export const deleteDocument = async (req, res, next) => {
   try {
     const document = await Document.findOne({
@@ -199,7 +252,7 @@ export const deleteDocument = async (req, res, next) => {
       // Nếu có lưu localPath, dùng luôn
       await fs.unlink(document.localPath).catch((err) => console.log("File PDF không tồn tại trên ổ cứng:", err.message));
     } else if (document.filePath) {
-      // Logic dự phòng: trích xuất tên file từ URL để xóa
+
       const fileName = document.filePath.split('/').pop(); 
       const localFilePath = path.resolve('upload/documents', fileName);
       await fs.unlink(localFilePath).catch(() => {});

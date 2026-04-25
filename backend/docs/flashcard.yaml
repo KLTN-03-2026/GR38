@@ -67,6 +67,9 @@ components:
         title:
           type: string
           example: Bộ flashcard Ôn tập Pháp thuộc
+        thumbnail:
+          type: string
+          example: https://res.cloudinary.com/dynbuqe3g/image/upload/v123/thumbnail.jpg
         description:
           type: string
           example: Bộ thẻ ghi nhớ cho phần lịch sử Việt Nam giai đoạn 1858-1945
@@ -107,12 +110,24 @@ components:
         _id:
           type: string
           example: 66a1f2c9b8d4e01f12349999
+        documentId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
         title:
           type: string
           example: Bộ flashcard Ôn tập Pháp thuộc
         thumbnail:
           type: string
           example: https://res.cloudinary.com/dynbuqe3g/image/upload/v123/thumbnail.jpg
+        description:
+          type: string
+          example: Mô tả bộ flashcard
+        teacherId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340002
+        totalCards:
+          type: integer
+          example: 10
         cards:
           type: array
           items:
@@ -151,33 +166,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlashcardProgressCard'
-        createdAt:
-          type: string
-          format: date-time
-          example: '2026-04-17T08:00:00.000Z'
-        updatedAt:
-          type: string
-          format: date-time
-          example: '2026-04-17T08:30:00.000Z'
-
-    FlashcardSetWithProgressResponse:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f12349999
-        documentId:
-          $ref: '#/components/schemas/DocumentRef'
-        teacherId:
-          type: string
-          example: 66a1f2c9b8d4e01f12340002
-        totalCards:
-          type: integer
-          example: 10
-        cards:
-          type: array
-          items:
-            $ref: '#/components/schemas/FlashcardCardWithProgress'
 
     ErrorResponse:
       type: object
@@ -187,16 +175,16 @@ components:
           example: false
         error:
           type: string
-          example: Không tìm thấy bộ flashcard
+          example: Thông báo lỗi chi tiết
         statusCode:
           type: integer
-          example: 404
+          example: 400
 
 paths:
   /api/v1/flashcards:
     get:
       summary: Lấy danh sách bộ flashcard
-      description: Giáo viên chỉ thấy các bộ do mình tạo, học sinh thấy tất cả các bộ flashcard theo logic hiện tại của backend.
+      description: Giáo viên xem bộ do mình tạo, học sinh xem tất cả. Tự động ưu tiên ảnh bìa riêng hoặc ảnh của tài liệu gốc.
       tags: [Flashcard]
       security:
         - bearerAuth: []
@@ -218,47 +206,70 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/FlashcardSetListResponse'
-              examples:
-                success:
-                  value:
-                    success: true
-                    count: 2
-                    data:
-                      - _id: 66a1f2c9b8d4e01f12349999
-                        documentId:
-                          _id: 66a1f2c9b8d4e01f12340001
-                          title: Lịch sử Việt Nam lớp 12
-                        teacherId: 66a1f2c9b8d4e01f12340002
-                        title: Bộ flashcard Ôn tập Pháp thuộc
-                        description: Bộ thẻ ghi nhớ cho phần lịch sử Việt Nam giai đoạn 1858-1945
-                        cards:
-                          - front: Triều đại nào thống nhất đất nước vào năm 1802?
-                            back: Triều Nguyễn
-                            difficulty: Trung bình
-                        isPublished: true
-                        tags:
-                          - lich-su-viet-nam
-                        stats:
-                          enrolledLearners: 125
-                        createdAt: '2026-04-17T08:00:00.000Z'
-                        updatedAt: '2026-04-17T08:15:00.000Z'
         '401':
-          description: Không có token, token không hợp lệ hoặc token đã hết hạn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Không có quyền truy cập tính năng này
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Chưa đăng nhập hoặc token hết hạn
 
-  /api/v1/flashcards/{documentId}:
+  /api/v1/flashcards/manual:
+    post:
+      summary: Tạo bộ flashcard thủ công
+      description: Chỉ Giáo viên mới được tạo. Gửi dữ liệu bằng form-data. Có thể đính kèm file ảnh làm thumbnail.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - cards
+              properties:
+                documentId:
+                  type: string
+                  description: ID tài liệu (Không bắt buộc)
+                title:
+                  type: string
+                  description: Tiêu đề bộ flashcard
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Chọn file ảnh (png, jpg) làm ảnh bìa
+                description:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                cards:
+                  type: string
+                  description: Chuỗi JSON chứa mảng các thẻ. Ví dụ `[{"front":"A", "back":"B"}]`
+      responses:
+        '201':
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Đã tạo bộ flashcard thủ công thành công
+                  data:
+                    $ref: '#/components/schemas/FlashcardSetBase'
+        '400':
+          description: Dữ liệu không hợp lệ (thiếu thẻ, thiếu tiêu đề...)
+        '403':
+          description: Chỉ giáo viên mới có quyền tạo
+
+  /api/v1/flashcards/document/{documentId}:
     get:
-      summary: Lấy bộ flashcard theo tài liệu kèm tiến độ cá nhân
-      description: Trả về bộ flashcard gốc của tài liệu và gắn thêm trạng thái học của người dùng hiện tại cho từng thẻ.
+      summary: Lấy bộ flashcard theo ID Tài liệu
+      description: Trả về bộ flashcard gốc của tài liệu kèm tiến độ của user (nếu có). Dùng trong trang Đọc tài liệu.
       tags: [Flashcard]
       security:
         - bearerAuth: []
@@ -268,11 +279,9 @@ paths:
           required: true
           schema:
             type: string
-          example: 66a1f2c9b8d4e01f12340001
-          description: ID của tài liệu đã sinh ra flashcard
       responses:
         '200':
-          description: Lấy bộ flashcard thành công, kể cả khi tài liệu chưa có flashcard sẽ trả về mảng rỗng
+          description: Lấy thành công (Nếu chưa có flashcard sẽ trả về rỗng)
           content:
             application/json:
               schema:
@@ -283,57 +292,114 @@ paths:
                     example: true
                   count:
                     type: integer
-                    example: 10
                   data:
                     $ref: '#/components/schemas/FlashcardSetDetailResponse'
-              examples:
-                success:
-                  value:
-                    success: true
-                    count: 2
-                    data:
-                      _id: 66a1f2c9b8d4e01f12349999
-                      title: Bộ flashcard Ôn tập Pháp thuộc
-                      cards:
-                        - _id: 66a1f2c9b8d4e01f12345678
-                          front: Triều đại nào thống nhất đất nước vào năm 1802?
-                          back: Triều Nguyễn
-                          difficulty: Trung bình
-                          isStarred: true
-                          reviewCount: 3
-                          memoryStatus: Đang ghi nhớ
-                          lastReviewed: '2026-04-17T08:30:00.000Z'
-                        - _id: 66a1f2c9b8d4e01f12345679
-                          front: Hiệp ước nào chấm dứt chiến tranh ở Đông Dương năm 1954?
-                          back: Hiệp định Genève
-                          difficulty: Khó
-                          isStarred: false
-                          reviewCount: 0
-                          memoryStatus: Chưa học
-                          lastReviewed: null
         '401':
-          description: Không có token, token không hợp lệ hoặc token đã hết hạn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Không có quyền truy cập tính năng này
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Không tìm thấy bộ flashcard tương ứng với tài liệu
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Chưa đăng nhập
 
-  /api/v1/flashcards/{setId}/cards/{cardId}/review:
-    post:
-      summary: Ghi nhận một lần ôn tập thẻ
-      description: Tăng số lần xem lại của thẻ trong tiến độ cá nhân. Nếu tiến độ chưa tồn tại thì backend sẽ tự tạo mới.
+  /api/v1/flashcards/{id}:
+    get:
+      summary: Lấy chi tiết bộ flashcard theo ID bộ thẻ
+      description: Xem chi tiết 1 bộ flashcard (kèm tiến độ học). Tự động lấy ảnh ưu tiên.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/FlashcardSetDetailResponse'
+        '404':
+          description: Không tìm thấy bộ flashcard
+    
+    put:
+      summary: Chỉnh sửa thông tin chung bộ flashcard
+      description: Sửa tiêu đề, mô tả. Có thể tải lên file ảnh mới để thay thế ảnh bìa hiện tại. Gửi bằng form-data.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: File ảnh bìa mới
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Đã cập nhật thành công
+        '403':
+          description: Không có quyền chỉnh sửa
+        '404':
+          description: Không tìm thấy bộ thẻ
+
+    delete:
+      summary: Xóa một bộ flashcard
+      description: Chỉ giáo viên tạo bộ flashcard mới có quyền xóa.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Xóa thành công
+        '403':
+          description: Không có quyền xóa
+        '404':
+          description: Không tìm thấy bộ thẻ
+
+  /api/v1/flashcards/{setId}/cards/{cardId}:
+    put:
+      summary: Chỉnh sửa nội dung một thẻ flashcard
+      description: Cập nhật mặt trước, mặt sau hoặc độ khó của thẻ. Gửi bằng JSON thông thường.
       tags: [Flashcard]
       security:
         - bearerAuth: []
@@ -343,15 +409,61 @@ paths:
           required: true
           schema:
             type: string
-          example: 66a1f2c9b8d4e01f12349999
-          description: ID của bộ flashcard chứa thẻ cần ôn tập
         - in: path
           name: cardId
           required: true
           schema:
             type: string
-          example: 66a1f2c9b8d4e01f12345678
-          description: ID của thẻ flashcard cần cập nhật tiến độ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                front:
+                  type: string
+                back:
+                  type: string
+                difficulty:
+                  type: string
+                  enum: [Dễ, Trung bình, Khó]
+      responses:
+        '200':
+          description: Cập nhật thẻ thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/FlashcardCard'
+        '403':
+          description: Không có quyền chỉnh sửa
+        '404':
+          description: Không tìm thấy thẻ
+
+  /api/v1/flashcards/{setId}/cards/{cardId}/review:
+    post:
+      summary: Ghi nhận một lần ôn tập thẻ
+      description: Tăng số lần xem lại của thẻ trong tiến độ cá nhân.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: setId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Ghi nhận ôn tập thành công
@@ -365,69 +477,13 @@ paths:
                     example: true
                   data:
                     $ref: '#/components/schemas/FlashcardProgress'
-                  message:
-                    type: string
-                    example: Đã lưu tiến độ ôn tập thẻ thành công
-              examples:
-                success:
-                  value:
-                    success: true
-                    data:
-                      _id: 66a1f2c9b8d4e01f1234abcd
-                      userId: 66a1f2c9b8d4e01f12340003
-                      flashcardSetId: 66a1f2c9b8d4e01f12349999
-                      cardProgress:
-                        - cardId: 66a1f2c9b8d4e01f12345678
-                          reviewCount: 1
-                          lastReviewed: '2026-04-17T08:30:00.000Z'
-                          isStarred: false
-                      createdAt: '2026-04-17T08:00:00.000Z'
-                      updatedAt: '2026-04-17T08:30:00.000Z'
-                    message: Đã lưu tiến độ ôn tập thẻ thành công
-        '201':
-          description: Tiến độ ôn tập mới được khởi tạo lần đầu cho thẻ
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/FlashcardProgress'
-                  message:
-                    type: string
-                    example: Đã lưu tiến độ ôn tập thẻ thành công
-        '400':
-          description: Yêu cầu không hợp lệ hoặc dữ liệu thẻ không hợp lệ
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Không có token, token không hợp lệ hoặc token đã hết hạn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Không có quyền truy cập tính năng này
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Không tìm thấy thẻ hoặc bộ flashcard liên quan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Không tìm thấy thẻ
 
   /api/v1/flashcards/{setId}/cards/{cardId}/star:
     put:
-      summary: Đánh dấu hoặc bỏ đánh dấu sao cho thẻ
-      description: Chuyển trạng thái yêu thích của một thẻ trong tiến độ cá nhân hiện tại.
+      summary: Bật/tắt đánh dấu sao cho thẻ
+      description: Cập nhật trạng thái yêu thích trong tiến độ học tập cá nhân.
       tags: [Flashcard]
       security:
         - bearerAuth: []
@@ -437,18 +493,14 @@ paths:
           required: true
           schema:
             type: string
-          example: 66a1f2c9b8d4e01f12349999
-          description: ID của bộ flashcard chứa thẻ cần bật/tắt sao
         - in: path
           name: cardId
           required: true
           schema:
             type: string
-          example: 66a1f2c9b8d4e01f12345678
-          description: ID của thẻ flashcard cần bật/tắt sao
       responses:
         '200':
-          description: Cập nhật trạng thái yêu thích thành công
+          description: Cập nhật trạng thái sao thành công
           content:
             application/json:
               schema:
@@ -459,99 +511,5 @@ paths:
                     example: true
                   data:
                     $ref: '#/components/schemas/FlashcardProgress'
-                  message:
-                    type: string
-                    example: Thẻ đã được đánh dấu sao
-              examples:
-                success:
-                  value:
-                    success: true
-                    data:
-                      _id: 66a1f2c9b8d4e01f1234abcd
-                      userId: 66a1f2c9b8d4e01f12340003
-                      flashcardSetId: 66a1f2c9b8d4e01f12349999
-                      cardProgress:
-                        - cardId: 66a1f2c9b8d4e01f12345678
-                          reviewCount: 3
-                          lastReviewed: '2026-04-17T08:30:00.000Z'
-                          isStarred: true
-                      createdAt: '2026-04-17T08:00:00.000Z'
-                      updatedAt: '2026-04-17T08:30:00.000Z'
-                    message: Thẻ đã được đánh dấu sao
-        '400':
-          description: Yêu cầu không hợp lệ hoặc dữ liệu thẻ không hợp lệ
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Không có token, token không hợp lệ hoặc token đã hết hạn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Không có quyền truy cập tính năng này
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Không tìm thấy thẻ hoặc bộ flashcard liên quan
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/v1/flashcards/{id}:
-    delete:
-      summary: Xóa một bộ flashcard
-      description: Chỉ người tạo bộ flashcard hoặc luồng quyền phù hợp ở tầng middleware mới có thể xóa.
-      tags: [Flashcard]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          example: 66a1f2c9b8d4e01f12349999
-          description: ID của bộ flashcard cần xóa
-      responses:
-        '200':
-          description: Xóa bộ flashcard thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: Đã xóa bộ flashcard thành công
-              examples:
-                success:
-                  value:
-                    success: true
-                    message: Đã xóa bộ flashcard thành công
-        '401':
-          description: Không có token, token không hợp lệ hoặc token đã hết hạn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Không có quyền truy cập tính năng này
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Không tìm thấy bộ flashcard
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Không tìm thấy thẻ

@@ -1,6 +1,6 @@
 tags:
   - name: Document
-    description: Các API quản lý tài liệu PDF (Tải lên, xem danh sách, chi tiết, xóa)
+    description: Các API quản lý tài liệu PDF (Tải lên, xem danh sách, chi tiết, xóa, sửa)
 
 components:
   schemas:
@@ -200,6 +200,57 @@ paths:
           description: Chưa đăng nhập
         '404':
           description: Không tìm thấy tài liệu
+          
+    put:
+      summary: Chỉnh sửa thông tin tài liệu
+      description: Chỉnh sửa tiêu đề hoặc cập nhật ảnh bìa mới cho tài liệu. Gửi dữ liệu bằng form-data. Chỉ Giáo viên sở hữu tài liệu mới có quyền sửa.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của tài liệu cần sửa
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Tiêu đề mới của tài liệu
+                  example: "Tài liệu ôn tập Lịch sử (Bản cập nhật)"
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Chọn file ảnh mới để thay thế ảnh bìa hiện tại
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Đã cập nhật thông tin tài liệu thành công"
+                  data:
+                    $ref: '#/components/schemas/DocumentSummary'
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền truy cập
+        '404':
+          description: Không tìm thấy tài liệu hoặc không có quyền chỉnh sửa
 
     delete:
       summary: Xóa tài liệu

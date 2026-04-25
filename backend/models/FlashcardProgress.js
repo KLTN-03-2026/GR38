@@ -8,7 +8,7 @@ const flashcardProgressSchema = new mongoose.Schema({
     },
     flashcardSetId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Flashcard', // Link tới bộ Flashcard gốc của Teacher
+        ref: 'Flashcard', 
         required: true
     },
     // Lưu trạng thái học tập của TỪNG THẺ trong bộ flashcard đó
@@ -30,7 +30,6 @@ const flashcardProgressSchema = new mongoose.Schema({
                 type: Date,
                 default: null
             },
-            // Gợi ý thêm cho hệ thống ôn tập: Trạng thái ghi nhớ
             memoryStatus: {
                 type: String,
                 enum: ['Chưa học', 'Đang học', 'Đã nhớ'],
@@ -40,7 +39,7 @@ const flashcardProgressSchema = new mongoose.Schema({
     ]
 }, { timestamps: true });
 
-// Tối ưu hóa truy vấn: Mỗi học sinh chỉ có 1 bản ghi Progress cho 1 bộ Flashcard
+
 flashcardProgressSchema.index({ userId: 1, flashcardSetId: 1 }, { unique: true });
 
 const FlashcardProgress = mongoose.model("FlashcardProgress", flashcardProgressSchema);

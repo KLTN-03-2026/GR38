@@ -132,6 +132,7 @@ function LoginPage() {
         )}
 
         <button
+        type="submit"
           onClick={handleLogin}
           disabled={loading}
           className="w-full mt-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-3"

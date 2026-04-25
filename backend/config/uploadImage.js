@@ -29,6 +29,24 @@ const documentImageStorage = new CloudinaryStorage({
   },
 });
 
+const flashcardImageStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'DATN_History_Web/Flashcards', 
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
+});
+
+const quizImageStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'DATN_History_Web/Quizzes', 
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
+});
+
 // 4. Khởi tạo 2 middleware multer riêng biệt
 export const uploadAvatar = multer({ storage: avatarStorage });
 export const uploadDocumentImage = multer({ storage: documentImageStorage });
+export const uploadFlashcardImage = multer({ storage: flashcardImageStorage });
+export const uploadQuizImage = multer({ storage: quizImageStorage });

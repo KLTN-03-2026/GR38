@@ -18,6 +18,10 @@ const flashcardSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    thumbnail: {
+        type: String, 
+        default: null
+    },
     description: {
         type: String,
         default: ''

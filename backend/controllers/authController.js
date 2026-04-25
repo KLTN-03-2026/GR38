@@ -36,13 +36,27 @@ const sendTokenResponse = (user, statusCode, res) => {
  */
 export const register = async (req, res, next) => {
     try {
-        const { fullName, email, password, role } = req.body;
+        const { fullName, email, password, passwordConfirm,role } = req.body;
 
         // Kiểm tra input
-        if (!fullName || !email || !password || !role) {
+        if (!fullName || !email || !password || !passwordConfirm || !role) {
             return res.status(400).json({
                 success: false,
-                error: 'Vui lòng cung cấp đầy đủ thông tin: fullName, email, password, role'
+                error: 'Vui lòng cung cấp đầy đủ thông tin: fullName, email, password, passwordConfirm, role'
+            });
+        }
+
+        if (password !== passwordConfirm) {
+            return res.status(400).json({
+                success: false,
+                error: 'Mật khẩu xác nhận không khớp'
+            });
+        }
+
+        if (role === USER_ROLES.ADMIN) {
+            return res.status(403).json({
+                success: false,
+                error: 'Hành động từ chối. Không thể tự đăng ký quyền Quản trị viên.'
             });
         }
 
@@ -63,6 +77,7 @@ export const register = async (req, res, next) => {
             });
         }
 
+
         // Tạo user mới
         const user = new User({
             fullName,
@@ -80,7 +95,7 @@ export const register = async (req, res, next) => {
         console.error('Lỗi đăng ký:', error);
         return res.status(500).json({
             success: false,
-            error: error.message || 'Lỗi khi đăng ký tài khoản'
+            error: 'Lỗi máy chủ khi đăng ký tài khoản'
         });
     }
 };

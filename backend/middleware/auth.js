@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
-import { USER_ROLES } from "../models/User.js";
+import User, { USER_ROLES } from "../models/User.js";
 
 const protect = async (req, res, next) => {
   let token;
@@ -25,12 +24,10 @@ const protect = async (req, res, next) => {
 
       next();
     } catch (error) {
-      console.error("Lỗi xác thực token:", error.message);
-
       if (error.name === "TokenExpiredError") {
         return res.status(401).json({
           success: false,
-          error: "Token đã hết hạn",
+          error: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
           statusCode: 401,
         });
       }
@@ -46,7 +43,7 @@ const protect = async (req, res, next) => {
   if (!token) {
     return res.status(401).json({
       success: false,
-      error: "Không có token, truy cập bị từ chối",
+      error: "Không tìm thấy token, quyền truy cập bị từ chối",
       statusCode: 401,
     });
   }
@@ -54,15 +51,10 @@ const protect = async (req, res, next) => {
 
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    console.log("=== AUTHORIZE DEBUG ===");
-    console.log("req.user.role:", req.user?.role);
-    console.log("roles required:", roles);
-    console.log("includes?:", roles.includes(req.user?.role));
-
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        error: "Không có thông tin người dùng",
+        error: "Không tìm thấy thông tin người dùng",
         statusCode: 401,
       });
     }
@@ -80,5 +72,4 @@ export const authorize = (...roles) => {
 };
 
 export { USER_ROLES };
-
 export default protect;

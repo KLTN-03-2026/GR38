@@ -111,24 +111,22 @@ const EditDocumentModal = ({ doc, onClose, onSaved }) => {
     setThumbSuccess(false);
   };
 
-  const handleUploadThumb = async () => {
+ const handleUploadThumb = async () => {
     if (!thumbFile) return;
     try {
-      setUploadingThumb(true);
-      setError("");
-      const formData = new FormData();
-      formData.append("thumbnail", thumbFile);
-      formData.append("documentId", doc._id);
-      await api.post("/documents/upload-thumbnail", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setThumbSuccess(true);
+        setUploadingThumb(true);
+        setError("");
+        const formData = new FormData();
+        formData.append("thumbnail", thumbFile);
+        const { data } = await api.post("/documents/upload-thumbnail", formData);
+        await api.patch(`/documents/${doc._id}`, { thumbnail: data.url });
+        setThumbSuccess(true);
     } catch (err) {
-      setError(err.response?.data?.message ?? "Lỗi upload ảnh bìa, vui lòng thử lại.");
+        setError(err.response?.data?.message ?? "Lỗi upload ảnh bìa, vui lòng thử lại.");
     } finally {
-      setUploadingThumb(false);
+        setUploadingThumb(false);
     }
-  };
+};
 
   /* ── PDF handlers ── */
   const handlePdfChange = (e) => {
@@ -148,7 +146,7 @@ const EditDocumentModal = ({ doc, onClose, onSaved }) => {
       setUploadingPdf(true);
       setError("");
       const formData = new FormData();
-      formData.append("pdf", pdfFile);          // field name — đổi thành "file" nếu backend yêu cầu
+      formData.append("pdf", pdfFile);          
       formData.append("documentId", doc._id);
       await api.post("/documents/upload-pdf", formData, {
         headers: { "Content-Type": "multipart/form-data" },

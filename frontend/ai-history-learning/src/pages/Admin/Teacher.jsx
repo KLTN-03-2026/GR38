@@ -214,7 +214,7 @@ export default function TeacherDashboard() {
             style={{ background: "linear-gradient(135deg,#F26739,#f9a87e)" }}>
             <div>
               <p className="text-sm font-bold text-white mb-0.5">Tạo bài kiểm tra mới</p>
-              <p className="text-xs text-white/80">Thêm câu hỏi cho học sinh</p>
+              <p className="text-xs text-white/80">Thêm câu hỏi cho người học</p>
             </div>
             <button onClick={() => navigate("/teacher/quizzes")}
               className="flex items-center gap-1 text-white text-xs font-bold px-4 py-2 rounded-xl border border-white/50 bg-white/25">

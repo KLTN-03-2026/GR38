@@ -133,7 +133,7 @@ const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
                 >
                   <option value="Giáo viên">Giáo viên</option>
-                  <option value="Học sinh">Học sinh</option>
+                  <option value="Người học">Người học</option>
                 </select>
               </div>
               <div className="space-y-1">

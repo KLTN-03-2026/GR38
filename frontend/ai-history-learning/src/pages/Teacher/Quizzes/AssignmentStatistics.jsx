@@ -366,7 +366,7 @@ export default function AssignmentStatistics() {
               Thống kê bài làm
             </h1>
             <p style={{ fontSize: 13, color: "#9CA3AF", margin: "4px 0 0" }}>
-              Quản lý và theo dõi tiến độ học sinh
+              Quản lý và theo dõi tiến độ người học
             </p>
           </div>
           <button
@@ -545,11 +545,11 @@ export default function AssignmentStatistics() {
                       </svg>
                       <p>
                         {data.length === 0
-                          ? "Chưa có dữ liệu thống kê học sinh"
+                          ? "Chưa có dữ liệu thống kê Người học"
                           : "Không tìm thấy bài làm nào"}
                       </p>
                       {data.length === 0 && (
-                        <span>Dữ liệu sẽ xuất hiện khi học sinh hoàn thành bài làm</span>
+                        <span>Dữ liệu sẽ xuất hiện khi Người học hoàn thành bài làm</span>
                       )}
                     </div>
                   </td>

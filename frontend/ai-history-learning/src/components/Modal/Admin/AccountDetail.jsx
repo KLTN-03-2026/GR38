@@ -115,7 +115,7 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
                   className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 outline-none"
                 >
                   <option value="TEACHER">Giáo viên</option>
-                  <option value="LEARNER">Học sinh</option>
+                  <option value="LEARNER">Người học</option>
                 </select>
               </div>
 

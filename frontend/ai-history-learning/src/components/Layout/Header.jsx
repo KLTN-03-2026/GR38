@@ -43,7 +43,10 @@ const Header = () => {
 
   const displayName = user.fullName ?? user.name ?? "Người dùng";
 
+  // ✅ SỬA 1: đọc đúng field — server trả profileImage, code cũ chỉ đọc avatar nên luôn miss
   const avatarUrl =
+    user.profileImage ||
+    user.avatarUrl ||
     user.avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=F26739&color=fff&rounded=true&size=128`;
 
@@ -59,11 +62,12 @@ const Header = () => {
       ? "Quản trị viên"
       : (user.role || "").toUpperCase() === "TEACHER"
         ? "Giáo viên"
-        : "Học sinh";
+        : "Người học";
 
   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("role");
+    localStorage.removeItem("token");
     navigate("/");
   };
 
@@ -73,9 +77,12 @@ const Header = () => {
     };
     window.addEventListener("user-update", updateUser);
     window.addEventListener("storage", updateUser);
+    // ✅ SỬA 2: lắng nghe avatar-update để re-render ngay sau khi upload xong
+    window.addEventListener("avatar-update", updateUser);
     return () => {
       window.removeEventListener("user-update", updateUser);
       window.removeEventListener("storage", updateUser);
+      window.removeEventListener("avatar-update", updateUser);
     };
   }, []);
 
@@ -133,7 +140,6 @@ const Header = () => {
         </div>
 
         <div className="relative" ref={dropdownRef}>
-          {/* Avatar button */}
           <button
             onClick={() => setOpen(!open)}
             className="header-avatar-btn flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full border border-gray-200 bg-white"
@@ -151,13 +157,11 @@ const Header = () => {
             </svg>
           </button>
 
-          {/* Dropdown */}
           {open && (
             <div
               className="dropdown-enter absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden"
               style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.10)" }}
             >
-              {/* User info */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
                 <img src={avatarUrl} alt="avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                 <div className="min-w-0">
@@ -166,7 +170,6 @@ const Header = () => {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="p-1.5">
                 <button className="dropdown-item" onClick={() => { navigate(profilePath); setOpen(false); }}>
                   <svg className="w-4 h-4 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -223,9 +223,13 @@ export default function QuizResultPage() {
       {/* Quay lại */}
       <button
         onClick={() => {
-          navigate("/teacher/quizzes", {
-            state: { documentId, docTitle: quiz?.title },
-          });
+          if (documentId) {
+            navigate(`/teacher/documents/${documentId}`, {
+              state: { activeTab: "Quizz" },
+            });
+          } else {
+            navigate(-1);
+          }
         }}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg text-sm font-medium transition"
       >

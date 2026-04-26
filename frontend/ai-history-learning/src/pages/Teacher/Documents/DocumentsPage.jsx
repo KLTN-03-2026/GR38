@@ -65,7 +65,13 @@ const DEFAULT_COVERS = [
   "/anh5.jpg",
   "/anh6.jpg",
 ];
-const getCover = (doc, idx) => DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
+const getCover = (doc, idx) => {
+  if (doc?.thumbnail && doc.thumbnail.trim() !== "" && doc.thumbnail !== "null") {
+    return doc.thumbnail;
+  }
+  return DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
+};
+
 const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
   <div
     className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -220,16 +226,17 @@ export default function DocumentsPage() {
   const ITEMS_PER_PAGE = 6;
 
   const fetchDocs = async () => {
-    try {
-      setLoading(true);
-      const res = await documentService.getAll();
-      setDocs(res.data ?? []);
-    } catch (err) {
-      console.error("Lỗi tải tài liệu:", err.response?.data ?? err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const res = await documentService.getAll();
+    console.log(">>> doc[0]:", res.data?.[0]); // thêm dòng này
+    setDocs(res.data ?? []);
+  } catch (err) {
+    console.error("Lỗi tải tài liệu:", err.response?.data ?? err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchDocs();
@@ -267,7 +274,7 @@ export default function DocumentsPage() {
     if (addErrors[name]) setAddErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleAddSubmit = async () => {
+const handleAddSubmit = async () => {
   const err = {};
   if (!addForm.title.trim()) err.title = "Vui lòng nhập tên tài liệu";
   if (!addForm.file) err.file = "Vui lòng chọn file PDF";
@@ -275,26 +282,28 @@ export default function DocumentsPage() {
     setAddErrors(err);
     return;
   }
+
   setAddLoading(true);
   try {
-    const result = await documentService.upload(addForm.file, {
-      title: addForm.title,
-    });
-    if (addForm.thumbFile && result?.data?._id) {
-      try {
-        const thumbForm = new FormData();
-        thumbForm.append("thumbnail", addForm.thumbFile);
-        await api.post("/documents/upload-thumbnail", thumbForm, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        // Cập nhật thumbnail cho document vừa tạo
-        await api.put(`/documents/${result.data._id}`, {
-          thumbnail: result.thumbnailUrl,
-        });
-      } catch (thumbErr) {
-        console.warn("Upload thumbnail thất bại:", thumbErr.message);
-      }
+    // Bước 1: Upload thumbnail TRƯỚC (nếu có)
+    let thumbnailUrl = null;
+    if (addForm.thumbFile) {
+      const thumbForm = new FormData();
+      thumbForm.append("thumbnail", addForm.thumbFile);
+
+      const thumbRes = await api.post("/documents/upload-thumbnail", thumbForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      thumbnailUrl = thumbRes.data?.url ?? null;
     }
+
+    // Bước 2: Upload PDF, kèm thumbnailUrl nếu có
+    await documentService.upload(addForm.file, {
+      title: addForm.title,
+      ...(thumbnailUrl && { thumbnail: thumbnailUrl }),
+    });
+
     await fetchDocs();
     closeModal();
     setGridKey((k) => k + 1);

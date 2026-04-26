@@ -4,10 +4,11 @@ export const getDocs = () => api.get("/documents");
 
 export const documentService = {
   // Upload PDF (endpoint đúng)
-  upload: async (file, { title }) => {
+  upload: async (file, { title, thumbnail }) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("title", title);
+    if (thumbnail) formData.append("thumbnail", thumbnail); 
     const response = await api.post("/documents/upload-pdf", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

@@ -2,6 +2,7 @@
   "name": "kltn38",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:8000",
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/dom": "^10.4.1",

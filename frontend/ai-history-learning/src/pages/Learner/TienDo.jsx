@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
 import { Calendar, Users, BookOpen, Star, DollarSign } from 'lucide-react';
-import api from "../../lib/api.js"; // Đã sửa đường dẫn import đúng cấu trúc src/
+import api from "../../lib/api.js";
 
 const TienDo = () => {
   const [data, setData] = useState(null);

@@ -48,7 +48,7 @@ import DocumentsLearner from "./pages/Learner/Documents";
 import FlashcardsLearner from "./pages/Learner/Flashcards.jsx";
 import QuizzesLearner from "./pages/Learner/Quizzes";
 import SuCo from "./pages/Learner/SuCo";
-import TienDo from "./pages/Learner/TienDo"; // Import TienDo
+import TienDo from "./pages/Learner/TienDo"; 
 
 // ================= HELPER =================
 const getUser = () => {
@@ -80,7 +80,6 @@ function PublicRoute() {
 
   if (!token) return <Outlet />;
 
-  // Đã đăng nhập → redirect về đúng trang
   if (role === "ADMIN") return <Navigate to="/admin" replace />;
   if (role === "TEACHER") return <Navigate to="/teacher" replace />;
   if (role === "LEARNER") return <Navigate to="/learner" replace />;
@@ -153,7 +152,6 @@ export default function AppRouter() {
       {/* ================= TEACHER ================= */}
       <Route element={<PrivateRoute allowedRole="TEACHER" />}>
 
-        {/* Fullscreen — nằm ngoài layout */}
         <Route path="/teacher/baigiang/:id" element={<Baigiangpage />} />
         <Route path="/teacher/baikiemtra/:id" element={<Baikiemtra />} />
 
@@ -188,7 +186,7 @@ export default function AppRouter() {
           <Route path="chat-ai" element={<ChatAI />} />
           <Route path="flashcard" element={<FlashCard />} />
           <Route path="quiz" element={<Quiz />} />
-          <Route path="hoc-flashcard" element={<FlashcardDetailLearner />} />
+          <Route path="hoc-flashcard/:id" element={<FlashcardDetailLearner />} />
           <Route path="tiendo" element={<TienDo />} />
         </Route>
       </Route>

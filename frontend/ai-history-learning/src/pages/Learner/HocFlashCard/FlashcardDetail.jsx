@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"; 
 import { useNavigate, useParams } from "react-router-dom";
-import axiosClient from "../../../lib/axios";
+// Đổi import đồng bộ với api.js
+import api from "../../../lib/api"; 
 
 const FlashcardDetail = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Đây là documentId
+  const { id } = useParams(); 
   
   const [flashcardSet, setFlashcardSet] = useState(null);
   const [questions, setQuestions] = useState([]); 
@@ -17,12 +18,15 @@ const FlashcardDetail = () => {
     const fetchDetail = async () => {
       try {
         setLoading(true);
-        // API này trả về data là 1 Object (không phải mảng) theo Swagger
-        const res = await axiosClient.get(`/flashcards/${id}`);
+        // Sử dụng api instance
+        const res = await api.get(`/flashcards/${id}`);
         
-        if (res.success && res.data) {
-          setFlashcardSet(res.data);
-          setQuestions(res.data.cards || []);
+        // Xử lý dữ liệu linh hoạt (tùy backend trả về res.data hay res.data.data)
+        const responseData = res.data?.data || res.data || res;
+
+        if (responseData) {
+          setFlashcardSet(responseData);
+          setQuestions(responseData.cards || []);
         }
       } catch (err) {
         console.error("Lỗi fetch chi tiết:", err);
@@ -35,8 +39,10 @@ const FlashcardDetail = () => {
 
   const handleReview = async (cardId) => {
     try {
-      // API POST Ghi nhận ôn tập thẻ theo Swagger
-      await axiosClient.post(`/flashcards/${flashcardSet._id}/cards/${cardId}/review`);
+      // Ghi nhận ôn tập thẻ
+      if (flashcardSet?._id) {
+        await api.post(`/flashcards/${flashcardSet._id}/cards/${cardId}/review`);
+      }
     } catch (err) {
       console.error("Lỗi lưu tiến độ:", err);
     }
@@ -44,7 +50,6 @@ const FlashcardDetail = () => {
 
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
-      // Trước khi qua thẻ mới, ghi nhận đã học thẻ cũ
       handleReview(questions[currentIndex]._id);
       setCurrentIndex(prev => prev + 1);
       setIsFlipped(false);

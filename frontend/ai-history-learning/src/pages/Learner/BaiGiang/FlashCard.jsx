@@ -13,16 +13,19 @@ const FlashCard = ({ documentId, lectureTitle }) => {
       if (!documentId) return;
       try {
         setLoading(true);
-        const res = await api.get(`/flashcards/${documentId}`);
+        // SỬA TẠI ĐÂY: Thêm /document/ vào đường dẫn API theo đúng Swagger
+        const res = await api.get(`/flashcards/document/${documentId}`);
         
-        const data = res?.data?.data || res?.data;
-        if (data && data.cards) {
-          setCards(data.cards);
+        // Kiểm tra dữ liệu trả về theo cấu trúc Swagger { success: true, data: { cards: [...] } }
+        const responseData = res?.data?.data || res?.data || res;
+        
+        if (responseData && responseData.cards && Array.isArray(responseData.cards)) {
+          setCards(responseData.cards);
         } else {
           setCards([]);
         }
       } catch (err) {
-        console.error("Lỗi lấy Flashcard:", err);
+        console.error("Lỗi lấy Flashcard theo ID tài liệu:", err);
         setCards([]);
       } finally {
         setLoading(false);
@@ -34,7 +37,7 @@ const FlashCard = ({ documentId, lectureTitle }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20 gap-3 text-[#f26739]">
       <Loader2 className="animate-spin" size={40} />
-      <p className="text-gray-500 font-medium italic">Đang tạo thẻ ghi nhớ...</p>
+      <p className="text-gray-500 font-medium italic">Đang tải thẻ ghi nhớ...</p>
     </div>
   );
 
@@ -43,6 +46,7 @@ const FlashCard = ({ documentId, lectureTitle }) => {
       <BookOpen className="text-gray-300 mb-4" size={56} />
       <h3 className="text-[18px] font-bold text-gray-400 uppercase tracking-widest">Chưa có Flashcards</h3>
       <p className="text-gray-500 font-semibold text-lg mt-2">{lectureTitle}</p>
+      <p className="text-gray-400 text-sm mt-1">Hệ thống đang chuẩn bị bộ thẻ cho bài giảng này.</p>
     </div>
   );
 
@@ -98,13 +102,15 @@ const FlashCard = ({ documentId, lectureTitle }) => {
          <div className="flex gap-4 w-full">
             <button 
               onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-              className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-gray-900 text-gray-900 py-3.5 rounded-2xl font-bold hover:bg-gray-50 transition-all active:scale-95"
+              className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-gray-900 text-gray-900 py-3.5 rounded-2xl font-bold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-30"
+              disabled={cards.length <= 1}
             >
               <ChevronLeft size={20} /> Thẻ trước
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              className="flex-[2] flex items-center justify-center gap-2 bg-[#f26739] text-white py-3.5 rounded-2xl font-bold hover:opacity-90 transition-all shadow-xl active:scale-95"
+              className="flex-[2] flex items-center justify-center gap-2 bg-[#f26739] text-white py-3.5 rounded-2xl font-bold hover:opacity-90 transition-all shadow-xl active:scale-95 disabled:opacity-30"
+              disabled={cards.length <= 1}
             >
               Thẻ tiếp theo <ChevronRight size={20} />
             </button>

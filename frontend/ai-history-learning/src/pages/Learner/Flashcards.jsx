@@ -156,8 +156,9 @@ const Flashcards = () => {
                     <div className="h-full bg-[#1473E6]" style={{ width: `${item.progress || 0}%` }}></div>
                   </div>
                 </div>
+                {/* SỬA LOGIC Ở ĐÂY: Dùng item._id để điều hướng đúng */}
                 <button 
-                  onClick={() => navigate(`/learner/hoc-flashcard/${item.documentId?._id || item.documentId}`)} 
+                  onClick={() => navigate(`/learner/hoc-flashcard/${item._id}`)} 
                   className="w-full bg-[#F26739] text-white py-3.5 rounded-xl font-bold hover:bg-[#d9562d] transition-colors shadow-lg active:scale-[0.98]"
                 >
                   Bắt đầu học ngay

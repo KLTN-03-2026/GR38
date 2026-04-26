@@ -1,6 +1,7 @@
 import Flashcard from "../models/Flashcard.js";
 import FlashcardProgress from "../models/FlashcardProgress.js";
 import { USER_ROLES } from "../models/User.js";
+import Document from "../models/Document.js";
 
 const resolveFlashcardSetId = async ({ setId, cardId }) => {
   if (setId) {
@@ -15,19 +16,18 @@ const resolveFlashcardSetId = async ({ setId, cardId }) => {
 };
 
 //@desc Tạo bộ flashcard thủ công
-// @route POST /api/flashcards/manual
-// @access Private (Teacher)
+// @route POST /api/v1/flashcards/manual
+// @access Private (Teacher, Admin)
 export const createManualFlashcardSet = async (req, res, next) => {
   try {
-    if (req.user.role !== USER_ROLES.TEACHER) {
+    if (req.user.role !== USER_ROLES.TEACHER && req.user.role !== USER_ROLES.ADMIN) {
       return res.status(403).json({
         success: false,
-        error: "Chỉ giáo viên mới có quyền tạo bộ Flashcard",
+        error: "Chỉ giáo viên hoặc Admin mới có quyền tạo bộ Flashcard",
         statusCode: 403,
       });
     }
 
-    // Xử lý parse JSON cho mảng cards (do gửi bằng FormData)
     let parsedCards = req.body.cards;
     if (typeof parsedCards === "string") {
       try {
@@ -39,9 +39,6 @@ export const createManualFlashcardSet = async (req, res, next) => {
 
     const { documentId, title, description, tags } = req.body;
     
-    // Lấy link ảnh từ Multer/Cloudinary (nếu người dùng có upload)
-    const thumbnailURL = req.file ? req.file.path : null;
-
     if (!title) {
       return res.status(400).json({
         success: false,
@@ -58,11 +55,24 @@ export const createManualFlashcardSet = async (req, res, next) => {
       });
     }
 
+    // --- LOGIC XỬ LÝ ẢNH BÌA (Đã đồng bộ giống bên Quiz) ---
+    let finalThumbnail = null;
+    if (req.file) {
+      // 1. Nếu có file upload từ client
+      finalThumbnail = req.file.path;
+    } else if (documentId) {
+      // 2. Nếu không có file upload nhưng có liên kết tài liệu -> Lấy ảnh tài liệu
+      const doc = await Document.findById(documentId).select("thumbnail");
+      if (doc && doc.thumbnail) {
+        finalThumbnail = doc.thumbnail;
+      }
+    }
+
     const newFlashcardSet = await Flashcard.create({
       documentId: documentId || null,
       teacherId: req.user._id,
       title,
-      thumbnail: thumbnailURL, // Sẽ là URL Cloudinary hoặc null
+      thumbnail: finalThumbnail, 
       description: description || "",
       tags: tags || [],
       cards: parsedCards.map((card) => ({
@@ -70,6 +80,7 @@ export const createManualFlashcardSet = async (req, res, next) => {
         back: card.back,
         difficulty: card.difficulty || "Trung bình",
       })),
+      isAiGenerated: false 
     });
 
     res.status(201).json({

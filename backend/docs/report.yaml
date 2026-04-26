@@ -1,0 +1,281 @@
+tags:
+  - name: Report
+    description: Các API quản lý báo cáo lỗi nội dung (Tài liệu, Quiz, Flashcard) và người dùng (Giáo viên)
+
+components:
+  schemas:
+    ReportUserRef:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340002
+        fullName:
+          type: string
+          example: Nguyễn Văn A
+        email:
+          type: string
+          example: hocsinh@example.com
+        profileImage:
+          type: string
+          example: https://res.cloudinary.com/.../avatar.jpg
+
+    ReportTargetRef:
+      type: object
+      description: Thông tin cơ bản của mục tiêu bị báo cáo (Tài liệu, Quiz, Flashcard hoặc User)
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        title:
+          type: string
+          description: Chỉ xuất hiện nếu mục tiêu là Document
+          example: Lịch sử Việt Nam lớp 12
+        name:
+          type: string
+          description: Chỉ xuất hiện nếu mục tiêu là Quiz hoặc Flashcard
+          example: Bộ câu hỏi ôn tập Điện Biên Phủ
+        fullName:
+          type: string
+          description: Chỉ xuất hiện nếu mục tiêu là User (Giáo viên)
+          example: Nguyễn Văn B
+
+    ReportBase:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12345555
+        reporterId:
+          $ref: '#/components/schemas/ReportUserRef'
+        targetType:
+          type: string
+          enum: [Document, Quiz, Flashcard, User]
+          example: User
+        targetId:
+          $ref: '#/components/schemas/ReportTargetRef'
+        issueType:
+          type: string
+          enum: [historical_fact, timeline, typo, inappropriate_behavior, spam, other]
+          example: inappropriate_behavior
+        description:
+          type: string
+          example: Giáo viên có ngôn từ không phù hợp trong bình luận.
+        status:
+          type: string
+          enum: [pending, resolved, rejected]
+          example: pending
+        adminNotes:
+          type: string
+          example: Đã kiểm tra và cảnh cáo giáo viên.
+        resolvedBy:
+          $ref: '#/components/schemas/ReportUserRef'
+        resolvedAt:
+          type: string
+          format: date-time
+          example: '2026-04-18T10:00:00.000Z'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
+
+    ReportCreateRequest:
+      type: object
+      required:
+        - targetType
+        - targetId
+        - issueType
+        - description
+      properties:
+        targetType:
+          type: string
+          enum: [Document, Quiz, Flashcard, User]
+          example: User
+        targetId:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        issueType:
+          type: string
+          enum: [historical_fact, timeline, typo, inappropriate_behavior, spam, other]
+          example: inappropriate_behavior
+        description:
+          type: string
+          example: Giáo viên này có hành vi không phù hợp.
+
+    ReportUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [pending, resolved, rejected]
+          example: resolved
+        adminNotes:
+          type: string
+          example: Cảm ơn bạn, Admin đã tiếp nhận và xử lý.
+
+paths:
+  /api/v1/reports:
+    post:
+      summary: Gửi báo cáo vi phạm
+      description: Dành cho Học viên (LEARNER) báo cáo lỗi tài liệu, bài quiz, flashcard hoặc hành vi của Giáo viên (TEACHER).
+      tags: [Report]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+      responses:
+        '201':
+          description: Báo cáo thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Báo cáo đã được gửi. Cảm ơn bạn đã đóng góp!
+                  data:
+                    $ref: '#/components/schemas/ReportBase'
+        '400':
+          description: Dữ liệu đầu vào không hợp lệ hoặc đã báo cáo rồi
+
+    get:
+      summary: Lấy danh sách toàn bộ báo cáo
+      description: Dành cho ADMIN quản lý các khiếu nại. Có hỗ trợ phân trang và lọc.
+      tags: [Report]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, resolved, rejected]
+          description: Lọc theo trạng thái báo cáo
+        - in: query
+          name: targetType
+          schema:
+            type: string
+            enum: [Document, Quiz, Flashcard, User]
+          description: Lọc theo loại mục tiêu bị báo cáo
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Số trang
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Số lượng trên 1 trang
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReportBase'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 25
+                      page:
+                        type: integer
+                        example: 1
+                      totalPages:
+                        type: integer
+                        example: 3
+        '403':
+          description: Không có quyền truy cập
+
+  /api/v1/reports/my-reports:
+    get:
+      summary: Xem lịch sử báo cáo cá nhân
+      description: Học viên xem lại các báo cáo mình đã gửi đi và trạng thái xử lý của Admin.
+      tags: [Report]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReportBase'
+        '401':
+          description: Chưa đăng nhập
+
+  /api/v1/reports/{id}/status:
+    patch:
+      summary: Cập nhật trạng thái xử lý báo cáo
+      description: Chỉ ADMIN mới có quyền duyệt (resolved/rejected) và thêm ghi chú phản hồi báo cáo.
+      tags: [Report]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12345555
+          description: ID của báo cáo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportUpdateRequest'
+      responses:
+        '200':
+          description: Cập nhật trạng thái thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Đã cập nhật trạng thái báo cáo
+                  data:
+                    $ref: '#/components/schemas/ReportBase'
+        '403':
+          description: Không có quyền thực hiện (Chỉ dành cho ADMIN)
+        '404':
+          description: Không tìm thấy báo cáo

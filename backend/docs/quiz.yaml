@@ -1,254 +1,15 @@
-tags:
-  - name: Quiz
-    description: Các API quản lý quiz, nộp bài và xem kết quả quiz
-
-components:
-  schemas:
-    DocumentRef:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f12340001
-        title:
-          type: string
-          example: Lịch sử Việt Nam lớp 12
-        fileName:
-          type: string
-          example: lich_su_12.pdf
-        thumbnail:
-          type: string
-          example: https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg
-
-    UserRef:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f12340002
-        fullName:
-          type: string
-          example: Nguyễn Văn A
-        email:
-          type: string
-          example: giaovien@example.com
-
-    QuizQuestion:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f12345678
-        question:
-          type: string
-          example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
-        options:
-          type: array
-          minItems: 4
-          maxItems: 4
-          items:
-            type: string
-          example:
-            - '1953'
-            - '1954'
-            - '1955'
-            - '1956'
-        correctAnswer:
-          type: string
-          example: '1954'
-        explanation:
-          type: string
-          example: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
-        difficulty:
-          type: string
-          enum: [Dễ, Trung bình, Khó]
-          example: Trung bình
-
-    QuizBase:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f12349999
-        documentId:
-          $ref: '#/components/schemas/DocumentRef'
-        teacherId:
-          $ref: '#/components/schemas/UserRef'
-        title:
-          type: string
-          example: Bộ câu hỏi ôn tập Điện Biên Phủ
-        description:
-          type: string
-          example: Quiz trắc nghiệm cho phần kháng chiến chống Pháp
-        questions:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuizQuestion'
-        totalQuestions:
-          type: integer
-          example: 10
-        isAiGenerated:
-          type: boolean
-          example: false
-        isPublished:
-          type: boolean
-          example: true
-        tags:
-          type: array
-          items:
-            type: string
-          example: ["dien-bien-phu"]
-        stats:
-          type: object
-          properties:
-            enrolledLearners:
-              type: integer
-              example: 125
-            totalAttempts:
-              type: integer
-              example: 42
-        createdAt:
-          type: string
-          format: date-time
-          example: '2026-04-17T08:00:00.000Z'
-        updatedAt:
-          type: string
-          format: date-time
-          example: '2026-04-17T08:15:00.000Z'
-
-    QuizListResponse:
-      allOf:
-        - $ref: '#/components/schemas/QuizBase'
-
-    QuizDetailResponse:
-      allOf:
-        - $ref: '#/components/schemas/QuizBase'
-
-    QuizAnswerItem:
-      type: object
-      properties:
-        questionId:
-          type: string
-          example: 66a1f2c9b8d4e01f12345678
-        selectedAnswer:
-          type: string
-          example: '1954'
-
-    QuizSubmitRequest:
-      type: object
-      properties:
-        userAnswers:
-          type: array
-          description: Mảng đáp án người dùng gửi lên
-          items:
-            $ref: '#/components/schemas/QuizAnswerItem'
-          example:
-            - questionId: 66a1f2c9b8d4e01f12345678
-              selectedAnswer: '1954'
-            - questionId: 66a1f2c9b8d4e01f12345679
-              selectedAnswer: Võ Nguyên Giáp
-        answers:
-          type: array
-          description: Tên thay thế cho userAnswers mà backend vẫn chấp nhận
-          items:
-            $ref: '#/components/schemas/QuizAnswerItem'
-
-    QuizSubmitQuestionDetail:
-      type: object
-      properties:
-        questionId:
-          type: string
-          example: 66a1f2c9b8d4e01f12345678
-        question:
-          type: string
-          example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
-        selectedAnswer:
-          type: string
-          example: '1954'
-        correctAnswer:
-          type: string
-          example: '1954'
-        explanation:
-          type: string
-          example: Chiến thắng Điện Biên Phủ kết thúc vào ngày 7/5/1954.
-        isCorrect:
-          type: boolean
-          example: true
-
-    QuizSubmitResponse:
-      type: object
-      properties:
-        quizResultId:
-          type: string
-          example: 66a1f2c9b8d4e01f1234abcd
-        score:
-          type: integer
-          example: 8
-        correctCount:
-          type: integer
-          example: 8
-        totalQuestions:
-          type: integer
-          example: 10
-        details:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuizSubmitQuestionDetail'
-
-    QuizHistoryResponse:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f1234abcd
-        userId:
-          type: string
-          example: 66a1f2c9b8d4e01f12340003
-        quizId:
-          type: object
-          properties:
-            _id:
-              type: string
-              example: 66a1f2c9b8d4e01f12349999
-            title:
-              type: string
-              example: Lịch sử Việt Nam
-        score:
-          type: integer
-          example: 8
-        totalQuestions:
-          type: integer
-          example: 10
-        createdAt:
-          type: string
-          format: date-time
-          example: '2026-04-17T08:30:00.000Z'
-
-    ErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        error:
-          type: string
-          example: Yêu cầu không hợp lệ
-        statusCode:
-          type: integer
-          example: 400
-
 paths:
   /api/v1/quizzes:
     post:
       summary: Tạo đề quiz thủ công
-      description: Dành cho TEACHER hoặc ADMIN để tự soạn câu hỏi.
+      description: Dành cho TEACHER hoặc ADMIN để tự soạn câu hỏi. Hỗ trợ upload ảnh bìa (thumbnail) hoặc tự động lấy ảnh từ Document.
       tags: [Quiz]
       security:
         - bearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
@@ -258,18 +19,23 @@ paths:
                 documentId:
                   type: string
                   example: 66a1f2c9b8d4e01f12340001
+                  description: ID tài liệu (Nếu không upload thumbnail, hệ thống sẽ tự lấy ảnh của tài liệu này)
                 description:
                   type: string
                   example: Gồm 5 câu hỏi trọng tâm
                 questions:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/QuizQuestion'
+                  type: string
+                  description: Mảng các câu hỏi định dạng JSON string (Do gửi qua FormData)
+                  example: '[{"question": "Chiến thắng Điện Biên Phủ diễn ra vào năm nào?", "options": ["1953", "1954", "1955", "1956"], "correctAnswer": "1954", "explanation": "Kết thúc ngày 7/5/1954", "difficulty": "Trung bình"}]'
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: File ảnh bìa tải lên từ máy tính (nếu có)
       responses:
         '201':
           description: Tạo thành công
         '400':
-          description: Lỗi dữ liệu đầu vào (cần ít nhất 5 câu)
+          description: Lỗi dữ liệu đầu vào (cần ít nhất 5 câu hoặc JSON không hợp lệ)
 
   /api/v1/quizzes/my-history:
     get:
@@ -425,7 +191,129 @@ paths:
         '400':
           description: Dữ liệu nộp bài không hợp lệ
 
+  /api/v1/quizzes/{quizId}/questions/{questionId}:
+    put:
+      summary: Cập nhật nội dung một câu hỏi cụ thể trong Quiz
+      description: Dành cho TEACHER hoặc ADMIN sửa lại đáp án hoặc nội dung của một câu hỏi.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: quizId
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của bộ Quiz
+        - in: path
+          name: questionId
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12345678
+          description: ID của câu hỏi cần sửa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question:
+                  type: string
+                  example: Trận Điện Biên Phủ diễn ra vào năm nào? (Đã sửa)
+                options:
+                  type: array
+                  items:
+                    type: string
+                  example: ["1952", "1953", "1954", "1955"]
+                correctAnswer:
+                  type: string
+                  example: "1954"
+                explanation:
+                  type: string
+                  example: Trận chiến kết thúc ngày 7/5/1954.
+                difficulty:
+                  type: string
+                  enum: [Dễ, Trung bình, Khó]
+                  example: Trung bình
+      responses:
+        '200':
+          description: Cập nhật câu hỏi thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Đã cập nhật câu hỏi Quiz thành công
+                  data:
+                    $ref: '#/components/schemas/QuizQuestion'
+        '403':
+          description: Không có quyền chỉnh sửa
+        '404':
+          description: Không tìm thấy bộ Quiz hoặc câu hỏi
+
   /api/v1/quizzes/{id}:
+    put:
+      summary: Cập nhật thông tin chung của bộ Quiz
+      description: Dành cho TEACHER (người tạo) hoặc ADMIN để sửa tiêu đề, mô tả, tags hoặc ảnh bìa (thumbnail).
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của đề quiz cần sửa
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Đề kiểm tra Lịch sử 12 (Cập nhật)
+                description:
+                  type: string
+                  example: Gồm 10 câu hỏi nâng cao
+                tags:
+                  type: string
+                  description: Mảng tags dạng JSON string (VD '["lich-su", "lop-12"]')
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: File ảnh bìa mới (nếu có)
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Đã cập nhật thông tin bộ Quiz thành công
+                  data:
+                    $ref: '#/components/schemas/QuizBase'
+        '403':
+          description: Không có quyền chỉnh sửa
+        '404':
+          description: Không tìm thấy bộ Quiz
+          
     delete:
       summary: Xóa quiz
       description: Chỉ TEACHER (người tạo) hoặc ADMIN được phép xóa.

@@ -93,7 +93,7 @@ const AdminDashboard = () => {
         />
         <StatCard label="Tổng giáo viên" value="12" icon={UserCheck} />
         <StatCard
-          label="Tổng học sinh"
+          label="Tổng Người học"
           value="573,444.5"
           icon={GraduationCap}
         />
@@ -110,7 +110,7 @@ const AdminDashboard = () => {
         {/* Chart Area */}
         <div className="md:col-span-7 p-6 border border-slate-200 shadow-sm rounded-xl bg-white">
           <p className="text-base font-semibold text-slate-900 mb-10">
-            Tổng quan số lượng học sinh đăng ký tài khoản
+            Tổng quan số lượng người học đăng ký tài khoản
           </p>
           <div className="relative h-[300px] w-full">
             {yAxis.map((y) => (

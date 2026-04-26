@@ -63,9 +63,9 @@ const AccountManagement = () => {
           .length.toString(),
       },
       {
-        label: "Tổng học sinh",
+        label: "Tổng Người học",
         value: accounts
-          .filter((a) => a.role === "LEARNER" || a.role === "Học sinh")
+          .filter((a) => a.role === "LEARNER" || a.role === "Người học")
           .length.toString(),
       },
       {
@@ -218,7 +218,7 @@ const AccountManagement = () => {
             >
               <option>Chức vụ</option>
               <option value="TEACHER">Giáo viên</option>
-              <option value="LEARNER">Học sinh</option>
+              <option value="LEARNER">Người học</option>
             </select>
             <select
               className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-600 outline-none"

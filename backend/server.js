@@ -17,6 +17,7 @@ import aiRoutes from "./routes/aiRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import progressRoutes from "./routes/progressRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,17 +38,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// FIX: đồng bộ đường dẫn static với multer
-// multer lưu vào: uploads/documents/
-// serve tại URL:  /uploads/documents/filename.pdf
-app.use(
-  "/uploads/documents",
-  express.static(path.join(__dirname, "uploads", "documents"))
-);
-app.use(
-  "/uploads/avatars",
-  express.static(path.join(__dirname, "uploads", "avatars"))
-);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
   customSiteTitle: "API Docs - AI History Learning",
@@ -61,6 +51,7 @@ app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/quizzes", quizRoutes);
 app.use("/api/v1/progress", progressRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/reports", reportRoutes);
 
 app.use(errorHandler);
 

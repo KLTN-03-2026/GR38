@@ -1,15 +1,18 @@
 import React, { useState, useRef } from "react";
-import { X, AlertCircle, Calendar, ChevronsUpDown, Upload } from "lucide-react";
+import { X, AlertCircle, Calendar, ChevronsUpDown, Upload, Loader2 } from "lucide-react";
+import Swal from "sweetalert2"; 
+import api from "../../lib/api"; 
 
 const SuCo = () => {
   const fileInputRef = useRef(null);
   const [images, setImages] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     hoTen: "",
     gmail: "",
     sdt: "",
-    ngayGui: "",
+    ngayGui: new Date().toISOString().split('T')[0],
     mucDo: "Bình thường",
     loaiSuCo: "Lỗi Website",
     tieuDe: "",
@@ -19,10 +22,7 @@ const SuCo = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Xóa lỗi ngay khi người dùng bắt đầu sửa lại trường đó
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
   const handleUploadClick = () => fileInputRef.current.click();
@@ -30,164 +30,156 @@ const SuCo = () => {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > 5) {
-      alert("Chỉ được tải lên tối đa 5 ảnh");
+      Swal.fire({
+        icon: 'warning',
+        title: 'Giới hạn ảnh',
+        text: 'Bạn chỉ được tải lên tối đa 5 ảnh minh chứng!',
+        confirmButtonColor: '#F26739'
+      });
       return;
     }
     const newImages = files.map(file => URL.createObjectURL(file));
     setImages([...images, ...newImages]);
   };
 
-  // --- HÀM KIỂM TRA LỖI CHI TIẾT ---
   const validate = () => {
     let newErrors = {};
-    const emailFormatRegex = /^[^\s@]+@gmail\.com$/;
-    const containsCharRegex = /\D/; // Kiểm tra nếu có chứa ký tự không phải số
-
-    // 1. Kiểm tra Họ tên
-    if (!formData.hoTen.trim()) {
-      newErrors.hoTen = "Vui lòng nhập họ tên";
-    }
-
-    // 2. Kiểm tra Gmail (2 trường hợp cụ thể)
-    if (!formData.gmail.trim()) {
-      newErrors.gmail = "Vui lòng nhập email";
-    } else if (!emailFormatRegex.test(formData.gmail)) {
-      newErrors.gmail = "Email không đúng định dạng (phải có @gmail.com)";
-    }
-
-    // 3. Kiểm tra Số điện thoại (2 trường hợp cụ thể)
-    if (!formData.sdt.trim()) {
-      newErrors.sdt = "Vui lòng nhập số điện thoại";
-    } else if (containsCharRegex.test(formData.sdt)) {
-      newErrors.sdt = "SĐT không hợp lệ (vui lòng nhập số, không nhập chữ)";
-    } else if (formData.sdt.length < 10 || formData.sdt.length > 11) {
-      newErrors.sdt = "Số điện thoại phải từ 10-11 số";
-    }
-
-    // 4. Các trường còn lại
-    if (!formData.ngayGui) newErrors.ngayGui = "Vui lòng chọn ngày";
+    if (!formData.hoTen.trim()) newErrors.hoTen = "Vui lòng nhập họ tên";
+    if (!formData.gmail.trim()) newErrors.gmail = "Vui lòng nhập email";
+    if (!formData.sdt.trim()) newErrors.sdt = "Vui lòng nhập số điện thoại";
     if (!formData.tieuDe.trim()) newErrors.tieuDe = "Vui lòng nhập tiêu đề";
     if (!formData.moTa.trim()) newErrors.moTa = "Vui lòng nhập mô tả nội dung";
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validate()) {
-      alert("Gửi báo cáo sự cố thành công!");
-      console.log("Dữ liệu báo cáo:", formData);
+  const handleSubmit = async () => {
+    if (!validate()) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Thiếu thông tin',
+        text: 'Vui lòng điền các trường bắt buộc.',
+        confirmButtonColor: '#d33'
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Payload đúng cấu trúc tài liệu API
+      const payload = {
+        targetType: "System", 
+        targetId: "66a1f2c9b8d4e01f12349999", 
+        issueType: formData.loaiSuCo === "Lỗi Website" ? "technical_issue" : "content_error",
+        description: `[${formData.tieuDe}] - ${formData.moTa}. Người gửi: ${formData.hoTen} (${formData.sdt})`,
+      };
+
+      const res = await api.post("/reports", payload);
+
+      if (res.data) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Gửi thành công!',
+          text: 'Báo cáo của bạn đã được ghi nhận.',
+          confirmButtonColor: '#F26739',
+        });
+        
+        // Reset form
+        setFormData({
+          hoTen: "", gmail: "", sdt: "", 
+          ngayGui: new Date().toISOString().split('T')[0],
+          mucDo: "Bình thường", loaiSuCo: "Lỗi Website",
+          tieuDe: "", moTa: ""
+        });
+        setImages([]);
+      }
+    } catch (err) {
+      console.error("Lỗi gửi báo cáo:", err);
+      const is404 = err.response?.status === 404;
+      
+      Swal.fire({
+        icon: 'error',
+        title: is404 ? 'Lỗi kết nối API' : 'Gửi thất bại',
+        html: is404 
+          ? "Bạn chưa thêm <b>app.use('/api/v1/reports', reportRoutes)</b> vào file <b>server.js</b>"
+          : `Lỗi: ${err.response?.data?.error || "Không thể gửi báo cáo lúc này."}`,
+        confirmButtonColor: '#d33'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="flex items-center justify-center p-10 bg-[#FAFAFA] min-h-screen font-['Inter']">
-      <div className="relative w-[840px] h-auto min-h-[1015px] bg-white border-l border-[#E4E4E7] shadow-lg rounded-[10px] flex flex-col items-center p-[24px] gap-[16px]">
-        
-        {/* Nút Close */}
-        <button className="absolute right-[8px] top-[8px] w-[32px] h-[32px] flex items-center justify-center opacity-70 hover:opacity-100">
-          <X size={16} className="text-[#09090B]" />
+      <div className="relative w-[840px] h-auto min-h-[1015px] bg-white border border-[#E4E4E7] shadow-lg rounded-[10px] flex flex-col items-center p-[24px] gap-[16px]">
+        <button className="absolute right-[16px] top-[16px] opacity-50 hover:opacity-100">
+          <X size={20} className="text-[#09090B]" />
         </button>
 
-        {/* Header */}
-        <div className="flex flex-col items-start w-[792px] gap-[16px] self-stretch">
+        <div className="flex flex-col items-start w-full gap-[16px]">
           <h2 className="text-[24px] font-semibold text-[#09090B]">Báo cáo sự cố</h2>
-          <p className="text-[14px] text-[#71717A] -mt-2">Vui lòng cung cấp thông tin chi tiết về sự cố bạn đang gặp phải.</p>
+          <p className="text-[14px] text-[#71717A] -mt-2">Mô tả chi tiết để giúp chúng tôi khắc phục nhanh hơn.</p>
         </div>
 
-        <div className="flex flex-col items-start gap-[10px] w-[792px] self-stretch">
-          
-          {/* Banner Thông tin */}
+        <div className="flex flex-col items-start gap-[10px] w-full mt-4">
           <div className="flex items-center p-[4px] w-full h-[50px] bg-[#F4F4F5] rounded-[6px]">
             <div className="flex justify-center items-center gap-[10px] w-full h-[42px] bg-white shadow-sm rounded-[4px]">
-              <AlertCircle size={16} className="text-[#09090B]" />
-              <span className="text-[14px] font-medium text-[#09090B]">Thông tin sự cố</span>
+              <AlertCircle size={16} />
+              <span className="text-[14px] font-medium">Thông tin sự cố</span>
             </div>
           </div>
 
-          {/* Row 1: Họ tên, Gmail, SĐT */}
-          <div className="flex flex-row gap-[16px] w-full mt-4 items-start">
+          <div className="flex flex-wrap md:flex-nowrap gap-[16px] w-full mt-4">
             <InputGroup label="Họ tên" name="hoTen" value={formData.hoTen} onChange={handleChange} error={errors.hoTen} placeholder="Nguyễn Văn A" />
             <InputGroup label="Gmail" name="gmail" value={formData.gmail} onChange={handleChange} error={errors.gmail} placeholder="abc@gmail.com" />
             <InputGroup label="Số điện thoại" name="sdt" value={formData.sdt} onChange={handleChange} error={errors.sdt} placeholder="0123456789" />
           </div>
 
-          {/* Row 2: Ngày, Mức độ, Loại */}
-          <div className="flex flex-row gap-[16px] w-full mt-2 items-start">
-            <div className="flex flex-col gap-[12px] w-[253px]">
-              <label className="text-[14px] font-medium text-[#09090B]">Ngày gửi yêu cầu</label>
-              <div className={`relative flex items-center w-full h-[40px] bg-white border ${errors.ngayGui ? 'border-red-500' : 'border-[#E4E4E7]'} rounded-[6px] px-4`}>
-                <input 
-                  type="date" 
-                  name="ngayGui"
-                  value={formData.ngayGui}
-                  onChange={handleChange}
-                  className="w-full bg-transparent outline-none text-[14px] text-[#71717A] cursor-pointer"
-                />
+          <div className="flex flex-wrap md:flex-nowrap gap-[16px] w-full mt-2">
+            <div className="flex flex-col gap-[12px] flex-1">
+              <label className="text-[14px] font-medium">Ngày gửi yêu cầu</label>
+              <div className="relative flex items-center w-full h-[40px] bg-white border border-[#E4E4E7] rounded-[6px] px-4">
+                <input type="date" name="ngayGui" value={formData.ngayGui} onChange={handleChange} className="w-full bg-transparent outline-none text-[14px]" />
                 <Calendar size={16} className="absolute right-4 text-[#71717A] pointer-events-none" />
               </div>
-              {errors.ngayGui && <span className="text-red-500 text-[12px]">{errors.ngayGui}</span>}
             </div>
-
             <SelectGroup label="Mức độ" name="mucDo" value={formData.mucDo} onChange={handleChange} options={["Bình thường", "Quan trọng"]} />
             <SelectGroup label="Loại sự cố" name="loaiSuCo" value={formData.loaiSuCo} onChange={handleChange} options={["Lỗi Website", "Lỗi AI"]} />
           </div>
 
-          {/* Row 3: Tiêu đề */}
-          <div className="flex flex-col gap-[12px] w-full mt-2">
-            <label className="text-[14px] font-medium">Tiêu đề</label>
-            <input 
-              name="tieuDe"
-              value={formData.tieuDe}
-              onChange={handleChange}
-              placeholder="Nhập tiêu đề..."
-              className={`w-full h-[40px] px-4 border ${errors.tieuDe ? 'border-red-500' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px]`} 
-            />
-            {errors.tieuDe && <span className="text-red-500 text-[12px]">{errors.tieuDe}</span>}
+          <div className="w-full mt-2">
+            <InputGroup label="Tiêu đề" name="tieuDe" value={formData.tieuDe} onChange={handleChange} error={errors.tieuDe} placeholder="Nhập tiêu đề sự cố..." />
           </div>
 
-          {/* Row 4: Mô tả */}
           <div className="flex flex-col gap-[12px] w-full mt-2">
             <label className="text-[14px] font-medium">Mô tả chi tiết</label>
-            <textarea 
-              name="moTa"
-              value={formData.moTa}
-              onChange={handleChange}
-              placeholder="Vui lòng mô tả sự cố bạn gặp phải..."
-              className={`w-full h-[120px] p-4 border ${errors.moTa ? 'border-red-500' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] resize-none`} 
-            />
+            <textarea name="moTa" value={formData.moTa} onChange={handleChange} placeholder="Vui lòng mô tả..." className={`w-full h-[120px] p-4 border ${errors.moTa ? 'border-red-500 shadow-[0_0_0_1px_red]' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] resize-none focus:border-black transition-all`} />
             {errors.moTa && <span className="text-red-500 text-[12px]">{errors.moTa}</span>}
           </div>
 
-          {/* Tải ảnh */}
-          <div className="flex flex-col gap-[16px] w-full mt-4">
-            <p className="text-[14px] text-[#71717A]">Tải lên tối đa 5 ảnh minh chứng</p>
+          <div className="w-full mt-4">
+            <p className="text-[14px] text-[#71717A] mb-4">Ảnh minh chứng (tối đa 5 ảnh)</p>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/*" className="hidden" />
-            <button 
-              type="button"
-              onClick={handleUploadClick}
-              className="flex items-center justify-center p-[8px_16px] gap-[8px] w-[130px] h-[40px] bg-white border border-black shadow-sm rounded-[6px] hover:bg-gray-50">
-              <Upload size={16} />
-              <span className="text-[14px] font-semibold">Tải ảnh</span>
+            <button type="button" onClick={handleUploadClick} className="flex items-center gap-2 px-4 py-2 border border-black rounded-[6px] hover:bg-gray-50 transition-all active:scale-95">
+              <Upload size={16} /> <span className="text-sm font-semibold">Tải ảnh</span>
             </button>
-
-            <div className="flex flex-wrap gap-4 justify-center items-center w-full h-[250px] border-2 border-dashed border-[#E0E0E0] rounded-lg bg-[#FAFAFA] p-4 overflow-y-auto">
+            <div className="mt-4 flex flex-wrap gap-4 p-4 min-h-[150px] border-2 border-dashed border-[#E4E4E7] rounded-lg bg-[#FAFAFA]">
               {images.length > 0 ? (
                 images.map((src, idx) => <img key={idx} src={src} className="w-24 h-24 object-cover rounded-md border shadow-sm" alt="preview" />)
               ) : (
-                <span className="text-[14px] text-[#A1A1AA]">Hình ảnh sự cố sẽ hiển thị ở đây</span>
+                <div className="w-full flex items-center justify-center text-[#A1A1AA] text-sm">Chưa có ảnh được chọn</div>
               )}
             </div>
           </div>
 
-          {/* Footer Buttons */}
-          <div className="flex justify-end gap-[12px] w-full mt-8">
-            
+          <div className="flex justify-end w-full mt-8">
             <button 
-              type="button"
-              onClick={handleSubmit}
-              className="px-6 h-[40px] bg-[#F26739] text-white rounded-[6px] text-[14px] font-medium hover:bg-orange-600 shadow-md transition-all">
-              Báo cáo sự cố
+              disabled={isSubmitting} 
+              onClick={handleSubmit} 
+              className="flex items-center justify-center min-w-[150px] h-[45px] bg-[#F26739] text-white rounded-[6px] font-medium hover:bg-orange-600 transition-all active:scale-95 disabled:bg-gray-400 shadow-md">
+              {isSubmitting ? <Loader2 className="animate-spin" /> : "Gửi báo cáo"}
             </button>
           </div>
         </div>
@@ -196,32 +188,19 @@ const SuCo = () => {
   );
 };
 
-// Component con cho Input
 const InputGroup = ({ label, name, value, onChange, error, placeholder }) => (
   <div className="flex flex-col gap-[12px] flex-1">
-    <label className="text-[14px] font-medium text-[#09090B]">{label}</label>
-    <input 
-      name={name}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={`w-full h-[40px] px-4 border ${error ? 'border-red-500' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] transition-all`} 
-    />
+    <label className="text-[14px] font-medium">{label}</label>
+    <input name={name} value={value} onChange={onChange} placeholder={placeholder} className={`w-full h-[40px] px-4 border ${error ? 'border-red-500 shadow-[0_0_0_1px_red]' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] focus:border-black transition-all`} />
     {error && <span className="text-red-500 text-[12px]">{error}</span>}
   </div>
 );
 
-// Component con cho Select
 const SelectGroup = ({ label, name, value, onChange, options }) => (
   <div className="flex flex-col gap-[12px] flex-1">
-    <label className="text-[14px] font-medium text-[#09090B]">{label}</label>
+    <label className="text-[14px] font-medium">{label}</label>
     <div className="relative">
-      <select 
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="appearance-none w-full h-[40px] px-4 bg-white border border-[#E4E4E7] rounded-[6px] outline-none text-[14px] cursor-pointer"
-      >
+      <select name={name} value={value} onChange={onChange} className="appearance-none w-full h-[40px] px-4 border border-[#E4E4E7] rounded-[6px] text-[14px] bg-white outline-none focus:border-black">
         {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
       </select>
       <ChevronsUpDown size={16} className="absolute right-4 top-3 text-[#71717A] pointer-events-none opacity-50" />

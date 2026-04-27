@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useProfile } from "../../../components/features/profile/Hook/useProfile";
-import AvatarUpload   from "../../../components/features/profile/AvatarUpload";
-import ProfileForm    from "../../../components/features/profile/ProfileForm";
-import PasswordModal  from "../../../components/features/profile/PasswordModal";
-import StatsPanel     from "../../../components/features/profile/StatsPanel";
+import { useProfile } from "@/components/features/profile/Hook/useProfile";
+import AvatarUpload   from "@/components/features/profile/AvatarUpload";
+import ProfileForm    from "@/components/features/profile/ProfileForm";
+import PasswordModal  from "@/components/features/profile/PasswordModal";
+import StatsPanel     from "@/components/features/profile/StatsPanel";
 
 export default function ProfilePage() {
   const { savedName, form, setForm, loading, saving, fetchError, saveError, avatarUrl, setAvatarUrl, handleSubmit } = useProfile();

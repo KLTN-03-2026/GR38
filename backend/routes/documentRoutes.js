@@ -1,13 +1,15 @@
-import express from 'express'
+import express from 'express';
 import {
     uploadsDocument,
     getDocuments,
     getDocument,
     deleteDocument,
-    updateDocument // ✅ 1. Import hàm update
+    updateDocument 
 } from '../controllers/documentController.js';
 import protect, { authorize } from '../middleware/auth.js';
 import { USER_ROLES } from '../models/User.js';
+
+// Import đúng middleware
 import uploadPdf from '../config/uploadPdf.js';
 import { uploadDocumentImage } from '../config/uploadImage.js';
 
@@ -15,7 +17,7 @@ const router = express.Router();
 
 router.use(protect);
 
-// 1. Route up file PDF (Lưu local)
+// 1. Route up file PDF 
 router.post(
     '/upload-pdf', 
     authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), 
@@ -23,14 +25,13 @@ router.post(
     uploadsDocument
 );
 
-// 2. Route up ảnh bìa tài liệu độc lập (Lưu Cloudinary)
+// 2. Route up ảnh bìa tài liệu độc lập 
 router.post(
     '/upload-thumbnail', 
     authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), 
     uploadDocumentImage.single('thumbnail'), 
     (req, res) => {
         if (!req.file) return res.status(400).json({ error: 'Chưa có ảnh' });
-        // Trả URL về cho Frontend, Frontend sẽ dùng URL này kết hợp với ID của PDF để tạo thành 1 bài giảng hoàn chỉnh
         res.json({ success: true, url: req.file.path }); 
     }
 );

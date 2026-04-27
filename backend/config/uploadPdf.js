@@ -1,44 +1,40 @@
 import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-const upLoadDir = path.join(__dirname, '../upload/documents');
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-if (!fs.existsSync(upLoadDir)) {
-    fs.mkdirSync(upLoadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, upLoadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-
-        const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
-        
-        cb(null, `${uniqueSuffix}-${originalName}`);
-    }
+const documentPdfStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'DATN_History_Web/Documents_PDF', // Thêm chữ _PDF để dễ phân biệt với ảnh bìa
+    resource_type: 'raw', 
+    format: 'pdf', 
+  },
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-        cb(null, true);
-    } else {
-        cb(new Error('Chỉ cho phép file PDF'), false);
-    }
+  if (file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new Error('Chỉ cho phép upload file PDF!'), false);
+  }
 };
 
-const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760
-    }
+const uploadPdf = multer({
+  storage: documentPdfStorage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 // 10MB
+  }
 });
 
-export default upload;
+// Export chuẩn tên
+export default uploadPdf;

@@ -4,10 +4,10 @@ import {
     getReports, 
     updateReportStatus, 
     getMyReports 
-} from '../controllers/report.controller.js';
+} from '../controllers/reportController.js';
 
 // Import middleware xác thực 
-import { protect, authorize } from '#middlewares/auth.js'; 
+import  protect, { authorize } from '../middleware/auth.js';
 
 import { USER_ROLES } from '../models/User.js';
 

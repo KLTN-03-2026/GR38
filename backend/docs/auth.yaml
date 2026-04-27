@@ -1,6 +1,6 @@
 tags:
   - name: Authentication
-    description: Các API Quản lý đăng nhập, đăng ký và hồ sơ cá nhân
+    description: Các API Quản lý đăng nhập, đăng ký, xác thực và hồ sơ cá nhân
 
 components:
   schemas:
@@ -27,10 +27,15 @@ components:
         isActive:
           type: boolean
           example: true
+        authType:
+          type: string
+          enum: [local, google]
+          example: local
+          description: "Phương thức đăng nhập của tài khoản"
         profileImage:
           type: string
           nullable: true
-          description: "URL ảnh đại diện (lưu trên Cloudinary)"
+          description: "URL ảnh đại diện (lưu trên Cloudinary hoặc Google)"
           example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v123/avatar.jpg"
         createdAt:
           type: string
@@ -40,7 +45,7 @@ components:
 paths:
   /api/v1/auth/register:
     post:
-      summary: Đăng ký tài khoản mới
+      summary: Đăng ký tài khoản mới (Local)
       tags: [Authentication]
       requestBody:
         required: true
@@ -78,11 +83,11 @@ paths:
         '201':
           description: Đăng ký thành công
         '400':
-          description: Lỗi validation hoặc mật khẩu xác nhận không khớp
+          description: Lỗi validation, email đã tồn tại hoặc mật khẩu xác nhận không khớp
 
   /api/v1/auth/login:
     post:
-      summary: Đăng nhập vào hệ thống
+      summary: Đăng nhập vào hệ thống (Local)
       tags: [Authentication]
       requestBody:
         required: true
@@ -103,10 +108,95 @@ paths:
       responses:
         '200':
           description: Trả về thông tin user và JWT Token
+        '400':
+          description: Tài khoản tạo bằng Google không thể dùng form này
         '401':
           description: Sai thông tin đăng nhập
         '403':
           description: "Tài khoản bị khóa hoặc Giáo viên chưa được duyệt (teacherApprovalStatus: pending)"
+
+  /api/v1/auth/google:
+    post:
+      summary: Đăng nhập / Đăng ký bằng Google
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: "Access token / ID token trả về từ SDK của Google"
+                role:
+                  type: string
+                  enum: [TEACHER, LEARNER]
+                  description: "Bắt buộc truyền lên nếu đây là lần đầu tiên user đăng nhập (để tạo tài khoản mới)"
+      responses:
+        '200':
+          description: Đăng nhập thành công, trả về JWT của hệ thống
+        '400':
+          description: Thiếu token hoặc thiếu role (với user mới)
+        '403':
+          description: "Tài khoản bị khóa hoặc Giáo viên chưa được duyệt"
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Yêu cầu gửi mã OTP Quên mật khẩu
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  example: nguyenvana@gmail.com
+      responses:
+        '200':
+          description: Mã OTP đã được gửi qua email
+        '404':
+          description: Email không tồn tại trong hệ thống
+        '400':
+          description: Tài khoản đăng nhập bằng Google không thể dùng tính năng này
+
+  /api/v1/auth/reset-password:
+    post:
+      summary: Xác nhận OTP và đặt lại mật khẩu mới
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+                - newPassword
+              properties:
+                email:
+                  type: string
+                  example: nguyenvana@gmail.com
+                otp:
+                  type: string
+                  example: "123456"
+                  description: "Mã 6 số nhận được từ Email"
+                newPassword:
+                  type: string
+                  example: "matkhaumoi123"
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công
+        '400':
+          description: OTP không chính xác hoặc đã hết hạn
 
   /api/v1/auth/profile:
     get:
@@ -169,7 +259,7 @@ paths:
 
   /api/v1/auth/change-password:
     post:
-      summary: Đổi mật khẩu
+      summary: Đổi mật khẩu (khi đã đăng nhập)
       tags: [Authentication]
       security:
         - bearerAuth: []
@@ -193,5 +283,7 @@ paths:
       responses:
         '200':
           description: Đổi mật khẩu thành công
+        '400':
+          description: Lỗi validation hoặc Tài khoản Google không có mật khẩu để đổi
         '401':
           description: Mật khẩu hiện tại không đúng

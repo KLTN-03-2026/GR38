@@ -1,93 +1,20 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useRegister } from "../../hooks/useRegister";
+
 import Swal from "sweetalert2";
-import { authService } from "../../services/authService";
+import { GoogleLogin } from "@react-oauth/google";
 
 function RegisterPage() {
-  const [input, setInput] = useState({
-    hoTen: "",
-    email: "",
-    pass: "",
-    passwordConfirm: "",
-  });
-  const [errors, setErrors] = useState({});
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const handleInput = (e) => {
-    const { name, value } = e.target;
-    setInput((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    let err = {};
-
-    const name = input.hoTen?.trim() || "";
-
-    if (!name) {
-      err.hoTen = "Vui lòng nhập Họ và Tên";
-    } else if (name.replace(/\s/g, "").length < 3) {
-      console.log("Tên gửi lên:", input.hoTen);
-      err.hoTen = "Họ tên phải có ít nhất 3 ký tự";
-    }
-    if (!input.email.trim()) err.email = "Vui lòng nhập Email";
-    if (!input.pass.trim()) err.pass = "Vui lòng nhập Mật khẩu";
-    if (!input.passwordConfirm.trim()) {
-      err.passwordConfirm = "Vui lòng nhập lại mật khẩu";
-    } else if (input.pass !== input.passwordConfirm) {
-      err.passwordConfirm = "Mật khẩu nhập lại không khớp";
-    }
-    if (!role) {
-      err.role = "Vui lòng chọn vai trò";
-    }
-
-    if (Object.keys(err).length) {
-      console.log("VALIDATION ERROR:", err); // 🔥 thêm dòng này
-      setErrors(err);
-      return;
-    }
-    console.log("INPUT TRƯỚC KHI GỬI:", input);
-    setLoading(true);
-    try {
-      const res = await authService.register({
-        fullName: input.hoTen.trim(),
-        email: input.email.trim(),
-        password: input.pass,
-        passwordConfirm: input.passwordConfirm,
-        role,
-      });
-      if (res.success) {
-        await Swal.fire({
-          icon: "success",
-          title: "ĐĂNG KÝ THÀNH CÔNG",
-          text: `Chào mừng ${input.hoTen} đến với Lịch Sử Việt Nam!`,
-          confirmButtonColor: "#f97316",
-          timer: 2000,
-          timerProgressBar: true,
-        });
-        navigate("/");
-      }
-    } catch (error) {
-      console.log("STATUS:", error.response?.status);
-      console.log("DATA:", error.response?.data); // 🔥 CÁI NÀY QUAN TRỌNG
-
-      const msg =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Lỗi server";
-
-      Swal.fire({
-        icon: "error",
-        title: "Đăng ký thất bại",
-        text: msg,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    input,
+    errors,
+    role,
+    loading,
+    handleInput,
+    handleRoleSelect,
+    handleSubmit,
+    handleGoogleSuccess,
+  } = useRegister();
 
   const inputClass = (field) =>
     `w-full px-3 py-2 text-sm rounded-md border outline-none transition
@@ -99,7 +26,7 @@ function RegisterPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center relative"
+      className="min-h-screen flex items-center justify-center relative py-10"
       style={{
         backgroundImage: `url('/thumnail.jpg')`,
         backgroundSize: "cover",
@@ -109,7 +36,7 @@ function RegisterPage() {
     >
       <div className="absolute inset-0 bg-black/40" />
 
-      <div className="relative z-10 w-full max-w-[420px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-8 shadow-xl mx-4 my-6">
+      <div className="relative z-10 w-full max-w-[420px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-8 shadow-xl mx-4">
         <h1 className="text-lg font-semibold text-gray-800 text-center mb-1">
           ĐĂNG KÝ
         </h1>
@@ -203,61 +130,19 @@ function RegisterPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setRole(role === "TEACHER" ? null : "TEACHER");
-                  setErrors((prev) => ({ ...prev, role: "" }));
-                }}
+                onClick={() => handleRoleSelect("TEACHER")}
                 className={`flex items-center justify-center gap-1.5 py-2 border text-xs font-medium rounded-md transition
-                  ${
-                    role === "TEACHER"
-                      ? "border-orange-500 bg-orange-500 text-white"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
+                  ${role === "TEACHER" ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
               >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
                 Giáo viên
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  setRole(role === "LEARNER" ? null : "LEARNER");
-                  setErrors((prev) => ({ ...prev, role: "" }));
-                }}
+                onClick={() => handleRoleSelect("LEARNER")}
                 className={`flex items-center justify-center gap-1.5 py-2 border text-xs font-medium rounded-md transition
-                  ${
-                    role === "LEARNER"
-                      ? "border-orange-500 bg-orange-500 text-white"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
+                  ${role === "LEARNER" ? "border-orange-500 bg-orange-500 text-white" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
               >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                  <path d="M6 12v5c3 3 9 3 12 0v-5" />
-                </svg>
                 Người học
               </button>
             </div>
@@ -269,13 +154,38 @@ function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-4"
           >
             {loading ? "Đang xử lý..." : "ĐĂNG KÝ"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
+        <div className="flex items-center my-4">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <span className="px-3 text-sm text-gray-400 bg-transparent">
+            Hoặc
+          </span>
+          <div className="flex-1 border-t border-gray-300"></div>
+        </div>
+
+        {/* NÚT ĐĂNG KÝ BẰNG GOOGLE */}
+        <div className="flex justify-center w-full">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => {
+              Swal.fire({
+                icon: "error",
+                title: "Lỗi",
+                text: "Đăng nhập Google thất bại!",
+              });
+            }}
+            width="350"
+            useOneTap={false} // Tắt One Tap (cái hay gây lỗi COOP)
+            ux_mode="popup"
+          />
+        </div>
+
+        <p className="text-center text-sm text-gray-500 mt-6">
           Bạn đã có tài khoản?{" "}
           <Link
             to="/"
@@ -288,4 +198,5 @@ function RegisterPage() {
     </div>
   );
 }
+
 export default RegisterPage;

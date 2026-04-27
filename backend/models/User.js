@@ -30,7 +30,10 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Vui lòng nhập mật khẩu'],
+        //  Đổi thành function: Chỉ bắt buộc nếu đăng nhập truyền thống (local)
+        required: function() { 
+            return this.authType === 'local'; 
+        },
         minlength: [6, 'Mật khẩu phải có ít nhất 6 ký tự'],
         select: false
     },
@@ -65,21 +68,35 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null,
         description: "Ngày làm bài tập gần nhất"
+    },
+    //  BỔ SUNG CÁC TRƯỜNG CHO GOOGLE LOGIN
+    googleId: {
+        type: String,
+        default: null
+    },
+    authType: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local'
     }
 }, {
     timestamps: true
 });
 
-userSchema.pre('save', async function(){
-    if(!this.isModified('password')){
-        return;
+// CẬP NHẬT HOOK: Bỏ qua băm mật khẩu nếu không có mật khẩu (Google Login)
+userSchema.pre('save', async function(next){
+    if(!this.isModified('password') || !this.password){
+        return next();
     }
     
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    next();
 });
 
+//  CẬP NHẬT HÀM SO SÁNH: Trả về false nếu tài khoản không có mật khẩu
 userSchema.methods.matchPassword = async function(enteredPassword) {
+    if (!this.password) return false;
     return await bcrypt.compare(enteredPassword, this.password);  
 };
 

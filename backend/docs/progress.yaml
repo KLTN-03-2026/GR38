@@ -7,6 +7,23 @@ components:
     ProgressOverview:
       type: object
       properties:
+        totalStudyDays:
+          type: integer
+          description: Tổng số ngày có tham gia học/làm bài
+          example: 365
+        completedQuizzes:
+          type: integer
+          description: Tổng số bài tập/quiz đã hoàn thành
+          example: 2350
+        studyStreak:
+          type: integer
+          description: Chuỗi ngày học liên tiếp hiện tại
+          example: 12
+        averageScore:
+          type: number
+          format: float
+          description: Điểm trung bình của tất cả các bài đã làm
+          example: 8.5
         totalDocuments:
           type: integer
           example: 12
@@ -22,18 +39,18 @@ components:
         starredFlashcards:
           type: integer
           example: 21
-        totalQuizzes:
+
+    ProgressChartData:
+      type: object
+      properties:
+        month:
+          type: string
+          description: Tên tháng(VD:T1,T2,...,T12)
+          example: T1
+        exercises:
           type: integer
-          example: 14
-        completedQuizzes:
-          type: integer
-          example: 10
-        averageScore:
-          type: integer
-          example: 78
-        studyStreak:
-          type: integer
-          example: 5
+          description: Số lượng bài hoàn thành trong tháng đó
+          example: 1400
 
     ProgressRecentDocument:
       type: object
@@ -56,43 +73,33 @@ components:
           enum: [processing, ready, failed]
           example: ready
 
-    ProgressRecentQuizDocumentRef:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 66a1f2c9b8d4e01f12340001
-        title:
-          type: string
-          example: Lịch sử Việt Nam lớp 12
-
     ProgressRecentQuiz:
       type: object
       properties:
-        _id:
+        id:
           type: string
           example: 66a1f2c9b8d4e01f12349999
         title:
           type: string
-          example: Quiz ôn tập Điện Biên Phủ
+          example: Kháng chiến chống Mỹ
         score:
-          type: integer
-          example: 8
-        totalQuestions:
-          type: integer
-          example: 10
-        completedAt:
+          type: number
+          format: float
+          example: 8.5
+        createdAt:
           type: string
           format: date-time
           example: '2026-04-17T07:55:00.000Z'
-        documentId:
-          $ref: '#/components/schemas/ProgressRecentQuizDocumentRef'
 
     ProgressDashboardData:
       type: object
       properties:
         overview:
           $ref: '#/components/schemas/ProgressOverview'
+        chartData:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressChartData'
         recent:
           type: object
           properties:
@@ -131,7 +138,7 @@ paths:
   /api/v1/progress/dashboard:
     get:
       summary: Lấy thống kê dashboard tiến độ học tập
-      description: Trả về tổng quan học tập và hoạt động gần đây của người dùng hiện tại.
+      description: Trả về tổng quan học tập, biểu đồ hoạt động và lịch sử làm bài gần đây của người dùng hiện tại.
       tags: [Progress]
       security:
         - bearerAuth: []
@@ -148,15 +155,26 @@ paths:
                     success: true
                     data:
                       overview:
+                        totalStudyDays: 365
+                        completedQuizzes: 2350
+                        studyStreak: 12
+                        averageScore: 8.5
                         totalDocuments: 12
                         totalFlashcardSets: 8
                         totalFlashcards: 160
                         reviewedFlashcards: 95
                         starredFlashcards: 21
-                        totalQuizzes: 14
-                        completedQuizzes: 10
-                        averageScore: 78
-                        studyStreak: 5
+                      chartData:
+                        - month: T1
+                          exercises: 1400
+                        - month: T2
+                          exercises: 4800
+                        - month: T3
+                          exercises: 2400
+                        - month: T4
+                          exercises: 5100
+                        - month: T5
+                          exercises: 1800
                       recent:
                         documents:
                           - _id: 66a1f2c9b8d4e01f12340001
@@ -164,20 +182,15 @@ paths:
                             fileName: lich_su_12.pdf
                             lastAccessed: '2026-04-17T07:40:00.000Z'
                             status: ready
-                          - _id: 66a1f2c9b8d4e01f12340002
-                            title: Việt Nam thời kỳ hiện đại
-                            fileName: viet_nam_hien_dai.pdf
-                            lastAccessed: '2026-04-16T14:20:00.000Z'
-                            status: ready
                         quizzes:
-                          - _id: 66a1f2c9b8d4e01f12349999
-                            title: Quiz ôn tập Điện Biên Phủ
-                            score: 8
-                            totalQuestions: 10
-                            completedAt: '2026-04-17T07:55:00.000Z'
-                            documentId:
-                              _id: 66a1f2c9b8d4e01f12340001
-                              title: Lịch sử Việt Nam lớp 12
+                          - id: 66a1f2c9b8d4e01f12349999
+                            title: Kháng chiến chống Mỹ
+                            score: 9.0
+                            createdAt: '2026-04-17T07:55:00.000Z'
+                          - id: 66a1f2c9b8d4e01f12349998
+                            title: Chiến tranh giải phóng miền Nam
+                            score: 8.5
+                            createdAt: '2026-04-16T10:15:00.000Z'
         '201':
           description: Dữ liệu dashboard được khởi tạo mới thành công
           content:

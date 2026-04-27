@@ -56,6 +56,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: 'https://res.cloudinary.com/dynbuqe3g/image/upload/v1777091786/user-a-solid-svgrepo-com_qsu3s6.png'
     }, 
+    currentStreak: {
+        type: Number,
+        default: 0,
+        description: "Chuỗi ngày học liên tiếp"
+    },
+    lastStudyDate: {
+        type: Date,
+        default: null,
+        description: "Ngày làm bài tập gần nhất"
+    }
 }, {
     timestamps: true
 });

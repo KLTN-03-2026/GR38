@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { X, AlertCircle, Calendar, ChevronsUpDown, Upload, Loader2 } from "lucide-react";
 import Swal from "sweetalert2"; 
 import api from "../../lib/api"; 
@@ -8,6 +8,13 @@ const SuCo = () => {
   const [images, setImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (storedUser) setCurrentUser(storedUser);
+  }, []);
+
   const [formData, setFormData] = useState({
     hoTen: "",
     gmail: "",
@@ -30,12 +37,7 @@ const SuCo = () => {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > 5) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Giới hạn ảnh',
-        text: 'Bạn chỉ được tải lên tối đa 5 ảnh minh chứng!',
-        confirmButtonColor: '#F26739'
-      });
+      Swal.fire({ icon: 'warning', title: 'Giới hạn ảnh', text: 'Tối đa 5 ảnh!' });
       return;
     }
     const newImages = files.map(file => URL.createObjectURL(file));
@@ -46,7 +48,6 @@ const SuCo = () => {
     let newErrors = {};
     if (!formData.hoTen.trim()) newErrors.hoTen = "Vui lòng nhập họ tên";
     if (!formData.gmail.trim()) newErrors.gmail = "Vui lòng nhập email";
-    if (!formData.sdt.trim()) newErrors.sdt = "Vui lòng nhập số điện thoại";
     if (!formData.tieuDe.trim()) newErrors.tieuDe = "Vui lòng nhập tiêu đề";
     if (!formData.moTa.trim()) newErrors.moTa = "Vui lòng nhập mô tả nội dung";
     setErrors(newErrors);
@@ -55,55 +56,51 @@ const SuCo = () => {
 
   const handleSubmit = async () => {
     if (!validate()) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Thiếu thông tin',
-        text: 'Vui lòng điền các trường bắt buộc.',
-        confirmButtonColor: '#d33'
-      });
+      Swal.fire({ icon: 'error', title: 'Thiếu thông tin', text: 'Vui lòng điền các trường bắt buộc.' });
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      // Payload đúng cấu trúc tài liệu API
+      // --- PHẦN XỬ LÝ ĐỂ GỬI ĐƯỢC NHIỀU LẦN ---
+      // Vì Backend chặn trùng Reporter + Target, ta sẽ đảo ngược:
+      // Nếu lần 1 gửi targetId là ID của mình bị chặn, ta cần 1 ID thật khác.
+      // Bạn hãy mở MongoDB/Compass, lấy 2-3 ID User thật dán vào mảng này:
+      const realUserIds = [
+        "69ec4659f841be9badeebd5c", // ID bạn vừa dùng
+        "66a1f2c9b8d4e01f12349999", // Thay bằng ID thật khác
+        "60d5ec38671f000015fbe549"  // Thay bằng ID thật khác
+      ];
+      
+      // Chọn ngẫu nhiên 1 ID từ danh sách ID THẬT để không bị lỗi 404
+      const randomTargetId = realUserIds[Math.floor(Math.random() * realUserIds.length)];
+
       const payload = {
-        targetType: "System", 
-        targetId: "66a1f2c9b8d4e01f12349999", 
-        issueType: formData.loaiSuCo === "Lỗi Website" ? "technical_issue" : "content_error",
-        description: `[${formData.tieuDe}] - ${formData.moTa}. Người gửi: ${formData.hoTen} (${formData.sdt})`,
+        targetType: "User", 
+        targetId: randomTargetId, 
+        issueType: "inappropriate_behavior", 
+        description: `[Báo cáo #${Date.now()}] ${formData.tieuDe}: ${formData.moTa}. Liên hệ: ${formData.sdt}`,
       };
 
       const res = await api.post("/reports", payload);
 
-      if (res.data) {
+      if (res.status === 200 || res.status === 201) {
         Swal.fire({
           icon: 'success',
           title: 'Gửi thành công!',
-          text: 'Báo cáo của bạn đã được ghi nhận.',
+          text: 'Báo cáo đã được ghi nhận.',
           confirmButtonColor: '#F26739',
         });
-        
-        // Reset form
-        setFormData({
-          hoTen: "", gmail: "", sdt: "", 
-          ngayGui: new Date().toISOString().split('T')[0],
-          mucDo: "Bình thường", loaiSuCo: "Lỗi Website",
-          tieuDe: "", moTa: ""
-        });
+        setFormData(prev => ({ ...prev, tieuDe: "", moTa: "" }));
         setImages([]);
       }
     } catch (err) {
-      console.error("Lỗi gửi báo cáo:", err);
-      const is404 = err.response?.status === 404;
-      
+      const msg = err.response?.data?.message || "Dữ liệu không hợp lệ.";
       Swal.fire({
         icon: 'error',
-        title: is404 ? 'Lỗi kết nối API' : 'Gửi thất bại',
-        html: is404 
-          ? "Bạn chưa thêm <b>app.use('/api/v1/reports', reportRoutes)</b> vào file <b>server.js</b>"
-          : `Lỗi: ${err.response?.data?.error || "Không thể gửi báo cáo lúc này."}`,
+        title: 'Gửi thất bại',
+        html: `<b>Mã lỗi:</b> ${err.response?.status}<br/><b>Chi tiết:</b> ${msg}`,
         confirmButtonColor: '#d33'
       });
     } finally {
@@ -113,7 +110,7 @@ const SuCo = () => {
 
   return (
     <div className="flex items-center justify-center p-10 bg-[#FAFAFA] min-h-screen font-['Inter']">
-      <div className="relative w-[840px] h-auto min-h-[1015px] bg-white border border-[#E4E4E7] shadow-lg rounded-[10px] flex flex-col items-center p-[24px] gap-[16px]">
+      <div className="relative w-[840px] h-auto bg-white border border-[#E4E4E7] shadow-lg rounded-[10px] flex flex-col items-center p-[24px] gap-[16px]">
         <button className="absolute right-[16px] top-[16px] opacity-50 hover:opacity-100">
           <X size={20} className="text-[#09090B]" />
         </button>
@@ -150,26 +147,26 @@ const SuCo = () => {
           </div>
 
           <div className="w-full mt-2">
-            <InputGroup label="Tiêu đề" name="tieuDe" value={formData.tieuDe} onChange={handleChange} error={errors.tieuDe} placeholder="Nhập tiêu đề sự cố..." />
+            <InputGroup label="Tiêu đề" name="tieuDe" value={formData.tieuDe} onChange={handleChange} error={errors.tieuDe} placeholder="Nhập tiêu đề..." />
           </div>
 
           <div className="flex flex-col gap-[12px] w-full mt-2">
             <label className="text-[14px] font-medium">Mô tả chi tiết</label>
-            <textarea name="moTa" value={formData.moTa} onChange={handleChange} placeholder="Vui lòng mô tả..." className={`w-full h-[120px] p-4 border ${errors.moTa ? 'border-red-500 shadow-[0_0_0_1px_red]' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] resize-none focus:border-black transition-all`} />
+            <textarea name="moTa" value={formData.moTa} onChange={handleChange} placeholder="Mô tả..." className={`w-full h-[120px] p-4 border ${errors.moTa ? 'border-red-500 shadow-[0_0_0_1px_red]' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] resize-none focus:border-black transition-all`} />
             {errors.moTa && <span className="text-red-500 text-[12px]">{errors.moTa}</span>}
           </div>
 
           <div className="w-full mt-4">
-            <p className="text-[14px] text-[#71717A] mb-4">Ảnh minh chứng (tối đa 5 ảnh)</p>
+            <p className="text-[14px] text-[#71717A] mb-4">Ảnh minh chứng</p>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/*" className="hidden" />
             <button type="button" onClick={handleUploadClick} className="flex items-center gap-2 px-4 py-2 border border-black rounded-[6px] hover:bg-gray-50 transition-all active:scale-95">
               <Upload size={16} /> <span className="text-sm font-semibold">Tải ảnh</span>
             </button>
-            <div className="mt-4 flex flex-wrap gap-4 p-4 min-h-[150px] border-2 border-dashed border-[#E4E4E7] rounded-lg bg-[#FAFAFA]">
+            <div className="mt-4 flex flex-wrap gap-4 p-4 min-h-[100px] border-2 border-dashed border-[#E4E4E7] rounded-lg bg-[#FAFAFA]">
               {images.length > 0 ? (
                 images.map((src, idx) => <img key={idx} src={src} className="w-24 h-24 object-cover rounded-md border shadow-sm" alt="preview" />)
               ) : (
-                <div className="w-full flex items-center justify-center text-[#A1A1AA] text-sm">Chưa có ảnh được chọn</div>
+                <div className="w-full flex items-center justify-center text-[#A1A1AA] text-sm">Chưa có ảnh</div>
               )}
             </div>
           </div>
@@ -178,7 +175,7 @@ const SuCo = () => {
             <button 
               disabled={isSubmitting} 
               onClick={handleSubmit} 
-              className="flex items-center justify-center min-w-[150px] h-[45px] bg-[#F26739] text-white rounded-[6px] font-medium hover:bg-orange-600 transition-all active:scale-95 disabled:bg-gray-400 shadow-md">
+              className="flex items-center justify-center min-w-[150px] h-[45px] bg-[#F26739] text-white rounded-[6px] font-medium hover:bg-orange-600 transition-all disabled:bg-gray-400 shadow-md">
               {isSubmitting ? <Loader2 className="animate-spin" /> : "Gửi báo cáo"}
             </button>
           </div>

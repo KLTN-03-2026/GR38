@@ -1,14 +1,16 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { getToken } from "./Hook/useProfile";
 
-const BASE_URL = "/api/v1/auth";
-
-export default function AvatarUpload({ avatarUrl, setAvatarUrl, initials }) {
+export default function AvatarUpload({ avatarUrl, initials, onFileChange }) {
   const inputRef = useRef(null);
-  const [file, setFile]           = useState(null);
-  const [preview, setPreview]     = useState(avatarUrl);
-  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(avatarUrl);
+  const [blobUrl, setBlobUrl] = useState(null);
+
+  useEffect(() => {
+    if (avatarUrl && !avatarUrl.startsWith("blob:")) {
+      setPreview(avatarUrl);
+    }
+  }, [avatarUrl]);
 
   const handleChange = (e) => {
     const f = e.target.files?.[0];
@@ -21,76 +23,19 @@ export default function AvatarUpload({ avatarUrl, setAvatarUrl, initials }) {
       Swal.fire({ icon: "error", title: "Ảnh không vượt quá 5MB", confirmButtonColor: "#f97316" });
       return;
     }
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    try {
-      setUploading(true);
-
-      // ✅ Đúng route: PUT /api/v1/auth/profile (không phải /upload-avatar)
-      // ✅ Đúng field: "avatar" theo Swagger docs
-      // ✅ KHÔNG set Content-Type thủ công — browser tự set multipart/form-data + boundary
-      const fd = new FormData();
-      fd.append("avatar", file);
-
-      const res = await fetch(`${BASE_URL}/profile`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: fd,
-      });
-
-      if (!res.ok) throw new Error();
-
-      const json = await res.json();
-      const data = json.data ?? json;
-
-      // Cloudinary trả URL về — thử các field có thể có
-      const realUrl =
-        data.profileImage ??
-        data.avatarUrl ??
-        data.avatar ??
-        preview;
-
-      setPreview(realUrl);
-      setAvatarUrl(realUrl);
-      setFile(null);
-
-      // Lưu localStorage để F5 vẫn còn
-      try {
-        const stored = JSON.parse(localStorage.getItem("user") || "{}");
-        localStorage.setItem(
-          "user",
-          JSON.stringify({ ...stored, profileImage: realUrl, avatarUrl: realUrl, avatar: realUrl })
-        );
-      } catch (_) {}
-
-      // Đồng bộ Header ngay lập tức
-      window.dispatchEvent(new CustomEvent("avatar-update", { detail: { avatarUrl: realUrl } }));
-      window.dispatchEvent(new Event("user-update"));
-
-      await Swal.fire({
-        icon: "success",
-        title: "Cập nhật ảnh thành công",
-        confirmButtonColor: "#f97316",
-        timer: 1500,
-        timerProgressBar: true,
-      });
-    } catch {
-      Swal.fire({ icon: "error", title: "Upload ảnh thất bại", confirmButtonColor: "#f97316" });
-    } finally {
-      setUploading(false);
-    }
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    const newBlob = URL.createObjectURL(f);
+    setBlobUrl(newBlob);
+    setPreview(newBlob);
+    onFileChange(f, newBlob);
   };
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center">
       <div className="relative w-16 h-16">
         <div className="w-16 h-16 rounded-full bg-white border-[3px] border-[#F26739] overflow-hidden flex items-center justify-center">
           {preview
-            ? <img src={preview} alt="avatar" className="w-full h-full object-cover" />
+            ? <img key={preview} src={preview} alt="avatar" className="w-full h-full object-cover" />
             : <span className="text-[#F26739] text-lg font-medium">{initials}</span>
           }
         </div>
@@ -105,19 +50,6 @@ export default function AvatarUpload({ avatarUrl, setAvatarUrl, initials }) {
         </button>
         <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
       </div>
-
-      {file && (
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          className="flex items-center gap-1.5 text-xs bg-[#F26739] hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition disabled:opacity-60"
-        >
-          {uploading
-            ? <><div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> Đang tải...</>
-            : "Lưu ảnh đại diện"
-          }
-        </button>
-      )}
     </div>
   );
 }

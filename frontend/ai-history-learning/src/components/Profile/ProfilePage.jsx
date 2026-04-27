@@ -1,26 +1,31 @@
 import { useState } from "react";
 import { useProfile } from "@/components/features/profile/Hook/useProfile";
-import AvatarUpload   from "@/components/features/profile/AvatarUpload";
-import ProfileForm    from "@/components/features/profile/ProfileForm";
-import PasswordModal  from "@/components/features/profile/PasswordModal";
-import StatsPanel     from "@/components/features/profile/StatsPanel";
+import AvatarUpload  from "@/components/features/profile/AvatarUpload";
+import ProfileForm   from "@/components/features/profile/ProfileForm";
+import PasswordModal from "@/components/features/profile/PasswordModal";
+import StatsPanel    from "@/components/features/profile/StatsPanel";
 
 export default function ProfilePage() {
   const { savedName, form, setForm, loading, saving, fetchError, saveError, avatarUrl, setAvatarUrl, handleSubmit } = useProfile();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarBlob, setAvatarBlob] = useState(null);
 
   const initials  = savedName ? savedName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "?";
   const roleLabel =
     (form.role || "").toUpperCase() === "TEACHER" ? "Giáo viên" :
-    (form.role || "").toUpperCase() === "LEARNER" ? "Người học" : form.role ?? "";
+    (form.role || "").toUpperCase() === "LEARNER"  ? "Người học" : form.role ?? "";
 
   return (
     <div className="flex gap-4 items-start">
       <div className="flex-1 bg-white border border-gray-100 rounded-2xl overflow-hidden">
-        {/* Banner */}
         <div className="h-16 bg-gradient-to-r from-[#F26739] to-[#f08260] relative">
           <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-            <AvatarUpload avatarUrl={avatarUrl} setAvatarUrl={setAvatarUrl} initials={initials} />
+            <AvatarUpload
+              avatarUrl={avatarUrl}
+              initials={initials}
+              onFileChange={(f, blob) => { setAvatarFile(f); setAvatarBlob(blob); }}
+            />
           </div>
         </div>
 
@@ -39,14 +44,13 @@ export default function ProfilePage() {
             <>
               <div className="text-center mb-4">
                 <p className="font-medium text-gray-900">{savedName}</p>
-                <p className="text-xs text-gray-400 mb-2">{form.email}</p>
                 {roleLabel && <span className="text-xs px-3 py-0.5 rounded-full bg-orange-50 text-orange-700 font-medium">{roleLabel}</span>}
               </div>
               <hr className="border-gray-100 my-4" />
               <ProfileForm
                 form={form} setForm={setForm}
                 saving={saving} saveError={saveError}
-                onSubmit={handleSubmit}
+                onSubmit={() => handleSubmit(avatarFile, avatarBlob, setAvatarUrl, setAvatarFile, setAvatarBlob)}
                 onOpenPassword={() => setShowPasswordModal(true)}
               />
             </>
@@ -55,7 +59,6 @@ export default function ProfilePage() {
       </div>
 
       <StatsPanel />
-
       {showPasswordModal && <PasswordModal onClose={() => setShowPasswordModal(false)} />}
     </div>
   );

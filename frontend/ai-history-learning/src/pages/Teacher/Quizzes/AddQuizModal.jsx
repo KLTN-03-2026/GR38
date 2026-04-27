@@ -3,11 +3,15 @@ import { quizService } from "../../../services/quizService";
 
 const emptyQuestion = { question: "", optionA: "", optionB: "", optionC: "", optionD: "", correctAnswer: "" };
 
+const MAX_QUESTIONS = 20;
+const MIN_QUESTIONS = 5;
+
 const inputCls = (err) =>
   `w-full px-3 py-2.5 text-sm border rounded-xl outline-none input-field ${err ? "border-red-300 bg-red-50" : "border-gray-200"}`;
 
 export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) {
-  const isEdit = !!editQuiz;
+  const isEdit   = !!editQuiz;
+  const isManual = !documentId; // thủ công khi không có documentId
 
   const [step, setStep]             = useState(1);
   const [quizTitle, setQuizTitle]   = useState("");
@@ -21,7 +25,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   const [editingIndex, setEditIdx]  = useState(null);
   const [saving, setSaving]         = useState(false);
   const [saveErr, setSaveErr]       = useState("");
-  const [listErr, setListErr]       = useState(""); // ← lỗi riêng cho danh sách câu hỏi
+  const [listErr, setListErr]       = useState("");
 
   useEffect(() => {
     if (!editQuiz) return;
@@ -60,6 +64,11 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   };
 
   const handleAddQuestion = () => {
+    // Giới hạn 20 câu (chỉ áp dụng khi thêm mới, không áp dụng khi đang sửa)
+    if (editingIndex === null && questions.length >= MAX_QUESTIONS) {
+      setListErr(`Tối đa ${MAX_QUESTIONS} câu hỏi cho một Quiz`);
+      return;
+    }
     if (!validateCurrentQ()) return;
     const options      = [currentQ.optionA, currentQ.optionB, currentQ.optionC, currentQ.optionD];
     const correctIndex = Number(currentQ.correctAnswer);
@@ -75,7 +84,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     } else {
       setQuestions((p) => [...p, built]);
     }
-    setListErr(""); // xóa lỗi danh sách khi thêm thành công
+    setListErr("");
     setCurrentQ(emptyQuestion);
     setCQErr({});
   };
@@ -94,12 +103,14 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     setEditIdx(i);
   };
 
-  const handleRemoveQ = (i) => setQuestions((p) => p.filter((_, idx) => idx !== i));
+  const handleRemoveQ = (i) => {
+    setQuestions((p) => p.filter((_, idx) => idx !== i));
+    setListErr(""); // xóa lỗi giới hạn khi xóa câu
+  };
 
   const handleFinish = async () => {
-    // ← Fix: dùng listErr riêng thay vì setCQErr để không gây confusion
-    if (questions.length < 5) {
-      setListErr("Cần ít nhất 5 câu hỏi để tạo Quiz");
+    if (questions.length < MIN_QUESTIONS) {
+      setListErr(`Cần ít nhất ${MIN_QUESTIONS} câu hỏi để tạo Quiz`);
       return;
     }
     setListErr("");
@@ -109,7 +120,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
       const payload = {
         title:       quizTitle,
         description,
-        difficulty,
+        difficulty:  isManual ? undefined : difficulty, 
         timeLimit:   Number(timeLimit),
         documentId:  documentId ?? null,
         questions:   questions.map((q) => ({
@@ -127,7 +138,6 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
       } else {
         result = await quizService.create(payload);
       }
-      // Truyền kèm questions local vì server thường không trả lại đủ questions trong response
       onSave(result, isEdit, questions);
     } catch (err) {
       setSaveErr(err?.response?.data?.message || `Lỗi ${isEdit ? "cập nhật" : "tạo"} Quiz, vui lòng thử lại.`);
@@ -137,10 +147,18 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     }
   };
 
+  // Nhãn nút tạo/lưu
+  const submitLabel = saving
+    ? "Đang lưu..."
+    : isEdit
+      ? `Lưu thay đổi (${questions.length} câu)`
+      : "Tạo Quiz";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"
       style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col modal-box" style={{ maxHeight: "90vh" }}>
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div>
@@ -157,7 +175,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                     {s}
                   </div>
                   <span className="text-[11px]" style={{ color: step >= s ? "#F26739" : "#9ca3af" }}>
-                    {s === 1 ? "Thông tin" : `${questions.length}/5 câu`}
+                    {s === 1 ? "Thông tin" : `${questions.length}/${MAX_QUESTIONS} câu`}
                   </span>
                   {s < 2 && <div className="w-5 h-px" style={{ background: step > s ? "#F26739" : "#e5e7eb" }} />}
                 </div>
@@ -183,21 +201,31 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                 <textarea placeholder="Nhập mô tả quiz..." value={description}
                   onChange={(e) => setDesc(e.target.value)} rows={2} className={`${inputCls(false)} resize-none`} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Độ khó</label>
-                  <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={inputCls(false)}>
-                    <option value="EASY">Dễ</option>
-                    <option value="MEDIUM">Trung bình</option>
-                    <option value="HARD">Khó</option>
-                  </select>
+
+              {/* Độ khó chỉ hiện khi gắn tài liệu (không thủ công) */}
+              {!isManual ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Độ khó</label>
+                    <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={inputCls(false)}>
+                      <option value="EASY">Dễ</option>
+                      <option value="MEDIUM">Trung bình</option>
+                      <option value="HARD">Khó</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Thời gian (phút)</label>
+                    <input type="number" min={1} value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} className={inputCls(false)} />
+                  </div>
                 </div>
+              ) : (
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Thời gian (phút)</label>
                   <input type="number" min={1} value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} className={inputCls(false)} />
                 </div>
-              </div>
-              {!documentId && (
+              )}
+
+              {isManual && (
                 <div className="flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
                   <svg width="15" height="15" className="text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -212,12 +240,9 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
               {questions.length > 0 && (
                 <div className="space-y-1.5">
                   {questions.map((q, i) => (
-                    // ← Fix: bỏ hoàn toàn animation fadeInUp, dùng style tĩnh
-                    <div
-                      key={i}
+                    <div key={i}
                       className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-gray-100 bg-gray-50"
-                      style={{ opacity: 1, visibility: "visible" }}
-                    >
+                      style={{ opacity: 1, visibility: "visible" }}>
                       <span className="text-[11px] font-semibold text-gray-400 shrink-0 w-5">#{i + 1}</span>
                       <p className="text-xs text-gray-600 flex-1 truncate">{q.question}</p>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">
@@ -230,48 +255,59 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                 </div>
               )}
 
-              {/* Form nhập câu hỏi mới */}
-              <div className="border border-dashed border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/40">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                  {editingIndex !== null ? `Chỉnh sửa câu ${editingIndex + 1}` : "Câu hỏi mới"}
-                </p>
-                <div>
-                  <textarea name="question" placeholder="Nhập câu hỏi..." value={currentQ.question}
-                    onChange={handleQChange} rows={2} className={`${inputCls(currentQErrors.question)} resize-none`} />
-                  {currentQErrors.question && <p className="text-xs text-red-500 mt-1">{currentQErrors.question}</p>}
+              {/* Form nhập câu hỏi mới — ẩn khi đã đủ 20 câu (và không đang sửa) */}
+              {(editingIndex !== null || questions.length < MAX_QUESTIONS) && (
+                <div className="border border-dashed border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/40">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                    {editingIndex !== null ? `Chỉnh sửa câu ${editingIndex + 1}` : "Câu hỏi mới"}
+                  </p>
+                  <div>
+                    <textarea name="question" placeholder="Nhập câu hỏi..." value={currentQ.question}
+                      onChange={handleQChange} rows={2} className={`${inputCls(currentQErrors.question)} resize-none`} />
+                    {currentQErrors.question && <p className="text-xs text-red-500 mt-1">{currentQErrors.question}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["A", "B", "C", "D"].map((letter) => {
+                      const key = `option${letter}`;
+                      return (
+                        <div key={letter}>
+                          <input type="text" name={key} placeholder={`Đáp án ${letter}`}
+                            value={currentQ[key]} onChange={handleQChange} className={inputCls(currentQErrors[key])} />
+                          {currentQErrors[key] && <p className="text-xs text-red-500 mt-0.5">{currentQErrors[key]}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div>
+                    <select name="correctAnswer" value={currentQ.correctAnswer} onChange={handleQChange} className={inputCls(currentQErrors.correctAnswer)}>
+                      <option value="">Chọn đáp án đúng</option>
+                      <option value="0">Đáp án A</option>
+                      <option value="1">Đáp án B</option>
+                      <option value="2">Đáp án C</option>
+                      <option value="3">Đáp án D</option>
+                    </select>
+                    {currentQErrors.correctAnswer && <p className="text-xs text-red-500 mt-1">{currentQErrors.correctAnswer}</p>}
+                  </div>
+                  <button onClick={handleAddQuestion}
+                    className="w-full py-2.5 text-sm border border-orange-200 text-orange-500 rounded-xl font-medium transition-all"
+                    style={{ background: "#fff8f5" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#ffefe8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#fff8f5")}>
+                    {editingIndex !== null ? "Cập nhật câu hỏi" : "+ Thêm câu hỏi này"}
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {["A", "B", "C", "D"].map((letter) => {
-                    const key = `option${letter}`;
-                    return (
-                      <div key={letter}>
-                        <input type="text" name={key} placeholder={`Đáp án ${letter}`}
-                          value={currentQ[key]} onChange={handleQChange} className={inputCls(currentQErrors[key])} />
-                        {currentQErrors[key] && <p className="text-xs text-red-500 mt-0.5">{currentQErrors[key]}</p>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div>
-                  <select name="correctAnswer" value={currentQ.correctAnswer} onChange={handleQChange} className={inputCls(currentQErrors.correctAnswer)}>
-                    <option value="">Chọn đáp án đúng</option>
-                    <option value="0">Đáp án A</option>
-                    <option value="1">Đáp án B</option>
-                    <option value="2">Đáp án C</option>
-                    <option value="3">Đáp án D</option>
-                  </select>
-                  {currentQErrors.correctAnswer && <p className="text-xs text-red-500 mt-1">{currentQErrors.correctAnswer}</p>}
-                </div>
-                <button onClick={handleAddQuestion}
-                  className="w-full py-2.5 text-sm border border-orange-200 text-orange-500 rounded-xl font-medium transition-all"
-                  style={{ background: "#fff8f5" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#ffefe8")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fff8f5")}>
-                  {editingIndex !== null ? "Cập nhật câu hỏi" : "+ Thêm câu hỏi này"}
-                </button>
-              </div>
+              )}
 
-              {/* ← Fix: lỗi "chưa đủ 5 câu" hiển thị riêng, không dùng currentQErrors */}
+              {/* Thông báo đã đủ 20 câu */}
+              {questions.length >= MAX_QUESTIONS && editingIndex === null && (
+                <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                  <svg width="15" height="15" className="text-orange-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-orange-600">Đã đạt tối đa <strong>{MAX_QUESTIONS} câu hỏi</strong>. Xoá bớt để thêm câu mới.</p>
+                </div>
+              )}
+
               {listErr && <p className="text-xs text-red-500 text-center">{listErr}</p>}
               {saveErr && <p className="text-xs text-red-500 text-center">{saveErr}</p>}
             </div>
@@ -289,7 +325,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
           ) : (
             <button onClick={handleFinish} disabled={saving}
               className="px-5 py-2.5 text-sm text-white rounded-xl font-medium primary-btn disabled:opacity-60" style={{ background: "#F26739" }}>
-              {saving ? "Đang lưu..." : isEdit ? `Lưu thay đổi (${questions.length} câu)` : `Tạo Quiz (${questions.length}/5 câu)`}
+              {submitLabel}
             </button>
           )}
         </div>

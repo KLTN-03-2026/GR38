@@ -55,66 +55,66 @@ export function useProfile() {
     })();
   }, []);
 
-  const handleSubmit = async () => {
-    setSaving(true);
-    setSaveError("");
-    try {
-      // Gửi JSON vì BE đọc từ req.body (không cần multipart)
-      const res = await fetch(`${BASE_URL}/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({
-          fullName: form.fullName,
-          email: form.email,
-        }),
-      });
-
-      // Đọc error message từ BE trước khi throw
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || `HTTP ${res.status}`);
-      }
-
-      const updated = json.data ?? json;
-      const newName = updated.fullName ?? form.fullName;
-      const newEmail = updated.email ?? form.email;
-      const newAvatar = updated.profileImage ?? updated.avatar ?? avatarUrl;
-
-      // Cập nhật state
-      setForm(p => ({ ...p, fullName: newName, email: newEmail }));
-      setSavedName(newName);
-      if (newAvatar) setAvatarUrl(newAvatar);
-
-      // Sync localStorage
-      const stored = JSON.parse(localStorage.getItem("user") || "{}");
-      localStorage.setItem("user", JSON.stringify({
-        ...stored,
-        fullName: newName,
-        email: newEmail,
-        profileImage: newAvatar,
-      }));
-      window.dispatchEvent(new Event("user-update"));
-
-      await Swal.fire({
-        icon: "success",
-        title: "CẬP NHẬT THÀNH CÔNG",
-        html: "Thông tin tài khoản đã được lưu",
-        confirmButtonColor: "#f97316",
-        timer: 1800,
-        timerProgressBar: true,
-      });
-
-    } catch (err) {
-      // Hiển thị đúng lỗi từ BE (vd: "Email đã được sử dụng")
-      setSaveError(err.message || "Lưu thất bại. Vui lòng thử lại.");
-    } finally {
-      setSaving(false);
+  const handleSubmit = async (avatarFile, avatarBlob, setAvatarUrl, setAvatarFile, setAvatarBlob) => {
+  setSaving(true);
+  setSaveError("");
+  try {
+    const formData = new FormData();
+    formData.append("fullName", form.fullName);
+    formData.append("email", form.email);
+    if (avatarFile) {
+      formData.append("avatar", avatarFile); // key "avatar" tùy theo BE
     }
-  };
 
+    const res = await fetch(`${BASE_URL}/profile`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        // KHÔNG set Content-Type — để browser tự set boundary cho FormData
+      },
+      body: formData,
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+
+    const updated = json.data ?? json;
+    const newName   = updated.fullName ?? form.fullName;
+    const newEmail  = updated.email ?? form.email;
+    const newAvatar = updated.profileImage ?? updated.avatar ?? updated.avatarUrl ?? avatarBlob ?? avatarUrl;
+
+    setForm(p => ({ ...p, fullName: newName, email: newEmail }));
+    setSavedName(newName);
+    if (newAvatar) setAvatarUrl(newAvatar);
+
+    // Reset avatar file sau khi lưu xong
+    if (setAvatarFile) setAvatarFile(null);
+    if (setAvatarBlob) setAvatarBlob(null);
+
+    // Sync localStorage
+    const stored = JSON.parse(localStorage.getItem("user") || "{}");
+    localStorage.setItem("user", JSON.stringify({
+      ...stored,
+      fullName: newName,
+      email: newEmail,
+      profileImage: newAvatar,
+    }));
+    window.dispatchEvent(new Event("user-update"));
+
+    await Swal.fire({
+      icon: "success",
+      title: "CẬP NHẬT THÀNH CÔNG",
+      html: "Thông tin tài khoản đã được lưu",
+      confirmButtonColor: "#f97316",
+      timer: 1800,
+      timerProgressBar: true,
+    });
+  } catch (err) {
+    setSaveError(err.message || "Lưu thất bại. Vui lòng thử lại.");
+  } finally {
+    setSaving(false);
+  }
+};
   return {
     savedName, form, setForm,
     loading, saving,

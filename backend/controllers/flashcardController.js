@@ -38,6 +38,8 @@ export const createManualFlashcardSet = async (req, res, next) => {
     }
 
     const { documentId, title, description, tags } = req.body;
+
+    const validDocumentId = (documentId && documentId.trim() !== "" && documentId !== "null") ? documentId : null;
     
     if (!title) {
       return res.status(400).json({
@@ -69,7 +71,7 @@ export const createManualFlashcardSet = async (req, res, next) => {
     }
 
     const newFlashcardSet = await Flashcard.create({
-      documentId: documentId || null,
+      documentId: validDocumentId,
       teacherId: req.user._id,
       title,
       thumbnail: finalThumbnail, 

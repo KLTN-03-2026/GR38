@@ -3,10 +3,11 @@ import { ArrowLeft, User } from "lucide-react";
 import Swal from "sweetalert2";
 
 const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
-  // Khởi tạo state từ dữ liệu account nhận được
+  // Khởi tạo state và xử lý logic hiển thị trạng thái ban đầu
   const [formData, setFormData] = useState({
     ...account,
-    name: account.fullName || account.name, // Đồng bộ tên trường
+    // Map isActive từ DB sang text hiển thị của select
+    status: account.isActive ? "Đang hoạt động" : "Đã vô hiệu hóa",
   });
 
   if (!account) return null;
@@ -30,8 +31,18 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
       cancelButtonText: "Hủy",
     }).then((result) => {
       if (result.isConfirmed) {
-        // Gọi hàm onUpdate từ props (đã đấu nối API ở Management)
-        if (onUpdate) onUpdate(formData);
+        // CHUẨN HÓA DỮ LIỆU TRƯỚC KHI GỬI API
+        const updatePayload = {
+          _id: formData._id || formData.id,
+          role: formData.role,
+          isActive: formData.status === "Đang hoạt động",
+        };
+
+        if (formData.role === "TEACHER" && account.teacherApprovalStatus) {
+          updatePayload.teacherApprovalStatus = account.teacherApprovalStatus;
+        }
+
+        if (onUpdate) onUpdate(updatePayload);
       }
     });
   };
@@ -64,13 +75,15 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
               <User size={48} className="text-blue-600" />
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-1">
-              {formData.name}
+              {formData.fullName || formData.name}
             </h2>
             <p className="text-slate-400 text-xs mb-6 font-mono">
               ID: {formData._id || formData.id}
             </p>
             <span
-              className={`w-full py-2 text-white text-center rounded-lg font-semibold text-sm ${formData.role === "TEACHER" || formData.role === "Giáo viên" ? "bg-[#1D72D6]" : "bg-[#6366f1]"}`}
+              className={`w-full py-2 text-white text-center rounded-lg font-semibold text-sm ${
+                formData.role === "TEACHER" ? "bg-[#1D72D6]" : "bg-[#6366f1]"
+              }`}
             >
               {formData.role}
             </span>
@@ -78,6 +91,7 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
 
           <div className="flex-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* HỌ VÀ TÊN - CỐ ĐỊNH */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-900">
                   Họ và tên
@@ -85,12 +99,13 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
                 <input
                   name="fullName"
                   type="text"
+                  disabled
                   value={formData.fullName || formData.name || ""}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-orange-100 outline-none"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed outline-none"
                 />
               </div>
 
+              {/* EMAIL - CỐ ĐỊNH */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-900">
                   Email
@@ -98,12 +113,13 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
                 <input
                   name="email"
                   type="email"
+                  disabled
                   value={formData.email || ""}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 outline-none"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed outline-none"
                 />
               </div>
 
+              {/* VAI TRÒ - ĐƯỢC SỬA */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-900">
                   Vai trò
@@ -112,13 +128,14 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 outline-none"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-orange-100 outline-none cursor-pointer"
                 >
-                  <option value="TEACHER">Giáo viên</option>
-                  <option value="LEARNER">Người học</option>
+                  <option value="TEACHER">TEACHER</option>
+                  <option value="LEARNER">LEARNER</option>
                 </select>
               </div>
 
+              {/* TRẠNG THÁI - ĐƯỢC SỬA */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-900">
                   Trạng thái
@@ -127,10 +144,9 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 outline-none"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-orange-100 outline-none cursor-pointer"
                 >
                   <option value="Đang hoạt động">Đang hoạt động</option>
-                  <option value="Đang xử lý">Đang xử lý</option>
                   <option value="Đã vô hiệu hóa">Đã vô hiệu hóa</option>
                 </select>
               </div>

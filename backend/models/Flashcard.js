@@ -2,11 +2,12 @@
 
     const flashcardSchema = new mongoose.Schema({
 
-        documentId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Document',
-            required: true
-        },
+
+    documentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Document',
+        default: null
+      },
 
         teacherId: {
             type: mongoose.Schema.Types.ObjectId,

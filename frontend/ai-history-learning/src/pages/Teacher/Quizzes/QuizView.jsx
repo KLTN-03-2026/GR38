@@ -47,13 +47,11 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
 const handleSubmit = async () => {
   const quizId = quiz._id ?? quiz.id;
   const answered = Object.keys(answers).length;
-
-  // Tính điểm: so sánh options[selectedIndex] với correctAnswer
+  // Dùng q.answer (index) thay vì q.correctAnswer (không tồn tại sau shuffle)
   const score = Object.entries(answers).filter(([i, selectedIndex]) => {
     const q = questions[Number(i)];
     if (!q) return false;
-    const selectedText = q.options[selectedIndex];
-    return selectedText === q.correctAnswer; // ← đúng field rồi
+    return Number(selectedIndex) === Number(q.answer); // ← FIX
   }).length;
 
   const submittedAnswers = questions.map((q, i) => ({

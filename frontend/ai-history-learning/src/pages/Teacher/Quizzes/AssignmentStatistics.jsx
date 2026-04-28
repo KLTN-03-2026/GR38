@@ -7,10 +7,15 @@ import api from "../../../lib/api";
 function mapStats(overview = {}) {
   const avg = overview.averageScore ?? 0;
   return {
-    totalQuizzes:     overview.totalQuizzes     ?? 0,
-    completedQuizzes: overview.completedQuizzes ?? 0,
-    averageScore:     isNaN(Number(avg)) ? 0 : Number(avg),
-    studyStreak:      overview.studyStreak      ?? 0,
+    totalQuizzes:       overview.totalQuizzes       ?? 0,
+    completedQuizzes:   overview.completedQuizzes   ?? 0,
+    averageScore:       isNaN(Number(avg)) ? 0 : Number(avg),
+    studyStreak:        overview.studyStreak        ?? 0,
+    totalDocuments:     overview.totalDocuments     ?? 0,
+    totalFlashcardSets: overview.totalFlashcardSets ?? 0,
+    totalFlashcards:    overview.totalFlashcards    ?? 0,
+    reviewedFlashcards: overview.reviewedFlashcards ?? 0,
+    starredFlashcards:  overview.starredFlashcards  ?? 0,
   };
 }
 // ───────────────────────────────────────────────────────────────────────────
@@ -32,8 +37,7 @@ function buildStats(s) {
             d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h.75" />
         </svg>
       ),
-      accent: "#F26739",
-      lightBg: "#FFF4EF",
+      accent: "#F26739", lightBg: "#FFF4EF",
     },
     {
       label: "Đã hoàn thành",
@@ -44,8 +48,7 @@ function buildStats(s) {
             d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      accent: "#16A34A",
-      lightBg: "#F0FDF4",
+      accent: "#16A34A", lightBg: "#F0FDF4",
     },
     {
       label: "Điểm trung bình",
@@ -56,8 +59,7 @@ function buildStats(s) {
             d="M3 13.5l5-5 4 4 5-6 4 3" />
         </svg>
       ),
-      accent: "#3B82F6",
-      lightBg: "#EFF6FF",
+      accent: "#3B82F6", lightBg: "#EFF6FF",
     },
     {
       label: "Chuỗi ngày học",
@@ -68,8 +70,51 @@ function buildStats(s) {
             d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
         </svg>
       ),
-      accent: "#D97706",
-      lightBg: "#FFFBEB",
+      accent: "#D97706", lightBg: "#FFFBEB",
+    },
+    {
+      label: "Tổng tài liệu",
+      value: s.totalDocuments,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        </svg>
+      ),
+      accent: "#8B5CF6", lightBg: "#F5F3FF",
+    },
+    {
+      label: "Bộ Flashcard",
+      value: s.totalFlashcardSets,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
+        </svg>
+      ),
+      accent: "#EC4899", lightBg: "#FDF2F8",
+    },
+    {
+      label: "Flashcard đã ôn",
+      value: `${s.reviewedFlashcards} / ${s.totalFlashcards}`,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      ),
+      accent: "#0EA5E9", lightBg: "#F0F9FF",
+    },
+    {
+      label: "Thẻ đã đánh dấu",
+      value: s.starredFlashcards,
+      icon: (
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+        </svg>
+      ),
+      accent: "#F59E0B", lightBg: "#FFFBEB",
     },
   ];
 }
@@ -158,25 +203,67 @@ export default function AssignmentStatistics() {
   const [deleting, setDeleting]         = useState(false);
 
   // ── Fetch dashboard ────────────────────────────────────────────────────
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Chỉ gọi dashboard — /quizzes/my-history bị 403 với Teacher
-      const dashRes = await api.get("/progress/dashboard");
-      const payload  = dashRes.data?.data ?? dashRes.data;
-      const overview = payload?.overview ?? {};
-      setStatsValues(mapStats(overview));
+const fetchDashboard = useCallback(async () => {
+  setLoading(true);
+  try {
+    const dashRes = await api.get("/progress/dashboard");
+    console.log(">>> [dashboard] raw response:", dashRes.data);
 
-      // Backend chưa có API lấy danh sách bài làm học sinh
-      // → bảng rỗng, chờ API mới từ backend
-      setData([]);
-    } catch (err) {
-      // Ẩn lỗi khỏi UI, chỉ log console
-      console.warn("[AssignmentStatistics] fetch error:", err?.response?.data?.message ?? err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    const payload  = dashRes.data?.data ?? dashRes.data;
+    console.log(">>> [dashboard] payload:", payload);
+
+    const overview = payload?.overview ?? {};
+    console.log(">>> [dashboard] overview:", overview);
+
+    const stats = {
+      totalQuizzes:        overview.totalQuizzes        ?? 0,
+      completedQuizzes:    overview.completedQuizzes    ?? 0,
+      averageScore:        overview.averageScore        ?? 0,
+      studyStreak:         overview.studyStreak         ?? 0,
+      totalDocuments:      overview.totalDocuments      ?? 0,
+      totalFlashcardSets:  overview.totalFlashcardSets  ?? 0,
+      totalFlashcards:     overview.totalFlashcards     ?? 0,
+      reviewedFlashcards:  overview.reviewedFlashcards  ?? 0,
+      starredFlashcards:   overview.starredFlashcards   ?? 0,
+    };
+    console.log(">>> [dashboard] stats mapped:", stats);
+    setStatsValues(stats);
+
+    const recent = payload?.recent ?? {};
+    console.log(">>> [dashboard] recent:", recent);
+
+    const documents = recent.documents ?? [];
+    console.log(">>> [dashboard] recent documents:", documents);
+
+    const quizzes = recent.quizzes ?? [];
+    console.log(">>> [dashboard] recent quizzes:", quizzes);
+
+    const rows = quizzes.map((q) => {
+      const row = {
+        ma:   q._id,
+        ten:  q.title ?? "Không có tên",
+        ngay: q.completedAt
+          ? new Date(q.completedAt).toLocaleDateString("vi-VN")
+          : "—",
+        sl:   q.totalQuestions ?? "—",
+        diem: q.score != null ? String(q.score) : "—",
+        tt:   "Đã làm bài",
+        documentTitle: q.documentId?.title ?? "—",
+      };
+      console.log(">>> [dashboard] row mapped:", row);
+      return row;
+    });
+
+    console.log(">>> [dashboard] all rows:", rows);
+    setData(rows);
+
+  } catch (err) {
+    console.error(">>> [dashboard] ERROR:", err?.response?.status);
+    console.error(">>> [dashboard] ERROR data:", err?.response?.data ?? err.message);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 

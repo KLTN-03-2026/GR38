@@ -7,6 +7,7 @@ import FlashcardPageInline from "./FlashcardPageInline";
 import EditDocumentModal   from "./EditDocumentModal";
 import ConfirmGenerateModal from "./ConfirmGenerateModal";
 import TabThongTin         from "./TabThongTin";
+import ChatAI              from "./ChatAI";   // ← import ChatAI
 import { IconBack, IconEdit, IconQuiz, IconCards, IconChat, IconPlus, IconArrowRight, EmptyState } from "./icons";
 
 const tabs = ["Thông tin", "Chat", "Quizz", "FlashCard"];
@@ -84,22 +85,22 @@ export default function DocumentsDetailPage() {
   );
 
   return (
-  <div className="h-full overflow-y-auto bg-gray-50">
-  {/* Header */}
-  <div className="sticky top-0 z-10 bg-gray-50 flex items-center justify-between px-6 pt-5 pb-4">
-    <button
-      onClick={() => navigate(-1)}
-      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 shadow-sm transition-all active:scale-95"
-    >
-      <IconBack /> Trở về
-    </button>
-    <button
-      onClick={() => setShowEditModal(true)}
-      className="flex items-center gap-2 bg-[#F26739] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm transition"
-    >
-      <IconEdit /> Chỉnh sửa
-    </button>
-  </div>
+    <div className="h-full overflow-y-auto bg-gray-50">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-gray-50 flex items-center justify-between px-6 pt-5 pb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 shadow-sm transition-all active:scale-95"
+        >
+          <IconBack /> Trở về
+        </button>
+        <button
+          onClick={() => setShowEditModal(true)}
+          className="flex items-center gap-2 bg-[#F26739] hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm transition"
+        >
+          <IconEdit /> Chỉnh sửa
+        </button>
+      </div>
 
       <div className="px-6 pb-6">
         <h1 className="text-xl font-bold text-gray-800 mb-4">{doc.title}</h1>
@@ -117,17 +118,9 @@ export default function DocumentsDetailPage() {
         {/* Tab content */}
         {activeTab === "Thông tin" && <TabThongTin doc={doc} id={id} setActiveTab={setActiveTab} />}
 
+        {/* ── TAB CHAT ─────────────────────────────────────────── */}
         {activeTab === "Chat" && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><IconChat /></div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">Chat với tài liệu</p>
-                <p className="text-xs text-gray-400">Hỏi đáp nội dung tài liệu bằng AI</p>
-              </div>
-            </div>
-            <EmptyState icon={<IconChat />} message="Tính năng Chat đang phát triển" sub="Sắp ra mắt trong phiên bản tiếp theo" />
-          </div>
+          <ChatAI documentId={id} />
         )}
 
         {activeTab === "Quizz" && (selectedQuiz ? (

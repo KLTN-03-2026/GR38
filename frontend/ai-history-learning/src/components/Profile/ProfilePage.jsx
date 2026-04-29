@@ -16,6 +16,8 @@ export default function ProfilePage() {
     (form.role || "").toUpperCase() === "TEACHER" ? "Giáo viên" :
     (form.role || "").toUpperCase() === "LEARNER"  ? "Người học" : form.role ?? "";
 
+  const isTeacher = (form.role || "").toUpperCase() === "TEACHER";
+
   return (
     <div className="flex gap-4 items-start">
       <div className="flex-1 bg-white border border-gray-100 rounded-2xl overflow-hidden">
@@ -58,7 +60,8 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <StatsPanel />
+      {isTeacher && <StatsPanel />}
+
       {showPasswordModal && <PasswordModal onClose={() => setShowPasswordModal(false)} />}
     </div>
   );

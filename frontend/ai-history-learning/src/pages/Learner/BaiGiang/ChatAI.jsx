@@ -253,5 +253,4 @@ const ChatAI = ({ documentId }) => {
     </div>
   );
 };
-
 export default ChatAI;

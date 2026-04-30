@@ -29,8 +29,8 @@ create: async (data) => {
     title:       data.title,
     description: data.description,
     difficulty:  data.difficulty,
-    time_limit:  data.timeLimit,   // ← server dùng snake_case
-    documentId:  data.documentId,  // ← thêm dòng này
+    time_limit:  data.timeLimit,   
+    documentId:  data.documentId,  
     questions:   data.questions,
   };
   console.log("📤 Gửi lên server:", JSON.stringify(payload, null, 2));
@@ -54,9 +54,12 @@ create: async (data) => {
     return res;
   },
 
-  // Fix: QuizPage truyền { answers: [...] } rồi, service chỉ forward thẳng
-  submit: async (quizId, payload) => {
-    const res = await api.post(`/quizzes/${quizId}/submit`, payload);
+ submit: async (quizId, answers) => {
+    const res = await api.post(
+      `/quizzes/${quizId}/submit`,
+      JSON.stringify(answers),
+      { headers: { "Content-Type": "application/json" } }
+    );
     return res;
   },
 

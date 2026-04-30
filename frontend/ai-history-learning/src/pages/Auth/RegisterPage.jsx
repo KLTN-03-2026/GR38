@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { useRegister } from "../../hooks/useRegister";
-
-import Swal from "sweetalert2";
 import { GoogleLogin } from "@react-oauth/google";
+import Swal from "sweetalert2"; // Cần import thêm Swal để dùng trong onError của GoogleLogin
 
 function RegisterPage() {
   const {
@@ -13,7 +12,7 @@ function RegisterPage() {
     handleInput,
     handleRoleSelect,
     handleSubmit,
-    handleGoogleSuccess,
+    handleGoogleSuccess, // 🔥 FIX: Lấy hàm này từ Hook ra
   } = useRegister();
 
   const inputClass = (field) =>
@@ -58,9 +57,7 @@ function RegisterPage() {
               onChange={handleInput}
               className={inputClass("hoTen")}
             />
-            {errors.hoTen && (
-              <p className="text-xs text-red-500 mt-1">{errors.hoTen}</p>
-            )}
+            {errors.hoTen && <p className="text-xs text-red-500 mt-1">{errors.hoTen}</p>}
           </div>
 
           {/* EMAIL */}
@@ -77,9 +74,7 @@ function RegisterPage() {
               autoComplete="off"
               className={inputClass("email")}
             />
-            {errors.email && (
-              <p className="text-xs text-red-500 mt-1">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           {/* MẬT KHẨU */}
@@ -96,9 +91,7 @@ function RegisterPage() {
               autoComplete="new-password"
               className={inputClass("pass")}
             />
-            {errors.pass && (
-              <p className="text-xs text-red-500 mt-1">{errors.pass}</p>
-            )}
+            {errors.pass && <p className="text-xs text-red-500 mt-1">{errors.pass}</p>}
           </div>
 
           {/* NHẬP LẠI MẬT KHẨU */}
@@ -116,9 +109,7 @@ function RegisterPage() {
               className={inputClass("passwordConfirm")}
             />
             {errors.passwordConfirm && (
-              <p className="text-xs text-red-500 mt-1">
-                {errors.passwordConfirm}
-              </p>
+              <p className="text-xs text-red-500 mt-1">{errors.passwordConfirm}</p>
             )}
           </div>
 
@@ -146,9 +137,7 @@ function RegisterPage() {
                 Người học
               </button>
             </div>
-            {errors.role && (
-              <p className="text-xs text-red-500 mt-1">{errors.role}</p>
-            )}
+            {errors.role && <p className="text-xs text-red-500 mt-1">{errors.role}</p>}
           </div>
 
           <button
@@ -169,7 +158,6 @@ function RegisterPage() {
         </div>
 
         {/* NÚT ĐĂNG KÝ BẰNG GOOGLE */}
-        <div className="flex justify-center w-full">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => {
@@ -180,10 +168,10 @@ function RegisterPage() {
               });
             }}
             width="350"
-            useOneTap={false} // Tắt One Tap (cái hay gây lỗi COOP)
-            ux_mode="popup"
+            useOneTap={false}
+            shape="rectangular"
           />
-        </div>
+
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Bạn đã có tài khoản?{" "}

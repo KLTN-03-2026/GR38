@@ -11,6 +11,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import { swaggerUi, swaggerDocs } from "./config/swagger.js";
 
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import flashcardRoutes from "./routes/flashcardRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
@@ -35,12 +36,6 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  next();
-});
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,6 +47,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/flashcards", flashcardRoutes);
 app.use("/api/v1/ai", aiRoutes);

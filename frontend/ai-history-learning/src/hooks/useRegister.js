@@ -29,11 +29,11 @@ export const useRegister = () => {
     setErrors((prev) => ({ ...prev, role: "" }));
   };
 
-  // 🔥 Hàm xử lý khi Component <GoogleLogin /> trả về kết quả thành công
+  //  Hàm xử lý khi Component <GoogleLogin /> trả về kết quả thành công
   const handleGoogleSuccess = async (credentialResponse) => {
     let selectedRole = role;
 
-    // Nếu người dùng bấm thẳng Google mà chưa chọn Role -> Hiển thị Popup hỏi
+
     if (!selectedRole) {
       const { value: roleFromPopup } = await Swal.fire({
         title: "Bạn là ai?",
@@ -53,32 +53,31 @@ export const useRegister = () => {
         cancelButtonText: "Hủy",
       });
 
-      if (!roleFromPopup) return; // Nếu bấm Hủy thì dừng lại
+      if (!roleFromPopup) return;
       selectedRole = roleFromPopup;
       setRole(roleFromPopup);
     }
 
     setLoading(true);
     try {
-      // Gửi Token (credential) xuống Backend
+
       const res = await authService.googleAuth({
-        token: credentialResponse.credential, // Component này trả về 'credential'
+        token: credentialResponse.credential, 
         role: selectedRole,
       });
 
       if (res.success) {
-        // Thông báo đẹp mắt
         await Swal.fire({
           icon: "success",
           title: "ĐĂNG KÝ THÀNH CÔNG",
           text: "Chào mừng bạn đến với Lịch Sử Việt Nam!",
           confirmButtonColor: "#f97316",
-          timer: 1500, // Đóng nhanh hơn 1 chút để vào trang chủ luôn
+          timer: 1500, 
           timerProgressBar: true,
-          showConfirmButton: false // Ẩn nút OK để tự động chuyển trang mượt hơn
+          showConfirmButton: false 
         });
         
-        // 🔥 CHUYỂN HƯỚNG ĐẾN TRANG CHỦ LUÔN THEO Ý BẠN
+
         navigate("/");
       }
     } catch (error) {

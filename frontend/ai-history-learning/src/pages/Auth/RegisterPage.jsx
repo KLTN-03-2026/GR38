@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useRegister } from "../../hooks/useRegister";
 import { GoogleLogin } from "@react-oauth/google";
-import Swal from "sweetalert2"; // Cần import thêm Swal để dùng trong onError của GoogleLogin
+import Swal from "sweetalert2";
 
 function RegisterPage() {
   const {
@@ -12,7 +12,7 @@ function RegisterPage() {
     handleInput,
     handleRoleSelect,
     handleSubmit,
-    handleGoogleSuccess, // 🔥 FIX: Lấy hàm này từ Hook ra
+    handleGoogleSuccess, 
   } = useRegister();
 
   const inputClass = (field) =>

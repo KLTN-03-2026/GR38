@@ -37,7 +37,6 @@ import Quiz from "./pages/Learner/BaiGiang/Quizz.jsx";
 import BaiKiemTra from "./pages/Learner/Baikiemtra/Baikiemtra";
 import FlashcardDetailLearner from "./pages/Learner/HocFlashCard/FlashcardDetail";
 import HocQuiz from "./pages/Learner/HocQuizz/HocQuizz.jsx";
-import ThongTinNguoiHoc from "./pages/Learner/ThongTinNguoiHoc/ThongTinNguoiHoc";
 import DocumentsLearner from "./pages/Learner/Documents";
 import FlashcardsLearner from "./pages/Learner/Flashcards.jsx";
 import QuizzesLearner from "./pages/Learner/Quizzes";
@@ -96,9 +95,10 @@ export default function AppRouter() {
       {/* ADMIN */}
       <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
-          <Route index         element={<AdminDashboard />} />
+          <Route index           element={<AdminDashboard />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="content"  element={<ReportManagement />} />
+          <Route path="profile"  element={<ProfilePage />} />
         </Route>
       </Route>
 
@@ -131,7 +131,7 @@ export default function AppRouter() {
           <Route path="flashcards"          element={<FlashcardsLearner />} />
           <Route path="quizzes"             element={<QuizzesLearner />} />
           <Route path="hoc-quizz/:id"       element={<HocQuiz />} />
-          <Route path="profile"             element={<ThongTinNguoiHoc />} />
+          <Route path="profile"             element={<ProfilePage />} />
           <Route path="suco"                element={<SuCo />} />
           <Route path="chat-ai"             element={<ChatAI />} />
           <Route path="flashcard"           element={<FlashCard />} />

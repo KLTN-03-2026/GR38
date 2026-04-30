@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 
-const BASE_URL = "/api/v1/auth";
+const BASE_URL = "http://localhost:8000/api/v1/auth";
 
 export function getToken() {
   try {

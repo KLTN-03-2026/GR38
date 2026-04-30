@@ -8,6 +8,8 @@ import Header from "./components/Layout/Header";
 // Auth
 import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
+import ForgotPasswordPage from "./components/Modal/Auth/ForgotPasswordForm";
+import ProfilePage from "./components/Profile/ProfilePage.jsx";
 
 // Admin
 import AdminDashboard from "./pages/Admin/AdminDashboard";
@@ -21,7 +23,6 @@ import QuizResultPage from "./pages/Teacher/Quizzes/QuizResultPage.jsx";
 import DocumentsPage from "./pages/Teacher/Documents/DocumentsPage.jsx";
 import DocumentsDetailPage from "./pages/Teacher/Documents/DocumentsDetailPage.jsx";
 import AssignmentStatistics from "./pages/Teacher/Quizzes/AssignmentStatistics.jsx";
-import ProfilePage from "./components/Profile/ProfilePage.jsx";
 import Baigiangpage from "./pages/Teacher/Documents/Baigiangpage.jsx";
 import Baikiemtra from "./pages/Teacher/Documents/Baikiemtra.jsx";
 import Flashcards from "./pages/Teacher/Flashcards/FlashcardPage.jsx";
@@ -90,6 +91,7 @@ export default function AppRouter() {
       <Route element={<PublicRoute />}>
         <Route path="/"         element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
       {/* ADMIN */}

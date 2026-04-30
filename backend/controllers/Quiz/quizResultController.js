@@ -80,7 +80,7 @@ export const getQuizResultDetail = async (req, res, next) => {
   try {
     const result = await QuizResult.findOne({
       _id: req.params.resultId,
-      userId: req.user._id, // Chỉ cho phép xem kết quả của chính mình
+      userId: req.user._id, 
     }).populate("quizId", "title questions description");
 
     if (!result) {

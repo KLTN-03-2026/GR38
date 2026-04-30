@@ -77,20 +77,32 @@ const userSchema = new mongoose.Schema(
       enum: ["local", "google"],
       default: "local",
     },
+    resetPasswordOtp: {
+      type: String,
+      default: null,
+    },
+    resetPasswordOtpExpires: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   },
 );
 
-userSchema.pre("save", async function () {
-  // Nếu pass không đổi hoặc là Google login (không có pass), bỏ qua và đi tiếp
-  if (!this.isModified("password") || !this.password) {
+userSchema.pre("save", async function (next) {
+  
+if (!this.isModified("password") || !this.password) {
     return;
   }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  } catch (error) {
+    next(error);
+  }
 });
 
 userSchema.methods.comparePassword = async function (enteredPassword) {

@@ -2,7 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import Swal from "sweetalert2";
-import { useLogin } from "../../hooks/useLogin"; // Sửa lại đường dẫn import hook của bạn
+import { useLogin } from "../../hooks/useLogin"; 
+
 
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -18,7 +19,6 @@ const EyeOffIcon = () => (
 );
 
 export default function LoginPage() {
-  // Rút gọn toàn bộ logic nhờ Custom Hook
   const {
     input,
     errors,
@@ -88,7 +88,7 @@ export default function LoginPage() {
           <div className="flex-1 border-t border-gray-300"></div>
         </div>
 
-        {/* 🔥 NÚT ĐĂNG NHẬP GOOGLE */}
+        {/* NÚT ĐĂNG NHẬP GOOGLE */}
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => {

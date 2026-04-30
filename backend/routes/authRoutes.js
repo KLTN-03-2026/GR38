@@ -5,7 +5,8 @@ import {
     login,
     getProfile,
     updateProfile,
-    changePassword
+    changePassword,
+    googleAuth
 } from '../controllers/authController.js';
 import { USER_ROLES } from '../models/User.js';
 import protect from '../middleware/auth.js';
@@ -106,6 +107,8 @@ const validateChangePassword = [
 
 router.post('/register', validateRegister, handleValidationErrors, register);
 router.post('/login', validateLogin, handleValidationErrors, login);
+router.post('/google', googleAuth); 
+// Protected Routes (Cần đăng nhập)
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, uploadAvatar.single('avatar'), validateUpdateProfile, handleValidationErrors, updateProfile);
 router.post('/change-password', protect, validateChangePassword, handleValidationErrors, changePassword);

@@ -28,15 +28,22 @@ connectDB();
 
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:3000",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs, {

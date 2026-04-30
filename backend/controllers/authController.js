@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User, { USER_ROLES } from '../models/User.js';
+import User, { USER_ROLES, TEACHER_APPROVAL_STATUS } from '../models/User.js';
 import { OAuth2Client } from 'google-auth-library';
 
 // Khởi tạo Google Client
@@ -125,18 +125,19 @@ export const login = async (req, res, next) => {
             });
         }
 
-        const isPasswordCorrect = await user.matchPassword(password);
+        // ĐÃ FIX: matchPassword -> comparePassword
+        const isPasswordCorrect = await user.comparePassword(password);
         if (!isPasswordCorrect) {
             return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
         }
 
-        const canLogin = user.canLogin();
-        if (!canLogin) {
-            if (user.role === USER_ROLES.TEACHER) {
-                return res.status(403).json({ success: false, error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin.' });
-            } else {
-                return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
-            }
+        // ĐÃ FIX: Thay thế canLogin() bằng logic kiểm tra trực tiếp
+        if (!user.isActive) {
+            return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
+        }
+        
+        if (user.role === USER_ROLES.TEACHER && user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED) {
+            return res.status(403).json({ success: false, error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin.' });
         }
 
         return sendTokenResponse(user, 200, res);
@@ -173,8 +174,7 @@ export const googleAuth = async (req, res, next) => {
             if (!role) {
                 return res.status(400).json({ 
                     success: false, 
-                    error: "Vui lòng chọn vai trò (Người học/Giáo viên) để hoàn tất đăng ký." 
-                });
+                    error: "Vui lòng chọn vai trò (Người học/Giáo viên) để hoàn tất đăng ký."});
             }
 
             user = new User({
@@ -197,14 +197,13 @@ export const googleAuth = async (req, res, next) => {
                 await user.save();
             }
 
-            // Kiểm tra trạng thái kích hoạt / duyệt giống hàm login
-            const canLogin = user.canLogin();
-            if (!canLogin) {
-                if (user.role === USER_ROLES.TEACHER) {
-                    return res.status(403).json({ success: false, error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin.' });
-                } else {
-                    return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
-                }
+            // ĐÃ FIX: Thay thế canLogin() bằng logic kiểm tra trực tiếp
+            if (!user.isActive) {
+                return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
+            }
+            
+            if (user.role === USER_ROLES.TEACHER && user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED) {
+                return res.status(403).json({ success: false, error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin.' });
             }
         }
 
@@ -351,7 +350,8 @@ export const changePassword = async (req, res, next) => {
             });
         }
 
-        const isMatch = await user.matchPassword(currentPassword);
+        // ĐÃ FIX: matchPassword -> comparePassword
+        const isMatch = await user.comparePassword(currentPassword);
         if (!isMatch) {
             return res.status(401).json({ success: false, error: 'Mật khẩu hiện tại không đúng' });
         }

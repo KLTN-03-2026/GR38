@@ -6,7 +6,8 @@ import { BrowserRouter } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 
-const clientId = "512876385864-pr6b1jo3okv0oph1eollaech10ior47j.apps.googleusercontent.com";
+const clientId = import.meta.env.VITE_GG_CLIENT_ID;
+console.log("GOOGLE CLIENT ID HIỆN TẠI LÀ:", clientId);
 
 createRoot(document.getElementById("root")).render(
   

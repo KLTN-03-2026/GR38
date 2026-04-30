@@ -1,13 +1,8 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import Swal from "sweetalert2";
-import { authService } from "../../services/authService";
-
-const ROLE_CONFIG = {
-  ADMIN:   { path: "/admin",   label: "Quản trị viên" },
-  TEACHER: { path: "/teacher", label: "Giáo viên" },
-  LEARNER: { path: "/learner", label: "Người học" },
-};
+import { useLogin } from "../../hooks/useLogin"; // Sửa lại đường dẫn import hook của bạn
 
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -23,66 +18,17 @@ const EyeOffIcon = () => (
 );
 
 export default function LoginPage() {
-  const [input, setInput]     = useState({ email: "", pass: "" });
-  const [errors, setErrors]   = useState({});
-  const [loading, setLoading] = useState(false);
-  const [showPass, setShowPass] = useState(false);
-  const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setInput(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
-  };
-
-  const handleLogin = async (e) => {
-    // ✅ FIX CHÍNH: ngăn form submit thật (gây refresh trang)
-    e.preventDefault();
-    e.stopPropagation();
-
-    const err = {};
-    if (!input.email) err.email = "Vui lòng nhập email";
-    if (!input.pass)  err.pass  = "Vui lòng nhập mật khẩu";
-    if (Object.keys(err).length) { setErrors(err); return; }
-
-    setLoading(true);
-    try {
-      const resData = await authService.login(input.email, input.pass);
-      const user = resData.data;
-      const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
-
-      await Swal.fire({
-        icon: "success",
-        title: "ĐĂNG NHẬP THÀNH CÔNG",
-        html: `Xin chào <b>${user.fullName}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
-        confirmButtonColor: "#f97316",
-        timer: 1800,
-        timerProgressBar: true,
-      });
-
-      const path = ROLE_CONFIG[user.role]?.path;
-      if (path) navigate(path);
-    } catch (error) {
-      // axios bắt 4xx/5xx và gắn vào error.response
-      const status = error.response?.status;
-      const serverMsg = error.response?.data?.message ?? "";
-
-      const isAuthError = [400, 401, 403, 404].includes(status);
-      const msg = isAuthError
-        ? "Tài khoản hoặc mật khẩu không chính xác"
-        : serverMsg || "Lỗi server, vui lòng thử lại sau";
-
-      Swal.fire({
-        icon: "error",
-        title: isAuthError ? "Đăng nhập thất bại" : "Có lỗi xảy ra",
-        text: msg,
-        confirmButtonColor: "#f97316",
-      });
-      setErrors({ pass: msg });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Rút gọn toàn bộ logic nhờ Custom Hook
+  const {
+    input,
+    errors,
+    loading,
+    showPass,
+    setShowPass,
+    handleChange,
+    handleLogin,
+    handleGoogleSuccess,
+  } = useLogin();
 
   const inputClass = (field) =>
     `w-full px-3 py-2 text-sm rounded-md border outline-none transition
@@ -103,7 +49,7 @@ export default function LoginPage() {
           <p className="text-xs text-gray-400 mt-1">Nhập thông tin Email và Mật khẩu</p>
         </div>
 
-        {/* ✅ FIX: dùng thẻ form với onSubmit, không dùng onClick trên button */}
+        {/* Form Đăng nhập truyền thống */}
         <form onSubmit={handleLogin} noValidate>
           {/* Email */}
           <label className="block text-sm text-gray-500 mb-1.5">Email</label>
@@ -129,19 +75,44 @@ export default function LoginPage() {
           </div>
           {errors.pass && <p className="text-xs text-red-500 mb-3">{errors.pass}</p>}
 
-          {/* ✅ FIX: type="submit" thay vì onClick */}
           <button type="submit" disabled={loading}
             className="w-full mt-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-3">
             {loading ? "Đang xử lý..." : "Đăng nhập"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mb-2">
+        {/* Dòng chữ Hoặc */}
+        <div className="flex items-center my-4">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <span className="px-3 text-sm text-gray-400 bg-transparent">Hoặc</span>
+          <div className="flex-1 border-t border-gray-300"></div>
+        </div>
+
+        {/* 🔥 NÚT ĐĂNG NHẬP GOOGLE */}
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => {
+              Swal.fire({
+                icon: "error",
+                title: "Lỗi",
+                text: "Đăng nhập Google thất bại!",
+                confirmButtonColor: "#f97316",
+              });
+            }}
+            width="300"
+            useOneTap={false} 
+            shape="rectangular"
+          />
+
+        {/* Các liên kết dưới cùng */}
+        <p className="text-center text-sm text-gray-500 mb-2 mt-2">
           Bạn chưa có tài khoản?{" "}
           <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition">Đăng ký</Link>
         </p>
         <p className="text-center">
-          <button type="button" className="text-xs text-orange-500 hover:text-orange-600 transition">Bạn quên mật khẩu?</button>
+          <Link to="/forgot-password" className="text-xs text-orange-500 hover:text-orange-600 transition">
+            Bạn quên mật khẩu?
+          </Link>
         </p>
       </div>
     </div>

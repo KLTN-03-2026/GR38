@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User, { USER_ROLES, TEACHER_APPROVAL_STATUS } from '../models/User.js';
 import { OAuth2Client } from 'google-auth-library';
 
-// Khởi tạo Google Client
+
 const client = new OAuth2Client(process.env.GG_CLIENT_ID);
 
 /**
@@ -148,25 +148,27 @@ export const login = async (req, res, next) => {
 };
 
 /**
- * MỚI: Đăng nhập & Đăng ký bằng Google
+ * MỚI: Đăng nhập & Đăng ký bằng Google (Dành cho ID Token từ <GoogleLogin />)
  * POST /api/auth/google
  */
 export const googleAuth = async (req, res, next) => {
     try {
-        const { token, role } = req.body;
+        const { token, role } = req.body; 
 
         if (!token) {
             return res.status(400).json({ success: false, error: "Thiếu token xác thực từ Google" });
         }
 
-        // 1. Xác minh Token
+        // 1. Xác minh ID Token bằng google-auth-library
         const ticket = await client.verifyIdToken({
             idToken: token,
-            audience: process.env.GG_CLIENT_ID,
+            audience: process.env.GG_CLIENT_ID, // ID ứng dụng Google của bạn
         });
+        
+        // Lấy thông tin user từ Payload
         const { sub: googleId, email, name, picture } = ticket.getPayload();
 
-        // 2. Tìm User
+        // 2. Tìm User trong Database
         let user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
@@ -174,7 +176,8 @@ export const googleAuth = async (req, res, next) => {
             if (!role) {
                 return res.status(400).json({ 
                     success: false, 
-                    error: "Vui lòng chọn vai trò (Người học/Giáo viên) để hoàn tất đăng ký."});
+                    error: "Vui lòng chọn vai trò (Người học/Giáo viên) để hoàn tất đăng ký."
+                });
             }
 
             user = new User({
@@ -190,14 +193,14 @@ export const googleAuth = async (req, res, next) => {
             // NẾU ĐÃ CÓ NHƯNG LÀ TÀI KHOẢN LOCAL -> LIÊN KẾT GOOGLE
             if (!user.googleId) {
                 user.googleId = googleId;
-                // Có thể cập nhật ảnh nếu họ chưa có ảnh đại diện
-                if (user.profileImage.includes('user-a-solid-svgrepo-com')) {
+                // Cập nhật ảnh nếu user chỉ có ảnh mặc định
+                if (user.profileImage && user.profileImage.includes('user-a-solid-svgrepo-com')) {
                     user.profileImage = picture;
                 }
                 await user.save();
             }
 
-            // ĐÃ FIX: Thay thế canLogin() bằng logic kiểm tra trực tiếp
+            // Kiểm tra trạng thái tài khoản
             if (!user.isActive) {
                 return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
             }
@@ -207,11 +210,16 @@ export const googleAuth = async (req, res, next) => {
             }
         }
 
-        // 3. Trả về token
+        // 3. Trả về token cho Client sử dụng
         return sendTokenResponse(user, 200, res);
 
     } catch (error) {
-        console.error("Lỗi Google Auth:", error);
+        // 🔥 Ghi log chi tiết ra Console để dễ debug nếu token hết hạn hoặc sai cấu hình
+        console.log("\n==================================================");
+        console.error("❌ [LỖI]: API POST /api/auth/google");
+        console.error("👉 Chi tiết lỗi:", error.message);
+        console.log("==================================================\n");
+        
         return res.status(500).json({ success: false, error: "Xác thực Google thất bại." });
     }
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2, ChevronLeft, ChevronRight, BookOpen, AlertCircle } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, BookOpen, AlertCircle, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../../lib/api"; 
+import api from "../../lib/api";
 
 const Quizzes = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,10 +62,9 @@ const Quizzes = () => {
 
   return (
     <div className="flex-1 bg-[#FDFDFD] min-h-screen p-6 font-sans">
-      {/* Container giới hạn độ rộng để không bị quá to trên màn hình lớn */}
       <div className="max-w-6xl mx-auto">
         
-        {/* HEADER & SEARCH BAR - Thu nhỏ lề dưới */}
+        {/* HEADER & SEARCH BAR */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-black text-[#18181B] mb-1 tracking-tight">HỆ THỐNG TRẮC NGHIỆM</h1>
@@ -84,7 +83,7 @@ const Quizzes = () => {
           </div>
         </div>
 
-        {/* QUIZ GRID - Giảm khoảng cách gap và padding card */}
+        {/* QUIZ GRID */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="animate-spin text-orange-500 w-10 h-10 mb-3" />
@@ -101,7 +100,6 @@ const Quizzes = () => {
               {currentItems.length > 0 ? (
                 currentItems.map((quiz) => (
                   <div key={quiz._id} className="flex flex-col bg-white p-4 rounded-[22px] shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden">
-                    {/* Thumbnail nhỏ lại */}
                     <div className="w-full h-[140px] overflow-hidden rounded-[14px] mb-4 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
                         <BookOpen size={48} className="text-orange-300 group-hover:scale-110 transition-transform duration-500" />
                     </div>
@@ -136,42 +134,61 @@ const Quizzes = () => {
               )}
             </div>
 
-            {/* PAGINATION - Nhỏ gọn hơn */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 pb-8">
+            {/* PAGINATION CHUẨN FIGMA - LUÔN HIỂN THỊ ĐỂ KIỂM TRA */}
+            <div className="flex flex-row justify-between items-center px-5 gap-4 w-full h-10 mt-8 mb-10">
+              {/* 1 trang label */}
+              <div className="text-[#000000] font-medium text-base leading-5 flex items-center font-['Inter'] w-[100px]">
+                {totalPages} trang
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex flex-row items-center p-0 gap-1 h-10">
+                {/* Previous Button */}
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-50 shadow-sm"
+                  className="flex flex-row justify-center items-center py-[6px] px-2 gap-1 h-10 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors"
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={14} className="text-[#09090B]" />
+                  <span className="text-[#18181B] font-medium text-sm leading-5 font-['Inter']">Previous</span>
                 </button>
                 
-                <div className="flex items-center gap-1.5">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`w-9 h-9 rounded-lg font-bold text-sm transition-all ${
-                        currentPage === i + 1
-                          ? "bg-[#F26739] text-white shadow-md shadow-orange-100"
-                          : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                {/* Page Numbers */}
+                <div className="flex flex-row items-center gap-1">
+                  {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    if (totalPages > 5 && pageNum > 3 && pageNum < totalPages) {
+                      if (pageNum === 4) return <MoreHorizontal key="dots" size={16} className="mx-2 text-gray-400" />;
+                      return null;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`box-border flex flex-row justify-center items-center p-2 w-10 h-10 rounded-md font-['Inter'] font-medium text-sm transition-all ${
+                          currentPage === pageNum
+                            ? "border border-[#E4E4E7] text-[#18181B] bg-white shadow-sm"
+                            : "text-[#18181B] hover:bg-gray-100"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                 </div>
 
+                {/* Next Button */}
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-50 shadow-sm"
+                  className="flex flex-row justify-center items-center py-[6px] px-2 gap-1 h-10 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors"
                 >
-                  <ChevronRight size={18} />
+                  <span className="text-[#18181B] font-medium text-sm leading-5 font-['Inter']">Next</span>
+                  <ChevronRight size={14} className="text-[#09090B]" />
                 </button>
               </div>
-            )}
+            </div>
           </>
         )}
       </div>

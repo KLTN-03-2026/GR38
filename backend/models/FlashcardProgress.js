@@ -11,13 +11,12 @@ const flashcardProgressSchema = new mongoose.Schema({
         ref: 'Flashcard', 
         required: true
     },
-    // Lưu trạng thái học tập của TỪNG THẺ trong bộ flashcard đó
     cardProgress: [
         {
             cardId: { 
                 type: mongoose.Schema.Types.ObjectId, 
                 required: true 
-            }, // Link tới _id của cái thẻ (front/back) trong bộ gốc
+            }, 
             isStarred: {
                 type: Boolean,
                 default: false
@@ -30,6 +29,11 @@ const flashcardProgressSchema = new mongoose.Schema({
                 type: Date,
                 default: null
             },
+
+            nextReviewDate: {
+                type: Date,
+                default: null 
+            },
             memoryStatus: {
                 type: String,
                 enum: ['Chưa học', 'Đang học', 'Đã nhớ'],
@@ -38,7 +42,6 @@ const flashcardProgressSchema = new mongoose.Schema({
         }
     ]
 }, { timestamps: true });
-
 
 flashcardProgressSchema.index({ userId: 1, flashcardSetId: 1 }, { unique: true });
 

@@ -2,31 +2,21 @@ import User, { USER_ROLES, TEACHER_APPROVAL_STATUS } from '#models/User.js';
 import { OAuth2Client } from 'google-auth-library';
 import nodemailer from 'nodemailer';
 import {sendTokenResponse}  from '#controllers/Auth/utils/jwtToken.js';
+import crypto from 'crypto';
 
 const client = new OAuth2Client(process.env.GG_CLIENT_ID);
 
-console.log("Email đang dùng:", process.env.EMAIL_USER);
-console.log("Mật khẩu đang dùng:", process.env.EMAIL_APP_PASSWORD);
-
-// const transporter = nodemailer.createTransport({
-//     host: 'smtp.gmail.com', 
-//     port: 465, 
-//     secure: true, 
-//     auth: {
-//         user: process.env.EMAIL_USER, 
-//         pass: process.env.EMAIL_APP_PASSWORD, 
-//     },
-
-// });
-
 const transporter = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
+    host: process.env.MAIL_HOST, 
+    port: parseInt(process.env.MAIL_PORT), 
+    secure: process.env.MAIL_SECURE === 'true', 
     auth: {
-      user: '5b951a2767e4cf',
-      pass: '87c618f10f7a03'
-    }
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_APP_PASSWORD, 
+    },
 });
+
+
 /**
  * Đăng ký tài khoản (Dành cho Email/Password truyền thống)
  * POST /api/auth/register
@@ -228,13 +218,13 @@ export const forgotPassword = async (req, res, next) => {
             return res.status(400).json({ success: false, error: 'Vui lòng cung cấp email' });
         }
 
+        // 1. Tìm user (biến user khai báo trong khối try tổng)
         const user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
             return res.status(404).json({ success: false, error: 'Không tìm thấy tài khoản với email này' });
         }
 
-        // CHẶN: Tài khoản đăng nhập bằng Google không sử dụng tính năng quên mật khẩu này
         if (user.authType === 'google') {
             return res.status(400).json({ 
                 success: false, 
@@ -242,17 +232,17 @@ export const forgotPassword = async (req, res, next) => {
             });
         }
 
-        // Tạo mã OTP 6 số ngẫu nhiên
+        // 2. Tạo mã OTP ngẫu nhiên (nếu đã import crypto thì dùng crypto, không thì giữ nguyên)
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Lưu OTP và thời gian hết hạn (10 phút) vào database
+        // 3. Lưu OTP vào database
         user.resetPasswordOtp = otp;
         user.resetPasswordOtpExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
 
-        // Cấu hình nội dung email
+        // 4. Cấu hình email
         const mailOptions = {
-            from: `"Hệ thống SmartEdu" <${process.env.EMAIL_USER}>`,
+            from: `"Hệ thống Hỗ trợ Ôn tập Lịch sử" <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: 'Mã OTP khôi phục mật khẩu',
             html: `
@@ -264,21 +254,38 @@ export const forgotPassword = async (req, res, next) => {
                         <span style="font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px; padding: 10px 20px; background: #f4f4f4; border-radius: 5px;">${otp}</span>
                     </div>
                     <p style="color: #d9534f; font-size: 14px;"><em>Lưu ý: Mã này chỉ có hiệu lực trong vòng 10 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</em></p>
-                    <p>Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
                 </div>
             `
         };
 
-        await transporter.sendMail(mailOptions);
-
-        return res.status(200).json({ 
-            success: true, 
-            message: 'Mã OTP đã được gửi đến email của bạn' 
-        });
+        // 5. GỬI EMAIL (Dùng try-catch lồng bên trong)
+        try {
+            await transporter.sendMail(mailOptions);
+            
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Mã OTP đã được gửi đến email của bạn' 
+            });
+            
+        } catch (mailError) {
+            // Lỗi ở đây là lỗi cấu hình SMTP/mạng. Ta vẫn truy cập được biến 'user' vì vẫn ở chung scope.
+            console.error('Lỗi gửi thư OTP:', mailError);
+            
+            // Hoàn tác: Xóa OTP đi vì gửi mail xịt
+            user.resetPasswordOtp = undefined;
+            user.resetPasswordOtpExpires = undefined;
+            await user.save({ validateBeforeSave: false }); // Bỏ qua validate để lưu nhanh
+            
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Không thể gửi email lúc này. Hệ thống đã hủy yêu cầu OTP.' 
+            });
+        }
 
     } catch (error) {
-        console.error('Lỗi gửi OTP quên mật khẩu:', error);
-        return res.status(500).json({ success: false, error: 'Lỗi máy chủ khi gửi email' });
+        // Lỗi ở đây là lỗi Database (ví dụ sập DB, sai cú pháp mongoose...)
+        console.error('Lỗi server khi xử lý quên mật khẩu:', error);
+        return res.status(500).json({ success: false, error: 'Lỗi máy chủ nội bộ' });
     }
 };
 

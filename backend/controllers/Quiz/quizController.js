@@ -219,6 +219,26 @@ export const updateQuizQuestion = async (req, res, next) => {
   }
 };
 
+//@desc Lấy danh sách toàn bộ bài quiz do giáo viên hiện tại tạo
+//@route GET /api/v1/quizzes/my-quizzes
+//@access Private (Teacher)
+export const getTeacherQuizzes = async (req, res, next) => {
+  try {
+    const quizzes = await Quiz.find({ teacherId: req.user._id })
+      .populate("documentId", "title fileName thumbnail")
+      .sort({ createdAt: -1 }); 
+
+    res.status(200).json({
+      success: true,
+      count: quizzes.length,
+      data: quizzes,
+      message: "Lấy danh sách đề thi của giáo viên thành công",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 //@desc Xóa quiz
 //@route DELETE /api/v1/quizzes/:id
 //@access Private

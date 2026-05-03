@@ -1,9 +1,10 @@
 import Quiz from "#models/Quiz.js";
 import QuizResult from "#models/QuizResult.js";
+import { USER_ROLES } from "#models/User.js";
 
 //@desc Nộp bài quiz và tự động chấm điểm
 //@route POST /api/v1/quizzes/:quizId/submit
-//@access Private (Learner)
+//@access Private 
 export const submitQuiz = async (req, res, next) => {
   try {
     const { quizId } = req.params;
@@ -26,6 +27,8 @@ export const submitQuiz = async (req, res, next) => {
         statusCode: 404,
       });
     }
+
+    // 2. Map lại đáp án của user
     const answerMap = new Map(
       userAnswers
         .filter((ans) => ans && ans.questionId)
@@ -49,23 +52,30 @@ export const submitQuiz = async (req, res, next) => {
       };
     });
 
-    // 4. Lưu kết quả vào DB
+    // Xác định xem ai đang nộp bài (Giáo viên hay Người học)
+    const scoreSystem10 = totalQuestions > 0 ? (correctCount / totalQuestions) * 10 : 0;
+    const roundedScore = Math.round(scoreSystem10 * 100) / 100; 
+
+    // 4. Lưu kết quả vào DB 
     const newResult = await QuizResult.create({
       userId: req.user._id,
       quizId: quiz._id,
-      score: correctCount,
+      score: roundedScore,                
+      correctAnswersCount: correctCount,  
       totalQuestions: totalQuestions,
+      timeSpent: timeSpent,               
       answers: processedAnswers,
+      isTeacherPreview: isTeacherPreview,
     });
 
-    // 5. Trả về cho frontend
     res.status(201).json({
       success: true,
-      message: "Nộp bài thành công!",
+      message: isTeacherPreview ? "Nộp bài thi thử của giáo viên thành công!" : "Nộp bài thành công!",
       data: {
         resultId: newResult._id,
         score: correctCount,
         totalQuestions: totalQuestions,
+        isTeacherPreview: isTeacherPreview 
       },
     });
   } catch (error) {

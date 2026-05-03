@@ -2,8 +2,7 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import { getToken } from "./Hook/useProfile";
 
-const BASE_URL = "/api/v1/auth";
-
+const BASE_URL = "http://localhost:8000/api/v1/user";
 const EyeOn = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>

@@ -118,22 +118,23 @@ const Flashcards = () => {
       try {
         const res = await api.get("/flashcards");
         const raw = res.data.data ?? res.data ?? [];
-        aiSets = raw.map((item, index) => {
-          const docId = typeof item.documentId === "object" && item.documentId !== null
-            ? item.documentId?._id : item.documentId;
-          const cardArr = Array.isArray(item.cards) ? item.cards : [];
-          return {
-            id:         item._id ?? item.id,
-            title:      item.title ?? item.documentTitle ?? "Flashcard AI",
-            cards:      cardArr,
-            cardCount:  cardArr.length || item.count || 0,
-            progress:   item.progress ?? 0,
-            image:      item.coverImage ?? item.documentCover ?? imagesList[index % imagesList.length]?.image ?? null,
-            source:     "ai",
-            documentId: docId ?? null,
-            createdAt:  item.createdAt,
-          };
-        });
+        console.log("thumbnails:", raw.map(i => ({ title: i.title, thumbnail: i.thumbnail }))); 
+        console.log("isAiGenerated check:", raw.map(i => ({ title: i.title, isAiGenerated: i.isAiGenerated })));
+      aiSets = raw.map((item, index) => {
+  const docId = typeof item.documentId === "object" && item.documentId !== null
+    ? item.documentId?._id : item.documentId;
+  const cardArr = Array.isArray(item.cards) ? item.cards : [];
+  return {
+    id:         item._id ?? item.id,
+    title:      item.title ?? item.documentTitle ?? "Flashcard AI",
+    cards:      cardArr,
+    cardCount:  cardArr.length || item.count || 0,
+    progress:   item.progress ?? 0,
+    image: item.thumbnail ?? imagesList[Math.floor(Math.random() * imagesList.length)].image,    source: item.documentId ? "ai" : "custom",  
+    documentId: docId ?? null,
+    createdAt:  item.createdAt,
+  };
+});
       } catch (err) {
         console.warn("Không tải được flashcard từ API:", err.message);
       }
@@ -288,7 +289,6 @@ const Flashcards = () => {
           </div>
         )}
       </div>
-
       {deleteTarget && (
         <ConfirmDeleteModal
           title={deleteTarget.title}
@@ -299,5 +299,4 @@ const Flashcards = () => {
     </div>
   );
 };
-
 export default Flashcards;

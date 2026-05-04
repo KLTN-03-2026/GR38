@@ -9,17 +9,21 @@ import Bubble            from "./components/Bubble";
 import TypingDots        from "./components/TypingDots";
 import ThemeToggle       from "./components/ThemeToggle";
 import CountPickerDialog from "./components/CountPickerDialog";
+import ConceptInputDialog from "./components/ConceptInputDialog";
 import { SidebarItem, ActionItem } from "./components/SidebarItem";
 
 export default function ChatAI({ documentId }) {
   const {
     messages, input, setInput,
-    isTyping, activeSide, setActiveSide,
+    isTyping, isLoadingHistory,
+    activeSide, setActiveSide,
     pendingAction, setPendingAction,
     dark, setDark,
     userData,
     scrollRef, textareaRef,
-    handleSend, handleNewChat, handleKey, handleConfirmCount,
+    handleSend, handleNewChat, handleKey,
+    handleConfirmCount,
+    handleConfirmConcept,
   } = useChatAI(documentId);
 
   const T = dark ? THEME.dark : THEME.light;
@@ -28,10 +32,21 @@ export default function ChatAI({ documentId }) {
     <>
       <style>{GLOBAL_CSS}</style>
 
-      {pendingAction && (
+      {/* Dialog chọn số lượng Flashcard / Quiz */}
+      {(pendingAction === "flashcard" || pendingAction === "quiz") && (
         <CountPickerDialog
           action={pendingAction}
           onConfirm={handleConfirmCount}
+          onCancel={() => setPendingAction(null)}
+          dark={dark}
+          T={T}
+        />
+      )}
+
+      {/* Dialog nhập khái niệm cần giải thích */}
+      {pendingAction === "concept" && (
+        <ConceptInputDialog
+          onConfirm={handleConfirmConcept}
           onCancel={() => setPendingAction(null)}
           dark={dark}
           T={T}
@@ -67,7 +82,9 @@ export default function ChatAI({ documentId }) {
                 <div style={{ fontSize: 11, fontWeight: 500, color: T.sbBright, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {documentId ? `Tài liệu #${documentId.slice(-6)}` : "Chọn tài liệu"}
                 </div>
-                <div style={{ fontSize: 9.5, color: T.sbMuted, marginTop: 1 }}>Đang hoạt động</div>
+                <div style={{ fontSize: 9.5, color: T.sbMuted, marginTop: 1 }}>
+                  {isLoadingHistory ? "Đang tải lịch sử..." : "Đang hoạt động"}
+                </div>
               </div>
               <IconChevronsUpDown size={12} style={{ color: T.sbMuted, flexShrink: 0 }}/>
             </div>
@@ -131,8 +148,8 @@ export default function ChatAI({ documentId }) {
                   <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", padding: "2px 7px", borderRadius: 20, background: T.teacherBadgeBg, color: T.teacherBadgeClr }}>TEACHER</span>
                 </div>
                 <div style={{ fontSize: 11, color: T.subColor, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "chatai-pulse 2s infinite" }}/>
-                  Sẵn sàng hỗ trợ
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: isLoadingHistory ? "#f59e0b" : "#10b981", display: "inline-block", animation: "chatai-pulse 2s infinite" }}/>
+                  {isLoadingHistory ? "Đang tải lịch sử chat..." : "Sẵn sàng hỗ trợ"}
                 </div>
               </div>
             </div>
@@ -152,6 +169,16 @@ export default function ChatAI({ documentId }) {
           {/* Messages */}
           <div ref={scrollRef} className="chatai-scroll"
             style={{ "--scroll-thumb": dark ? "#2a2a3a" : "#e5e7eb", flex: 1, overflowY: "auto", padding: "20px 18px", display: "flex", flexDirection: "column", gap: 16, background: T.surface, transition: "background 0.3s" }}>
+
+            {/* Loading history skeleton */}
+            {isLoadingHistory && messages.length === 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, opacity: 0.5 }}>
+                {[80, 60, 90].map((w, i) => (
+                  <div key={i} style={{ height: 36, borderRadius: 12, background: dark ? "#2a2a3a" : "#e5e7eb", width: `${w}%`, animation: "chatai-pulse 1.5s infinite" }}/>
+                ))}
+              </div>
+            )}
+
             {messages.map(msg => <Bubble key={msg.id} msg={msg} dark={dark} T={T}/>)}
             {isTyping && <TypingDots T={T}/>}
           </div>
@@ -161,9 +188,9 @@ export default function ChatAI({ documentId }) {
             {QUICK_ACTIONS.map(qa => {
               const pill = dark ? qa.pillDark : qa.pill;
               return (
-                <button key={qa.cmd} onClick={() => handleSend(qa.cmd)} disabled={isTyping}
+                <button key={qa.cmd} onClick={() => handleSend(qa.cmd)} disabled={isTyping || isLoadingHistory}
                   className="chatai-pill"
-                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, padding: "5px 11px", borderRadius: 20, cursor: "pointer", border: `0.5px solid ${pill.border}`, color: pill.color, background: pill.bg, transition: "opacity 0.15s", opacity: isTyping ? 0.4 : 1, whiteSpace: "nowrap" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500, padding: "5px 11px", borderRadius: 20, cursor: "pointer", border: `0.5px solid ${pill.border}`, color: pill.color, background: pill.bg, transition: "opacity 0.15s", opacity: (isTyping || isLoadingHistory) ? 0.4 : 1, whiteSpace: "nowrap" }}>
                   <qa.Icon size={11} style={{ color: "currentColor" }}/>
                   {qa.label}
                 </button>
@@ -179,9 +206,9 @@ export default function ChatAI({ documentId }) {
                 onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
                 onKeyDown={handleKey}
                 placeholder="Đặt câu hỏi về tài liệu, hoặc nhập lệnh..."
-                disabled={isTyping}
+                disabled={isTyping || isLoadingHistory}
                 style={{ flex: 1, fontSize: 13, color: T.msgAiColor, background: "transparent", border: "none", outline: "none", resize: "none", lineHeight: 1.5, minHeight: 40, maxHeight: 120, padding: "6px 0", fontFamily: "inherit" }}/>
-              <button onClick={() => handleSend()} disabled={!input.trim() || isTyping}
+              <button onClick={() => handleSend()} disabled={!input.trim() || isTyping || isLoadingHistory}
                 className="chatai-send"
                 style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: input.trim() && !isTyping ? GRAD.indigo : (dark ? "#252535" : "#e5e7eb"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: input.trim() && !isTyping ? "pointer" : "not-allowed", transition: "background 0.2s, opacity 0.15s", marginBottom: 1 }}>
                 {isTyping

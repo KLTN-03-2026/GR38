@@ -95,6 +95,7 @@ export default function TeacherDashboard() {
   const [userName, setUserName] = useState(getUserName);
   const [docCount, setDocCount] = useState(0);
   const [flashcardCount, setFlashcardCount] = useState(0);
+  const [quizCount, setQuizCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -107,27 +108,31 @@ export default function TeacherDashboard() {
     };
   }, []);
 
- useEffect(() => {
-  (async () => {
-    try {
-      const [docRes, flashRes] = await Promise.all([
-        api.get("/documents"),
-        api.get("/flashcards"),
-      ]);
-      setDocCount(docRes.data.count ?? docRes.data.data?.length ?? 0);
-      setFlashcardCount(flashRes.data.count ?? flashRes.data.data?.length ?? 0);
-    } catch (err) {
-      console.error("Lỗi tải thống kê:", err);
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const [docRes, flashRes, quizRes] = await Promise.all([
+          api.get("/documents"),
+          api.get("/flashcards"),
+          api.get("/quizzes/my-quizzes"),
+        ]);
+        setDocCount(docRes.data.count ?? docRes.data.data?.length ?? 0);
+        setFlashcardCount(
+          flashRes.data.count ?? flashRes.data.data?.length ?? 0,
+        );
+        setQuizCount(quizRes.data.count ?? quizRes.data.data?.length ?? 0);
+      } catch (err) {
+        console.error("Lỗi tải thống kê:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const stats = [
     {
       label: "Tổng bài TestQuiz đã tạo",
-      value: loading ? "..." : "0",
+      value: loading ? "..." : String(quizCount),
       Icon: ClipboardList,
       color: "#F26739",
       bg: "#FFF3EE",

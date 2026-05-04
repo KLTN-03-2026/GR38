@@ -47,14 +47,40 @@ export default function DocumentsDetailPage() {
   };
 
   const loadFlashList = async () => {
-    try { setFlashLoading(true); const res = await api.get(`/flashcards?documentId=${id}`); setFlashList(Array.isArray(res.data.data ?? res.data) ? (res.data.data ?? res.data) : []); }
-    catch { setFlashList([]); } finally { setFlashLoading(false); }
-  };
+  try {
+    setFlashLoading(true);
+    const res = await api.get("/flashcards");
+    const all = Array.isArray(res.data.data ?? res.data) ? (res.data.data ?? res.data) : [];
+    // Filter chỉ lấy flashcard thuộc tài liệu hiện tại
+    const filtered = all.filter(f => {
+      const docId = f.documentId?._id ?? f.documentId;
+      return docId === id;
+    });
+    setFlashList(filtered);
+  } catch {
+    setFlashList([]);
+  } finally {
+    setFlashLoading(false);
+  }
+}; 
 
-  const handleGenerateQuiz = async (n) => {
-    try { setGeneratingQuiz(true); await api.post("/ai/generate-quiz", { documentId: id, numQuestions: n }); setShowQuizModal(false); await loadQuizList(); }
-    catch (err) { alert(err.response?.data?.error ?? "Lỗi tạo quiz"); } finally { setGeneratingQuiz(false); }
-  };
+ const handleGenerateQuiz = async (n) => {
+  try {
+    setGeneratingQuiz(true);
+    // Đếm số quiz đã có để đặt tên version
+    const existingCount = quizList.length;
+    const baseName = `${doc.title} - Quiz`;
+    const title = existingCount === 0 ? baseName : `${baseName} v${existingCount + 1}.0`;
+
+    await api.post("/ai/generate-quiz", { documentId: id, numQuestions: n, title });
+    setShowQuizModal(false);
+    await loadQuizList();
+  } catch (err) {
+    alert(err.response?.data?.error ?? "Lỗi tạo quiz");
+  } finally {
+    setGeneratingQuiz(false);
+  }
+};
 
   const handleGenerateFlash = async (n) => {
     try { setGeneratingFlash(true); await api.post("/ai/generate-flashcards", { documentId: id, numQuestions: n }); setShowFlashModal(false); await loadFlashList(); }

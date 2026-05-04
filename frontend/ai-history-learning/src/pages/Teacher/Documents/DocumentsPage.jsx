@@ -278,6 +278,8 @@ const handleAddSubmit = async () => {
   const err = {};
   if (!addForm.title.trim()) err.title = "Vui lòng nhập tên tài liệu";
   if (!addForm.file) err.file = "Vui lòng chọn file PDF";
+  if (addForm.file && addForm.file.size > 10 * 1024 * 1024)
+    err.file = "File PDF không được vượt quá 10MB";
   if (Object.keys(err).length) {
     setAddErrors(err);
     return;
@@ -285,20 +287,16 @@ const handleAddSubmit = async () => {
 
   setAddLoading(true);
   try {
-    // Bước 1: Upload thumbnail TRƯỚC (nếu có)
     let thumbnailUrl = null;
     if (addForm.thumbFile) {
       const thumbForm = new FormData();
       thumbForm.append("thumbnail", addForm.thumbFile);
-
       const thumbRes = await api.post("/documents/upload-thumbnail", thumbForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       thumbnailUrl = thumbRes.data?.url ?? null;
     }
 
-    // Bước 2: Upload PDF, kèm thumbnailUrl nếu có
     await documentService.upload(addForm.file, {
       title: addForm.title,
       ...(thumbnailUrl && { thumbnail: thumbnailUrl }),
@@ -549,7 +547,7 @@ const handleAddSubmit = async () => {
 
       {/* Modal thêm */}
       {showAddModal && (
-        <div className="modal-overlay fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+<div className="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="modal-box bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between px-6 pt-5 pb-3">
               <div>

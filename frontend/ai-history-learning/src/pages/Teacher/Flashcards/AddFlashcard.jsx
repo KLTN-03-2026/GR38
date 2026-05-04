@@ -68,40 +68,55 @@ const AddFlashcard = () => {
   };
 
   const handleSave = async () => {
-    const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
+  const errs = validate();
+  if (Object.keys(errs).length > 0) {
+    setErrors(errs);
+    return;
+  }
+  try {
+    setSaving(true);
+    setSaveErr("");
+    const formData = new FormData();
+    formData.append("title", title.trim());
+    formData.append(
+      "cards",
+      JSON.stringify(
+        cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
+      ),
+    );
+    if (imagePreview) {
+      const fetchRes = await fetch(imagePreview); // ← đổi tên từ res → fetchRes
+      const blob = await fetchRes.blob();
+      formData.append("thumbnail", blob, "thumbnail.jpg");
     }
-    try {
-      setSaving(true);
-      setSaveErr("");
-      const formData = new FormData();
-      formData.append("title", title.trim());
-      if (selectedDocId) formData.append("documentId", selectedDocId);
-      formData.append(
-        "cards",
-        JSON.stringify(
-          cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
-        ),
-      );
-      if (imagePreview) {
-        const res = await fetch(imagePreview);
-        const blob = await res.blob();
-        formData.append("thumbnail", blob, "thumbnail.jpg");
-      }
-      await api.post("/flashcards/manual", formData);
-      navigate("/teacher/flashcards");
-    } catch (err) {
-      setSaveErr(
-        err?.response?.data?.message ||
-          "Tạo bộ thẻ thất bại, vui lòng thử lại.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
 
+    const res = await api.post("/flashcards", formData);
+    console.log("full response:", JSON.stringify(res.data));
+
+    const saved = res.data?.data ?? res.data;
+    const newId = saved?._id;
+
+    if (newId) {
+      const existing = JSON.parse(localStorage.getItem("flashcards") || "[]");
+      existing.push({
+        id: newId,
+        title: title.trim(),
+        cards: cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
+        thumbnail: saved?.thumbnail ?? null,
+      });
+      localStorage.setItem("flashcards", JSON.stringify(existing));
+    }
+
+    navigate("/teacher/flashcards");
+  } catch (err) {
+    setSaveErr(
+      err?.response?.data?.message ||
+        "Tạo bộ thẻ thất bại, vui lòng thử lại.",
+    );
+  } finally {
+    setSaving(false);
+  }
+};
   return (
     <div className="flex-1 bg-[#FAFAFA] min-h-screen flex flex-col items-center p-8 font-['Inter']">
       <div className="w-full max-w-[860px]">
@@ -123,15 +138,7 @@ const AddFlashcard = () => {
           <h1 className="text-[24px] font-black text-[#18181B] uppercase tracking-tight">
             Tạo bộ Flashcard mới
           </h1>
-        </div>
-
-        <DocSelector
-          documents={documents}
-          docsLoading={docsLoading}
-          selectedDocId={selectedDocId}
-          setSelectedDocId={setSelectedDocId}
-        />
-
+        </div>     
         {/* Tên bộ thẻ */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
           <label className="block text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-2">

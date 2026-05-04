@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext"; // THÊM DÒNG NÀY
 
 const LogoutModal = ({ onConfirm, onCancel }) => (
   <div
@@ -34,57 +35,44 @@ const LogoutModal = ({ onConfirm, onCancel }) => (
 
 const Header = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem("user") || "{}"),
-  );
+  // SỬA: Lấy user và hàm logout trực tiếp từ Context
+  const { user, logout } = useAuth(); 
+  
   const [open, setOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dropdownRef = useRef(null);
 
-  const displayName = user.fullName ?? user.name ?? "Người dùng";
+  // Bảo vệ trường hợp user bị null khi vừa đăng xuất xong
+  const safeUser = user || {};
 
-  // ✅ SỬA 1: đọc đúng field — server trả profileImage, code cũ chỉ đọc avatar nên luôn miss
+  const displayName = safeUser.fullName ?? safeUser.name ?? "Người dùng";
+
   const avatarUrl =
-    user.profileImage ||
-    user.avatarUrl ||
-    user.avatar ||
+    safeUser.profileImage ||
+    safeUser.avatarUrl ||
+    safeUser.avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=F26739&color=fff&rounded=true&size=128`;
 
   const profilePath =
-    user.role === "admin"
+    safeUser.role === "admin"
       ? "/admin/profile"
-      : (user.role || "").toUpperCase() === "TEACHER"
+      : (safeUser.role || "").toUpperCase() === "TEACHER"
         ? "/teacher/profile"
-        : "/student/profile";
+        : "/learner/profile"; // Đã đổi thành learner cho khớp với AppRouter
 
   const roleLabel =
-    user.role === "admin"
+    safeUser.role === "admin"
       ? "Quản trị viên"
-      : (user.role || "").toUpperCase() === "TEACHER"
+      : (safeUser.role || "").toUpperCase() === "TEACHER"
         ? "Giáo viên"
         : "Người học";
 
+  // SỬA: Gọi hàm logout của Context thay vì tự xóa localStorage
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("role");
-    localStorage.removeItem("token");
-    navigate("/");
+    logout(); // Xóa sạch state và localStorage
+    setShowLogoutModal(false);
+    navigate("/"); // Chuyển trang mượt mà không cần F5
   };
-
-  useEffect(() => {
-    const updateUser = () => {
-      setUser(JSON.parse(localStorage.getItem("user") || "{}"));
-    };
-    window.addEventListener("user-update", updateUser);
-    window.addEventListener("storage", updateUser);
-    // ✅ SỬA 2: lắng nghe avatar-update để re-render ngay sau khi upload xong
-    window.addEventListener("avatar-update", updateUser);
-    return () => {
-      window.removeEventListener("user-update", updateUser);
-      window.removeEventListener("storage", updateUser);
-      window.removeEventListener("avatar-update", updateUser);
-    };
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

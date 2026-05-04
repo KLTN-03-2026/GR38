@@ -1,21 +1,15 @@
-// src/hooks/useRegister.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { authService } from "@/services/authService"; 
+import { useAuth } from "@/context/AuthContext"; 
 
 export const useRegister = () => {
-  const [input, setInput] = useState({
-    hoTen: "",
-    email: "",
-    pass: "",
-    passwordConfirm: "",
-  });
+  const { setAuthUser } = useAuth(); 
+  const [input, setInput] = useState({ hoTen: "", email: "", pass: "", passwordConfirm: "" });
   const [errors, setErrors] = useState({});
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  // Hook chuyển hướng của React Router
   const navigate = useNavigate();
 
   const handleInput = (e) => {
@@ -29,10 +23,8 @@ export const useRegister = () => {
     setErrors((prev) => ({ ...prev, role: "" }));
   };
 
-  //  Hàm xử lý khi Component <GoogleLogin /> trả về kết quả thành công
   const handleGoogleSuccess = async (credentialResponse) => {
     let selectedRole = role;
-
 
     if (!selectedRole) {
       const { value: roleFromPopup } = await Swal.fire({
@@ -53,39 +45,49 @@ export const useRegister = () => {
         cancelButtonText: "Hủy",
       });
 
-      if (!roleFromPopup) return;
+      if (!roleFromPopup) return; 
       selectedRole = roleFromPopup;
       setRole(roleFromPopup);
     }
 
     setLoading(true);
     try {
-
-      const res = await authService.googleAuth({
+      const resData = await authService.googleAuth({
         token: credentialResponse.credential, 
         role: selectedRole,
       });
 
-      if (res.success) {
+      if (resData.isPendingApproval) {
         await Swal.fire({
-          icon: "success",
-          title: "ĐĂNG KÝ THÀNH CÔNG",
-          text: "Chào mừng bạn đến với Lịch Sử Việt Nam!",
-          confirmButtonColor: "#f97316",
-          timer: 1500, 
-          timerProgressBar: true,
-          showConfirmButton: false 
+          icon: "info",
+          title: "CHỜ PHÊ DUYỆT",
+          text: resData.message,
+          confirmButtonColor: "#f97316"
         });
-        
-
-        navigate("/");
+        navigate("/"); 
+        return; 
       }
+
+      const user = resData.data || resData;
+
+      // 1. Hiện thông báo và CHỜ tắt (giảm xuống 1 giây cho mượt)
+      await Swal.fire({
+        icon: "success",
+        title: "ĐĂNG KÝ THÀNH CÔNG",
+        text: "Chào mừng bạn đến với Lịch Sử Việt Nam!",
+        confirmButtonColor: "#f97316",
+        timer: 1500, 
+        timerProgressBar: true,
+        showConfirmButton: false 
+      });
+      
+      // 2. Chờ xong mới set user và chuyển trang
+      setAuthUser(user);
+      navigate("/");
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi đăng ký bằng Google";
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi đăng ký";
       Swal.fire({
-        icon: "error",
-        title: "Đăng ký thất bại",
-        text: errorMsg,
+        icon: "error", title: "Đăng ký thất bại", text: errorMsg, confirmButtonColor: "#f97316"
       });
     } finally {
       setLoading(false);
@@ -107,49 +109,52 @@ export const useRegister = () => {
     
     if (!role) err.role = "Vui lòng chọn vai trò";
 
-    if (Object.keys(err).length) {
-      setErrors(err);
-      return;
-    }
+    if (Object.keys(err).length) { setErrors(err); return; }
 
     setLoading(true);
     try {
-      const res = await authService.register({
+      const resData = await authService.register({
         fullName: input.hoTen.trim(),
         email: input.email.trim(),
         password: input.pass,
         passwordConfirm: input.passwordConfirm,
         role,
       });
-      if (res.success) {
+      
+      if (resData.isPendingApproval) {
         await Swal.fire({
-          icon: "success",
+          icon: "info",
           title: "ĐĂNG KÝ THÀNH CÔNG",
-          text: `Chào mừng ${input.hoTen} đến với Lịch Sử Việt Nam!`,
-          confirmButtonColor: "#f97316",
-          timer: 1500,
-          timerProgressBar: true,
-          showConfirmButton: false
+          text: resData.message,
+          confirmButtonColor: "#f97316"
         });
-        
-        navigate("/");
+        navigate("/"); 
+        return; 
       }
+
+      const user = resData.data || resData;
+
+      // 1. Hiện thông báo và CHỜ tắt
+      await Swal.fire({
+        icon: "success",
+        title: "ĐĂNG KÝ THÀNH CÔNG",
+        text: `Chào mừng ${input.hoTen} đến với Lịch Sử Việt Nam!`,
+        confirmButtonColor: "#f97316",
+        timer: 1500,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
+      
+      // 2. Chờ xong mới set user và chuyển trang
+      setAuthUser(user);
+      navigate("/");
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || "Lỗi server";
-      Swal.fire({ icon: "error", title: "Đăng ký thất bại", text: msg });
+      Swal.fire({ icon: "error", title: "Đăng ký thất bại", text: msg, confirmButtonColor: "#f97316" });
     } finally {
       setLoading(false);
     }
   };
 
-  return {
-    input,
-    errors,
-    role,
-    loading,
-    handleInput,
-    handleRoleSelect,
-    handleSubmit,
-    handleGoogleSuccess, 
-  };
+  return { input, errors, role, loading, handleInput, handleRoleSelect, handleSubmit, handleGoogleSuccess };
 };

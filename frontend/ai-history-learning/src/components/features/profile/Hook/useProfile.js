@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import { useAuth } from "@/context/AuthContext";
 
 const BASE_URL = "http://localhost:8000/api/v1/user";
 export function getToken() {
@@ -12,6 +13,7 @@ export function getToken() {
 }
 
 export function useProfile() {
+  const { setAuthUser } = useAuth();
   const [savedName, setSavedName] = useState("");
   const [form, setForm]           = useState({ fullName: "", email: "", role: "" });
   const [loading, setLoading]     = useState(true);
@@ -62,7 +64,7 @@ export function useProfile() {
     formData.append("fullName", form.fullName);
     formData.append("email", form.email);
     if (avatarFile) {
-      formData.append("avatar", avatarFile); // key "avatar" tùy theo BE
+      formData.append("avatar", avatarFile); 
     }
 
     const res = await fetch(`${BASE_URL}/profile`, {
@@ -78,6 +80,9 @@ export function useProfile() {
     if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
 
     const updated = json.data ?? json;
+
+    setAuthUser(updated);
+    
     const newName   = updated.fullName ?? form.fullName;
     const newEmail  = updated.email ?? form.email;
     const newAvatar = updated.profileImage ?? updated.avatar ?? updated.avatarUrl ?? avatarBlob ?? avatarUrl;
@@ -86,18 +91,19 @@ export function useProfile() {
     setSavedName(newName);
     if (newAvatar) setAvatarUrl(newAvatar);
 
-    // Reset avatar file sau khi lưu xong
-    if (setAvatarFile) setAvatarFile(null);
-    if (setAvatarBlob) setAvatarBlob(null);
+    // // Reset avatar file sau khi lưu xong
+    // if (setAvatarFile) setAvatarFile(null);
+    // if (setAvatarBlob) setAvatarBlob(null);
 
-    // Sync localStorage
-    const stored = JSON.parse(localStorage.getItem("user") || "{}");
-    localStorage.setItem("user", JSON.stringify({
-      ...stored,
-      fullName: newName,
-      email: newEmail,
-      profileImage: newAvatar,
-    }));
+    // // Sync localStorage
+    // const stored = JSON.parse(localStorage.getItem("user") || "{}");
+    // localStorage.setItem("user", JSON.stringify({
+    //   ...stored,
+    //   fullName: newName,
+    //   email: newEmail,
+    //   profileImage: newAvatar,
+    // }));
+    localStorage.setItem("user", JSON.stringify(updated));
     window.dispatchEvent(new Event("user-update"));
 
     await Swal.fire({

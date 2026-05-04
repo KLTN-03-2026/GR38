@@ -1,8 +1,8 @@
-// src/hooks/useLogin.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { authService } from "@/services/authService";
+import { useAuth } from "@/context/AuthContext";
 
 const ROLE_CONFIG = {
   ADMIN:   { path: "/admin",   label: "Quản trị viên" },
@@ -11,6 +11,7 @@ const ROLE_CONFIG = {
 };
 
 export const useLogin = () => {
+  const { setAuthUser } = useAuth(); 
   const [input, setInput] = useState({ email: "", pass: "" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -23,7 +24,6 @@ export const useLogin = () => {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  //  Xử lý đăng nhập bằng Email/Password truyền thống
   const handleLogin = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -36,9 +36,10 @@ export const useLogin = () => {
     setLoading(true);
     try {
       const resData = await authService.login(input.email, input.pass);
-      const user = resData.data;
+      const user = resData.data || resData; 
       const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
 
+      // 1. Hiện thông báo và CHỜ tắt
       await Swal.fire({
         icon: "success",
         title: "ĐĂNG NHẬP THÀNH CÔNG",
@@ -49,6 +50,8 @@ export const useLogin = () => {
         showConfirmButton: false
       });
 
+      // 2. Chờ xong mới set user và chuyển trang
+      setAuthUser(user);
       const path = ROLE_CONFIG[user.role]?.path || "/";
       navigate(path);
     } catch (error) {
@@ -61,10 +64,7 @@ export const useLogin = () => {
         : serverMsg || "Lỗi server, vui lòng thử lại sau";
 
       Swal.fire({
-        icon: "error",
-        title: isAuthError ? "Đăng nhập thất bại" : "Có lỗi xảy ra",
-        text: msg,
-        confirmButtonColor: "#f97316",
+        icon: "error", title: isAuthError ? "Đăng nhập thất bại" : "Có lỗi xảy ra", text: msg, confirmButtonColor: "#f97316",
       });
       setErrors({ pass: msg });
     } finally {
@@ -72,7 +72,6 @@ export const useLogin = () => {
     }
   };
 
-  // Xử lý đăng nhập bằng Google
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
@@ -80,42 +79,30 @@ export const useLogin = () => {
         token: credentialResponse.credential, 
       });
 
-      const user = resData.data;
+      const user = resData.data || resData;
       const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
 
+      // 1. Hiện thông báo và CHỜ tắt
       await Swal.fire({
         icon: "success",
         title: "ĐĂNG NHẬP THÀNH CÔNG",
-        html: `Xin chào <b>${user.fullName}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
+        html: `Xin chào <b>${user.fullName || 'bạn'}</b><br/><span style="font-size:13px;color:#6b7280">Vai trò: ${roleLabel}</span>`,
         confirmButtonColor: "#f97316",
         timer: 1500,
         timerProgressBar: true,
         showConfirmButton: false
       });
 
-      const path = ROLE_CONFIG[user.role]?.path || "/";
-      navigate(path);
+      // 2. Chờ xong mới set user và chuyển trang
+      setAuthUser(user);
+      navigate("/");
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || "Đăng nhập Google thất bại";
-      Swal.fire({
-        icon: "error",
-        title: "Lỗi đăng nhập",
-        text: msg,
-        confirmButtonColor: "#f97316",
-      });
+      Swal.fire({ icon: "error", title: "Lỗi đăng nhập", text: msg, confirmButtonColor: "#f97316" });
     } finally {
       setLoading(false);
     }
   };
 
-  return {
-    input,
-    errors,
-    loading,
-    showPass,
-    setShowPass,
-    handleChange,
-    handleLogin,
-    handleGoogleSuccess,
-  };
+  return { input, errors, loading, showPass, setShowPass, handleChange, handleLogin, handleGoogleSuccess };
 };

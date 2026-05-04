@@ -1,11 +1,15 @@
 import User, { USER_ROLES, TEACHER_APPROVAL_STATUS } from '#models/User.js';
 import { OAuth2Client } from 'google-auth-library';
 import nodemailer from 'nodemailer';
-import {sendTokenResponse}  from '#controllers/Auth/utils/jwtToken.js';
+import { sendTokenResponse } from '#controllers/Auth/utils/jwtToken.js';
 import crypto from 'crypto';
 
-const client = new OAuth2Client(process.env.GG_CLIENT_ID);
+const client_id = process.env.GG_CLIENT_ID;
+const client = new OAuth2Client(client_id);
 
+// ==========================================
+// CẤU HÌNH NODEMAILER
+// ==========================================
 const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST, 
     port: parseInt(process.env.MAIL_PORT), 
@@ -16,128 +20,26 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-
-/**
- * Đăng ký tài khoản (Dành cho Email/Password truyền thống)
- * POST /api/auth/register
- */
-export const register = async (req, res, next) => {
+// ==========================================
+// HÀM HỖ TRỢ XÁC MINH TOKEN GOOGLE
+// ==========================================
+async function verifyGoogleToken(token) {
     try {
-        const { fullName, email, password, passwordConfirm, role } = req.body;
-
-        if (!fullName || !email || !password || !passwordConfirm || !role) {
-            return res.status(400).json({
-                success: false,
-                error: 'Vui lòng cung cấp đầy đủ thông tin: fullName, email, password, passwordConfirm, role'
-            });
-        }
-
-        if (password !== passwordConfirm) {
-            return res.status(400).json({
-                success: false,
-                error: 'Mật khẩu xác nhận không khớp'
-            });
-        }
-
-        if (role === USER_ROLES.ADMIN) {
-            return res.status(403).json({
-                success: false,
-                error: 'Hành động từ chối. Không thể tự đăng ký quyền Quản trị viên.'
-            });
-        }
-
-        if (!Object.values(USER_ROLES).includes(role)) {
-            return res.status(400).json({
-                success: false,
-                error: `Role không hợp lệ. Các role hợp lệ là: ${Object.values(USER_ROLES).join(', ')}`
-            });
-        }
-
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                error: 'Email đã được sử dụng'
-            });
-        }
-
-        // Ghi chú rõ authType là local
-        const user = new User({
-            fullName,
-            email: email.toLowerCase(),
-            password,
-            role,
-            authType: 'local' 
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: client_id,
         });
-
-        await user.save();
-        return sendTokenResponse(user, 201, res);
+        return ticket.getPayload();
     } catch (error) {
-        console.error('Lỗi đăng ký:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Lỗi máy chủ khi đăng ký tài khoản'
-        });
+        console.error('Lỗi xác minh token Google:', error);
+        throw new Error('Xác minh token Google thất bại');
     }
-};
+}
 
-
-/**
- * Đăng nhập (Dành cho Email/Password truyền thống)
- * POST /api/auth/login
- */
-export const login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Vui lòng cung cấp email và password'
-            });
-        }
-
-        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-
-        if (!user) {
-            return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
-        }
-
-        // CHẶN: Nếu tài khoản này tạo bằng Google thì không có mật khẩu để login kiểu này
-        if (user.authType === 'google' && !user.password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Tài khoản này được liên kết với Google. Vui lòng chọn "Đăng nhập bằng Google".'
-            });
-        }
-
-        // ĐÃ FIX: matchPassword -> comparePassword
-        const isPasswordCorrect = await user.comparePassword(password);
-        if (!isPasswordCorrect) {
-            return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
-        }
-
-        // ĐÃ FIX: Thay thế canLogin() bằng logic kiểm tra trực tiếp
-        if (!user.isActive) {
-            return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
-        }
-        
-        if (user.role === USER_ROLES.TEACHER && user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED) {
-            return res.status(403).json({ success: false, error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin.' });
-        }
-
-        return sendTokenResponse(user, 200, res);
-    } catch (error) {
-        console.error('Lỗi đăng nhập:', error);
-        return res.status(500).json({ success: false, error: error.message || 'Lỗi khi đăng nhập' });
-    }
-};
-
-
-/**
- * Đăng nhập & Đăng ký bằng Google (Dành cho ID Token từ <GoogleLogin />)
- * POST /api/auth/google
- */
+// ==========================================
+// ĐĂNG NHẬP & ĐĂNG KÝ BẰNG GOOGLE
+// POST /api/auth/google
+// ==========================================
 export const googleAuth = async (req, res, next) => {
     try {
         const { token, role } = req.body; 
@@ -146,16 +48,12 @@ export const googleAuth = async (req, res, next) => {
             return res.status(400).json({ success: false, error: "Thiếu token xác thực từ Google" });
         }
 
-        // 1. Xác minh ID Token bằng google-auth-library
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: process.env.GG_CLIENT_ID, // ID ứng dụng Google của bạn
-        });
+        // 1. Xác minh ID Token 
+        const payload = await verifyGoogleToken(token);
         
-        // Lấy thông tin user từ Payload
-        const { sub: googleId, email, name, picture } = ticket.getPayload();
+        // Bóc tách dữ liệu từ payload
+        const { sub: googleId, email, name, picture } = payload;
 
-        // 2. Tìm User trong Database
         let user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
@@ -172,14 +70,24 @@ export const googleAuth = async (req, res, next) => {
                 profileImage: picture,
                 role: role,
                 googleId: googleId,
-                authType: 'google'
+                authType: 'google',
+                isActive: true 
             });
             await user.save();
+
+            // Chặn Giáo viên đăng ký lần đầu, không cấp token đăng nhập
+            if (user.role === USER_ROLES.TEACHER) {
+                return res.status(201).json({
+                    success: true,
+                    isPendingApproval: true,
+                    message: "Đăng ký bằng Google thành công! Tài khoản Giáo viên của bạn đang chờ Admin duyệt."
+                });
+            }
+
         } else {
-            // NẾU ĐÃ CÓ NHƯNG LÀ TÀI KHOẢN LOCAL -> LIÊN KẾT GOOGLE
+            // NẾU ĐÃ CÓ NHƯNG LÀ TÀI KHOẢN LOCAL -> LIÊN KẾT GOOGLE VÀO
             if (!user.googleId) {
                 user.googleId = googleId;
-                // Cập nhật ảnh nếu user chỉ có ảnh mặc định
                 if (user.profileImage && user.profileImage.includes('user-a-solid-svgrepo-com')) {
                     user.profileImage = picture;
                 }
@@ -192,24 +100,127 @@ export const googleAuth = async (req, res, next) => {
             }
             
             if (user.role === USER_ROLES.TEACHER && user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED) {
-                return res.status(403).json({ success: false, error: 'Tài khoản Teacher của bạn đang chờ duyệt từ Admin.' });
+                return res.status(403).json({ success: false, error: 'Tài khoản Giáo viên của bạn đang chờ duyệt từ Admin.' });
             }
         }
 
-        // 3. Trả về token cho Client sử dụng
         return sendTokenResponse(user, 200, res);
 
     } catch (error) {
         console.error('Lỗi xác thực Google:', error);
-        return res.status(500).json({ success: false, error: "Xác thực Google thất bại." });
+        return res.status(401).json({ success: false, error: "Xác thực Google thất bại hoặc token hết hạn." });
+    }
+};
+// ==========================================
+// ĐĂNG KÝ (EMAIL / PASSWORD)
+// POST /api/auth/register
+// ==========================================
+export const register = async (req, res, next) => {
+    try {
+        const { fullName, email, password, passwordConfirm, role } = req.body;
+
+        if (!fullName || !email || !password || !passwordConfirm || !role) {
+            return res.status(400).json({
+                success: false,
+                error: 'Vui lòng cung cấp đầy đủ thông tin: fullName, email, password, passwordConfirm, role'
+            });
+        }
+
+        if (password !== passwordConfirm) {
+            return res.status(400).json({ success: false, error: 'Mật khẩu xác nhận không khớp' });
+        }
+
+        if (role === USER_ROLES.ADMIN) {
+            return res.status(403).json({ success: false, error: 'Không thể tự đăng ký quyền Quản trị viên.' });
+        }
+
+        if (!Object.values(USER_ROLES).includes(role)) {
+            return res.status(400).json({
+                success: false,
+                error: `Role không hợp lệ. Các role hợp lệ là: ${Object.values(USER_ROLES).join(', ')}`
+            });
+        }
+
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({ success: false, error: 'Email đã được sử dụng' });
+        }
+
+        const user = new User({
+            fullName,
+            email: email.toLowerCase(),
+            password,
+            role,
+            authType: 'local' 
+        });
+
+        await user.save();
+
+        // Chặn Giáo viên đăng ký mới, không cấp token đăng nhập
+        if (user.role === USER_ROLES.TEACHER) {
+            return res.status(201).json({
+                success: true,
+                isPendingApproval: true, // Cờ báo cho Frontend
+                message: "Đăng ký thành công! Tài khoản Giáo viên của bạn đang chờ Admin duyệt."
+            });
+        }
+
+        // Cấp token cho Người học (LEARNER)
+        return sendTokenResponse(user, 201, res);
+    } catch (error) {
+        console.error('Lỗi đăng ký:', error);
+        return res.status(500).json({ success: false, error: 'Lỗi máy chủ khi đăng ký tài khoản' });
+    }
+};
+// ==========================================
+// ĐĂNG NHẬP (EMAIL / PASSWORD)
+// POST /api/auth/login
+// ==========================================
+export const login = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Vui lòng cung cấp email và password' });
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
+        }
+
+        if (user.authType === 'google' && !user.password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Tài khoản này được liên kết với Google. Vui lòng chọn "Đăng nhập bằng Google".'
+            });
+        }
+
+        const isPasswordCorrect = await user.comparePassword(password);
+        if (!isPasswordCorrect) {
+            return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
+        }
+
+        if (!user.isActive) {
+            return res.status(403).json({ success: false, error: 'Tài khoản của bạn đã bị vô hiệu hóa.' });
+        }
+        
+        if (user.role === USER_ROLES.TEACHER && user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED) {
+            return res.status(403).json({ success: false, error: 'Tài khoản Giáo viên của bạn đang chờ duyệt từ Admin.' });
+        }
+
+        return sendTokenResponse(user, 200, res);
+    } catch (error) {
+        console.error('Lỗi đăng nhập:', error);
+        return res.status(500).json({ success: false, error: error.message || 'Lỗi khi đăng nhập' });
     }
 };
 
-
-/**
- * Yêu cầu gửi mã OTP Quên mật khẩu
- * POST /api/auth/forgot-password
- */
+// ==========================================
+// QUÊN MẬT KHẨU (GỬI OTP)
+// POST /api/auth/forgot-password
+// ==========================================
 export const forgotPassword = async (req, res, next) => {
     try {
         const { email } = req.body;
@@ -218,7 +229,6 @@ export const forgotPassword = async (req, res, next) => {
             return res.status(400).json({ success: false, error: 'Vui lòng cung cấp email' });
         }
 
-        // 1. Tìm user (biến user khai báo trong khối try tổng)
         const user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
@@ -232,15 +242,12 @@ export const forgotPassword = async (req, res, next) => {
             });
         }
 
-        // 2. Tạo mã OTP ngẫu nhiên (nếu đã import crypto thì dùng crypto, không thì giữ nguyên)
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // 3. Lưu OTP vào database
         user.resetPasswordOtp = otp;
         user.resetPasswordOtpExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
 
-        // 4. Cấu hình email
         const mailOptions = {
             from: `"Hệ thống Hỗ trợ Ôn tập Lịch sử" <${process.env.EMAIL_USER}>`,
             to: user.email,
@@ -258,54 +265,35 @@ export const forgotPassword = async (req, res, next) => {
             `
         };
 
-        // 5. GỬI EMAIL (Dùng try-catch lồng bên trong)
         try {
             await transporter.sendMail(mailOptions);
-            
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Mã OTP đã được gửi đến email của bạn' 
-            });
-            
+            return res.status(200).json({ success: true, message: 'Mã OTP đã được gửi đến email của bạn' });
         } catch (mailError) {
-            // Lỗi ở đây là lỗi cấu hình SMTP/mạng. Ta vẫn truy cập được biến 'user' vì vẫn ở chung scope.
             console.error('Lỗi gửi thư OTP:', mailError);
-            
-            // Hoàn tác: Xóa OTP đi vì gửi mail xịt
             user.resetPasswordOtp = undefined;
             user.resetPasswordOtpExpires = undefined;
-            await user.save({ validateBeforeSave: false }); // Bỏ qua validate để lưu nhanh
+            await user.save({ validateBeforeSave: false }); 
             
-            return res.status(500).json({ 
-                success: false, 
-                error: 'Không thể gửi email lúc này. Hệ thống đã hủy yêu cầu OTP.' 
-            });
+            return res.status(500).json({ success: false, error: 'Không thể gửi email lúc này. Hệ thống đã hủy yêu cầu OTP.' });
         }
-
     } catch (error) {
-        // Lỗi ở đây là lỗi Database (ví dụ sập DB, sai cú pháp mongoose...)
         console.error('Lỗi server khi xử lý quên mật khẩu:', error);
         return res.status(500).json({ success: false, error: 'Lỗi máy chủ nội bộ' });
     }
 };
 
-
-/**
- * Xác thực OTP và Đặt lại mật khẩu
- * POST /api/auth/reset-password
- */
+// ==========================================
+// ĐẶT LẠI MẬT KHẨU
+// POST /api/auth/reset-password
+// ==========================================
 export const resetPassword = async (req, res, next) => {
     try {
         const { email, otp, newPassword } = req.body;
 
         if (!email || !otp || !newPassword) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Vui lòng cung cấp đầy đủ email, mã OTP và mật khẩu mới' 
-            });
+            return res.status(400).json({ success: false, error: 'Vui lòng cung cấp đầy đủ email, mã OTP và mật khẩu mới' });
         }
 
-        // Tìm user có email khớp, OTP khớp và OTP chưa hết hạn
         const user = await User.findOne({
             email: email.toLowerCase(),
             resetPasswordOtp: otp,
@@ -313,16 +301,10 @@ export const resetPassword = async (req, res, next) => {
         });
 
         if (!user) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Mã OTP không hợp lệ hoặc đã hết hạn' 
-            });
+            return res.status(400).json({ success: false, error: 'Mã OTP không hợp lệ hoặc đã hết hạn' });
         }
 
-        // Cập nhật mật khẩu mới (middleware pre-save trong model sẽ tự động hash mật khẩu này)
         user.password = newPassword;
-        
-        // Xóa thông tin OTP sau khi đã sử dụng thành công
         user.resetPasswordOtp = undefined;
         user.resetPasswordOtpExpires = undefined;
 
@@ -332,7 +314,6 @@ export const resetPassword = async (req, res, next) => {
             success: true, 
             message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' 
         });
-
     } catch (error) {
         console.error('Lỗi đặt lại mật khẩu:', error);
         return res.status(500).json({ success: false, error: 'Lỗi máy chủ khi đặt lại mật khẩu' });

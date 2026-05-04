@@ -8,7 +8,7 @@ const errorHandler = (err, req, res, next) => {
         statusCode = 404;
     }
 
-    // Xử lý lỗi trùng dữ liệu (unique constraint)
+    // Xử lý lỗi trùng dữ liệu 
     if (err.code === 11000) {
         const field = Object.keys(err.keyValue)[0];
         message = `${field} đã tồn tại`; 

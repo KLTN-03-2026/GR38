@@ -4,7 +4,6 @@ import { GoogleLogin } from "@react-oauth/google";
 import Swal from "sweetalert2";
 import { useLogin } from "../../hooks/useLogin"; 
 
-
 const EyeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -20,14 +19,8 @@ const EyeOffIcon = () => (
 
 export default function LoginPage() {
   const {
-    input,
-    errors,
-    loading,
-    showPass,
-    setShowPass,
-    handleChange,
-    handleLogin,
-    handleGoogleSuccess,
+    input, errors, loading, showPass, setShowPass,
+    handleChange, handleLogin, handleGoogleSuccess,
   } = useLogin();
 
   const inputClass = (field) =>
@@ -51,7 +44,6 @@ export default function LoginPage() {
 
         {/* Form Đăng nhập truyền thống */}
         <form onSubmit={handleLogin} noValidate>
-          {/* Email */}
           <label className="block text-sm text-gray-500 mb-1.5">Email</label>
           <input
             type="email" name="email" placeholder="m@example.com"
@@ -60,7 +52,6 @@ export default function LoginPage() {
           />
           {errors.email && <p className="text-xs text-red-500 mb-3">{errors.email}</p>}
 
-          {/* Password */}
           <label className="block text-sm text-gray-500 mb-1.5">Mật khẩu</label>
           <div className="relative mb-1">
             <input
@@ -81,7 +72,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Dòng chữ Hoặc */}
         <div className="flex items-center my-4">
           <div className="flex-1 border-t border-gray-300"></div>
           <span className="px-3 text-sm text-gray-400 bg-transparent">Hoặc</span>
@@ -89,23 +79,21 @@ export default function LoginPage() {
         </div>
 
         {/* NÚT ĐĂNG NHẬP GOOGLE */}
+        <div className="flex justify-center w-full">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => {
               Swal.fire({
-                icon: "error",
-                title: "Lỗi",
-                text: "Đăng nhập Google thất bại!",
-                confirmButtonColor: "#f97316",
+                icon: "error", title: "Lỗi", text: "Đăng nhập Google thất bại!", confirmButtonColor: "#f97316",
               });
             }}
             width="300"
             useOneTap={false} 
             shape="rectangular"
           />
+        </div>
 
-        {/* Các liên kết dưới cùng */}
-        <p className="text-center text-sm text-gray-500 mb-2 mt-2">
+        <p className="text-center text-sm text-gray-500 mb-2 mt-4">
           Bạn chưa có tài khoản?{" "}
           <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition">Đăng ký</Link>
         </p>

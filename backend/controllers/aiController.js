@@ -45,7 +45,7 @@ export const generateFlashcards = async (req, res, next) => {
       teacherId: req.user._id,
       documentId: document._id,
       title: `${document.title} - Flashcards`,
-      thumbnail: document.thumbnail, // BỔ SUNG: Kế thừa ảnh bìa từ tài liệu
+      thumbnail: document.thumbnail, 
       description: `Bộ flashcard được tạo tự động từ tài liệu ${document.title}`,
       cards: cards.map(card => ({
         front: card.question,
@@ -53,7 +53,7 @@ export const generateFlashcards = async (req, res, next) => {
         difficulty: card.difficulty,
       })),
       isPublished: false,
-      isAiGenerated: true, // BỔ SUNG: Đánh dấu là AI tạo
+      isAiGenerated: true, 
       tags: []
     });
 

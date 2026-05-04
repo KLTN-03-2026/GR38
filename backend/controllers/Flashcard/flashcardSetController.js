@@ -1,5 +1,3 @@
-// controllers/Flashcard/flashcardSetController.js
-
 import Flashcard from "#models/Flashcard.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";

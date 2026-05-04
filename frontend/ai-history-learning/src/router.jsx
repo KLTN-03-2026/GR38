@@ -1,6 +1,8 @@
 import React from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
+// ================= LAYOUT & PAGES IMPORTS =================
 // Layout
 import Sidebar from "./components/Layout/Sidebar";
 import Header from "./components/Layout/Header";
@@ -44,26 +46,45 @@ import QuizzesLearner from "./pages/Learner/Quizzes";
 import SuCo from "./pages/Learner/SuCo";
 import TienDo from "./pages/Learner/TienDo";
 
-// ================= HELPER =================
-const getUser  = () => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } };
-const getToken = () => localStorage.getItem("token");
-
 // ================= PRIVATE ROUTE =================
 function PrivateRoute({ allowedRole }) {
-  const token = getToken();
-  const role  = (getUser().role || "").toUpperCase();
-  if (!token) return <Navigate to="/" replace />;
-  return role === (allowedRole || "").toUpperCase() ? <Outlet /> : <Navigate to="/" replace />;
+  const { user, role, loading } = useAuth();
+
+  // Chờ Context load xong dữ liệu từ LocalStorage rồi mới quyết định
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Đang tải hệ thống...
+      </div>
+    );
+  }
+
+  // Chặn khách vãng lai
+  if (!user) return <Navigate to="/" replace />;
+
+  // Kiểm tra đúng vai trò
+  return role === allowedRole ? <Outlet /> : <Navigate to="/" replace />;
 }
 
 // ================= PUBLIC ROUTE =================
 function PublicRoute() {
-  const token = getToken();
-  const role  = (getUser().role || "").toUpperCase();
-  if (!token) return <Outlet />;
-  if (role === "ADMIN")   return <Navigate to="/admin"   replace />;
+  const { user, role, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Đang tải hệ thống...
+      </div>
+    );
+  }
+
+  if (!user) return <Outlet />;
+
+  // Nếu đã đăng nhập, tự động vào Dashboard tương ứng
+  if (role === "ADMIN") return <Navigate to="/admin" replace />;
   if (role === "TEACHER") return <Navigate to="/teacher" replace />;
   if (role === "LEARNER") return <Navigate to="/learner" replace />;
+
   return <Outlet />;
 }
 
@@ -86,10 +107,9 @@ function AppLayout({ mlWidth = "ml-[220px]" }) {
 export default function AppRouter() {
   return (
     <Routes>
-
       {/* PUBLIC */}
       <Route element={<PublicRoute />}>
-        <Route path="/"         element={<LoginPage />} />
+        <Route path="/" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
@@ -97,55 +117,56 @@ export default function AppRouter() {
       {/* ADMIN */}
       <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
-          <Route index           element={<AdminDashboard />} />
+          <Route index element={<AdminDashboard />} />
           <Route path="accounts" element={<AccountManagement />} />
-          <Route path="content"  element={<ReportManagement />} />
-          <Route path="profile"  element={<ProfilePage />} />
+          <Route path="content" element={<ReportManagement />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
 
       {/* TEACHER */}
       <Route element={<PrivateRoute allowedRole="TEACHER" />}>
-        <Route path="/teacher/baigiang/:id"   element={<Baigiangpage />} />
+        <Route path="/teacher/baigiang/:id" element={<Baigiangpage />} />
         <Route path="/teacher/baikiemtra/:id" element={<Baikiemtra />} />
         <Route path="/teacher" element={<AppLayout />}>
-          <Route index                  element={<Teacher />} />
-          <Route path="quizzes"         element={<QuizPage />} />
-          <Route path="quiz-result"     element={<QuizResultPage />} />
-          <Route path="documents"       element={<DocumentsPage />} />
-          <Route path="documents/:id"   element={<DocumentsDetailPage />} />
-          <Route path="stats"           element={<AssignmentStatistics />} />
-          <Route path="profile"         element={<ProfilePage />} />
-          <Route path="flashcards"      element={<Flashcards />} />
-          <Route path="flashcards/add"  element={<AddFlashcards />} />
-          <Route path="flashcards/:id"  element={<FlashcardDetail />} />
-          <Route path="quiz/:id"        element={<QuizPage />} />
+          <Route index element={<Teacher />} />
+          <Route path="quizzes" element={<QuizPage />} />
+          <Route path="quiz-result" element={<QuizResultPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="documents/:id" element={<DocumentsDetailPage />} />
+          <Route path="stats" element={<AssignmentStatistics />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="flashcards" element={<Flashcards />} />
+          <Route path="flashcards/add" element={<AddFlashcards />} />
+          <Route path="flashcards/:id" element={<FlashcardDetail />} />
+          <Route path="quiz/:id" element={<QuizPage />} />
         </Route>
       </Route>
 
       {/* LEARNER */}
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
-        <Route path="/learner" element={<AppLayout/>}>
-          <Route index                      element={<Dashboard />} />
-          <Route path="documents"           element={<DocumentsLearner />} />
-          <Route path="bai-giang/:id"       element={<BaiGiang />} />
-          <Route path="baikiemtra/:id"      element={<BaiKiemTra />} />
-          <Route path="flashcards"          element={<FlashcardsLearner />} />
-          <Route path="quizzes"             element={<QuizzesLearner />} />
-          <Route path="hoc-quizz/:id"       element={<HocQuiz />} />
-          <Route path="profile"             element={<ProfilePage />} />
-          <Route path="suco"                element={<SuCo />} />
-          <Route path="chat-ai"             element={<ChatAI />} />
-          <Route path="flashcard"           element={<FlashCard />} />
-          <Route path="quiz"                element={<Quiz />} />
-          <Route path="hoc-flashcard/:id"   element={<FlashcardDetailLearner />} />
-          <Route path="tiendo"              element={<TienDo />} />
+        <Route path="/learner" element={<AppLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="documents" element={<DocumentsLearner />} />
+          <Route path="bai-giang/:id" element={<BaiGiang />} />
+          <Route path="baikiemtra/:id" element={<BaiKiemTra />} />
+          <Route path="flashcards" element={<FlashcardsLearner />} />
+          <Route path="quizzes" element={<QuizzesLearner />} />
+          <Route path="hoc-quizz/:id" element={<HocQuiz />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="suco" element={<SuCo />} />
+          <Route path="chat-ai" element={<ChatAI />} />
+          <Route path="flashcard" element={<FlashCard />} />
+          <Route path="quiz" element={<Quiz />} />
+          <Route
+            path="hoc-flashcard/:id"
+            element={<FlashcardDetailLearner />}
+          />
+          <Route path="tiendo" element={<TienDo />} />
         </Route>
       </Route>
 
-      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 }

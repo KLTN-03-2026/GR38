@@ -7,14 +7,14 @@ import {
     updateFlashcardSet,
     updateFlashcard,
     deleteFlashcardSet
-} from '../controllers/Flashcard/flashcardSetController.js';
+} from '#controllers/Flashcard/flashcardSetController.js';
 
 import {
     getFlashcardSetWithProgress,
     getFlashcardsByDocument,
     reviewFlashcard,
     toggleStarFlashcard
-} from '../controllers/Flashcard/flashcardProgressController.js';
+} from '#controllers/Flashcard/flashcardProgressController.js';
 
 import protect, { authorize, USER_ROLES } from '../middleware/auth.js';
 import { uploadFlashcardImage } from '../config/uploadImage.js';

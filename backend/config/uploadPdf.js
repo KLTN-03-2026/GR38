@@ -14,7 +14,7 @@ cloudinary.config({
 const documentPdfStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'DATN_History_Web/Documents_PDF', // Thêm chữ _PDF để dễ phân biệt với ảnh bìa
+    folder: 'DATN_History_Web/Documents_PDF', 
     resource_type: 'raw', 
     format: 'pdf', 
   },
@@ -32,9 +32,9 @@ const uploadPdf = multer({
   storage: documentPdfStorage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 // 10MB
+    fileSize: parseInt(process.env.MAX_FILE_SIZE)
   }
 });
 
-// Export chuẩn tên
+
 export default uploadPdf;

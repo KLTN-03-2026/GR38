@@ -5,13 +5,13 @@ import api from "../lib/api";
 
 export const authService = {
   /**
-   * Đăng ký tài khoản mới
+   * Đăng ký tài khoản mới (truyền thống)
    * @param {Object} data
    * @param {string} data.fullName - Họ và tên
    * @param {string} data.email - Email
    * @param {string} data.password - Mật khẩu
    * @param {string} data.passwordConfirm - Xác nhận mật khẩu
-   * @param {string} data.role - TEACHER | STUDENT 
+   * @param {string} data.role - TEACHER | LEARNER 
    */
   register: async (data) => {
     const payload = {
@@ -32,6 +32,35 @@ export const authService = {
    */
   login: async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
+
+    // Lưu token
+    if (res.data.token) {
+      localStorage.setItem(
+        "token",
+        JSON.stringify({
+          access_token: res.data.token,
+          refresh_token: res.data.refresh_token ?? null,
+        })
+      );
+    }
+
+    // Lưu thông tin user
+    if (res.data.data) {
+      localStorage.setItem("user", JSON.stringify(res.data.data));
+      localStorage.setItem("role", res.data.data.role);
+    }
+    return res.data;
+  },
+
+  /**
+   * Đăng nhập / Đăng ký bằng Google (MỚI)
+   * @param {Object} data
+   * @param {string} data.token
+   * @param {string} [data.role] - Vai trò của user (truyền lên nếu đăng ký mới)
+   */
+  googleAuth: async (data) => {
+    const res = await api.post("/auth/google", data);
+
 
     if (res.data.token) {
       localStorage.setItem(

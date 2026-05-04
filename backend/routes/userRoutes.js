@@ -6,6 +6,7 @@ import {
 }
 from '#controllers/Auth/userController.js';
 import protect  from '#middleware/auth.js'; 
+import {uploadAvatar} from '../config/uploadImage.js';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const router = express.Router();
 router.use(protect); 
 
 router.get('/profile', getProfile);
-router.put('/profile', updateProfile);
+router.put('/profile', uploadAvatar.single('avatar'), updateProfile);
 router.post('/change-password', changePassword);
 
 export default router;

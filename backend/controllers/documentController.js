@@ -43,7 +43,7 @@ export const uploadsDocument = async (req, res, next) => {
 
     await document.save();
 
-    // Xử lý PDF chạy ngầm (Không dùng await để block request)
+    // Xử lý PDF chạy ngầm 
     processPDF(document.id, req.file.path).catch((err) => {
       console.error("Lỗi xử lý PDF ngầm:", err);
     });

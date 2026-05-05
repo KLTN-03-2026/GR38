@@ -29,7 +29,11 @@ const swaggerOptions = {
         tags: [
             {
                 name: 'Authentication',
-                description: 'Các API Quản lý đăng nhập, đăng ký và hồ sơ cá nhân'
+                description: 'Các API Quản lý đăng nhập, đăng ký và xác thực'
+            },
+            {
+                name: 'User',
+                description: 'Các API quản lý hồ sơ cá nhân và bảo mật tài khoản'
             },
             {
                 name: 'Admin',

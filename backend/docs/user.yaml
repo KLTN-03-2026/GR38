@@ -1,0 +1,131 @@
+tags:
+  - name: User
+    description: Cac API quan ly ho so ca nhan va bao mat tai khoan
+
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12345678
+        fullName:
+          type: string
+          example: Nguyen Van A
+        email:
+          type: string
+          example: nguyenvana@gmail.com
+        role:
+          type: string
+          enum: [ADMIN, TEACHER, LEARNER]
+          example: LEARNER
+        teacherApprovalStatus:
+          type: string
+          enum: [pending, approved, rejected]
+          example: approved
+        isActive:
+          type: boolean
+          example: true
+        authType:
+          type: string
+          enum: [local, google]
+          example: local
+          description: "Phuong thuc dang nhap cua tai khoan"
+        profileImage:
+          type: string
+          nullable: true
+          description: "URL anh dai dien (luu tren Cloudinary hoac Google)"
+          example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v123/avatar.jpg"
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T08:00:00.000Z'
+
+paths:
+  /api/v1/user/profile:
+    get:
+      summary: Lay thong tin ca nhan hien tai
+      tags: [User]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Thanh cong
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+
+    put:
+      summary: Cap nhat thong tin ca nhan
+      description: "Co the cap nhat van ban (JSON) hoac gui kem file anh (Multipart). Neu gui file anh, su dung field name la 'avatar'."
+      tags: [User]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  example: Nguyen Van A (Moi)
+                email:
+                  type: string
+                  example: newemail@gmail.com
+                avatar:
+                  type: string
+                  format: binary
+                  description: "File anh dai dien moi de tai len Cloudinary"
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                email:
+                  type: string
+                profileImage:
+                  type: string
+                  description: "URL anh neu da co san"
+      responses:
+        '200':
+          description: Cap nhat thanh cong
+        '401':
+          description: Chua dang nhap
+
+  /api/v1/user/change-password:
+    post:
+      summary: Doi mat khau (khi da dang nhap)
+      tags: [User]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Doi mat khau thanh cong
+        '400':
+          description: Loi validation hoac Tai khoan Google khong co mat khau de doi
+        '401':
+          description: Mat khau hien tai khong dung

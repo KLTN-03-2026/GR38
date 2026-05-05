@@ -23,40 +23,52 @@ export const useRegister = () => {
     setErrors((prev) => ({ ...prev, role: "" }));
   };
 
+
+  // XỬ LÝ GOOGLE LOGIN/REGISTER 
   const handleGoogleSuccess = async (credentialResponse) => {
-    let selectedRole = role;
-
-    if (!selectedRole) {
-      const { value: roleFromPopup } = await Swal.fire({
-        title: "Bạn là ai?",
-        text: "Vui lòng chọn vai trò để hoàn tất đăng ký",
-        icon: "question",
-        input: "radio",
-        inputOptions: {
-          LEARNER: "Người học",
-          TEACHER: "Giáo viên",
-        },
-        inputValidator: (value) => {
-          if (!value) return "Bạn cần chọn một vai trò!";
-        },
-        confirmButtonText: "Tiếp tục",
-        confirmButtonColor: "#f97316",
-        showCancelButton: true,
-        cancelButtonText: "Hủy",
-      });
-
-      if (!roleFromPopup) return; 
-      selectedRole = roleFromPopup;
-      setRole(roleFromPopup);
-    }
-
     setLoading(true);
+    
     try {
-      const resData = await authService.googleAuth({
+      let resData = await authService.googleAuth({
         token: credentialResponse.credential, 
-        role: selectedRole,
       });
 
+
+      if (resData.requireRole) {
+        setLoading(false); 
+
+        const { value: roleFromPopup } = await Swal.fire({
+          title: "Bạn là ai?",
+          text: "Vui lòng chọn vai trò để hoàn tất đăng ký",
+          icon: "question",
+          input: "radio",
+          inputOptions: {
+            LEARNER: "Người học", 
+            TEACHER: "Giáo viên",
+          },
+          inputValidator: (value) => {
+            if (!value) return "Bạn cần chọn một vai trò!";
+          },
+          confirmButtonText: "Tiếp tục",
+          confirmButtonColor: "#f97316",
+          showCancelButton: true,
+          cancelButtonText: "Hủy",
+        });
+
+        if (!roleFromPopup) return; 
+
+        setLoading(true);
+        setRole(roleFromPopup);
+
+        resData = await authService.googleAuth({
+          token: credentialResponse.credential, 
+          role: roleFromPopup,
+        });
+      }
+
+      // 4. XỬ LÝ KẾT QUẢ CUỐI CÙNG 
+
+      
       if (resData.isPendingApproval) {
         await Swal.fire({
           icon: "info",
@@ -68,26 +80,31 @@ export const useRegister = () => {
         return; 
       }
 
-      const user = resData.data || resData;
+      const user = resData.data || resData.user || resData;
 
-      // 1. Hiện thông báo và CHỜ tắt (giảm xuống 1 giây cho mượt)
+      const isNewUser = resData.isNewUser;
+      const titleMsg = isNewUser ? "ĐĂNG KÝ THÀNH CÔNG" : "ĐĂNG NHẬP THÀNH CÔNG";
+      const textMsg = isNewUser 
+        ? "Chào mừng bạn đến với Lịch Sử Việt Nam!" 
+        : "Chào mừng bạn quay trở lại!";
+
       await Swal.fire({
         icon: "success",
-        title: "ĐĂNG KÝ THÀNH CÔNG",
-        text: "Chào mừng bạn đến với Lịch Sử Việt Nam!",
+        title: titleMsg,
+        text: textMsg,
         confirmButtonColor: "#f97316",
         timer: 1500, 
         timerProgressBar: true,
         showConfirmButton: false 
       });
       
-      // 2. Chờ xong mới set user và chuyển trang
       setAuthUser(user);
       navigate("/");
+
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi đăng ký";
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi xác thực Google";
       Swal.fire({
-        icon: "error", title: "Đăng ký thất bại", text: errorMsg, confirmButtonColor: "#f97316"
+        icon: "error", title: "Thất bại", text: errorMsg, confirmButtonColor: "#f97316"
       });
     } finally {
       setLoading(false);
@@ -134,7 +151,6 @@ export const useRegister = () => {
 
       const user = resData.data || resData;
 
-      // 1. Hiện thông báo và CHỜ tắt
       await Swal.fire({
         icon: "success",
         title: "ĐĂNG KÝ THÀNH CÔNG",
@@ -145,7 +161,6 @@ export const useRegister = () => {
         showConfirmButton: false
       });
       
-      // 2. Chờ xong mới set user và chuyển trang
       setAuthUser(user);
       navigate("/");
     } catch (error) {

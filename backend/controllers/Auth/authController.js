@@ -7,9 +7,7 @@ import crypto from 'crypto';
 const client_id = process.env.GG_CLIENT_ID;
 const client = new OAuth2Client(client_id);
 
-// ==========================================
 // CẤU HÌNH NODEMAILER
-// ==========================================
 const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST, 
     port: parseInt(process.env.MAIL_PORT), 
@@ -20,9 +18,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// ==========================================
 // HÀM HỖ TRỢ XÁC MINH TOKEN GOOGLE
-// ==========================================
 async function verifyGoogleToken(token) {
     try {
         const ticket = await client.verifyIdToken({
@@ -57,11 +53,21 @@ export const googleAuth = async (req, res, next) => {
         let user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
+            // ==========================================
+            // TRƯỜNG HỢP 1: CHƯA CÓ TÀI KHOẢN (ĐĂNG KÝ)
+            // ==========================================
+            
             if (!role) {
-                return res.status(400).json({ 
-                    success: false, 
-                    error: "Vui lòng chọn vai trò (Người học/Giáo viên) để hoàn tất đăng ký."
+                // Frontend gọi lần 1 (chưa có role) -> Trả về cờ requireRole để Frontend bật Modal
+                return res.status(200).json({ 
+                    success: true, 
+                    requireRole: true,
+                    message: "Vui lòng chọn vai trò (Người học/Giáo viên) để hoàn tất đăng ký."
                 });
+            }
+
+            if (role !== USER_ROLES.STUDENT && role !== USER_ROLES.TEACHER) {
+                return res.status(400).json({ success: false, error: "Vai trò không hợp lệ." });
             }
 
             user = new User({
@@ -75,16 +81,21 @@ export const googleAuth = async (req, res, next) => {
             });
             await user.save();
 
-            // Chặn Giáo viên đăng ký lần đầu, không cấp token đăng nhập
             if (user.role === USER_ROLES.TEACHER) {
                 return res.status(201).json({
                     success: true,
+                    isNewUser: true,
                     isPendingApproval: true,
                     message: "Đăng ký bằng Google thành công! Tài khoản Giáo viên của bạn đang chờ Admin duyệt."
                 });
             }
+            
+            // Trả về token cho học sinh đăng ký thành công (Status 201)
+            req.isNewUser = true; 
+            return sendTokenResponse(user, 201, res);
 
         } else {
+            
             // NẾU ĐÃ CÓ NHƯNG LÀ TÀI KHOẢN LOCAL -> LIÊN KẾT GOOGLE VÀO
             if (!user.googleId) {
                 user.googleId = googleId;
@@ -102,9 +113,10 @@ export const googleAuth = async (req, res, next) => {
             if (user.role === USER_ROLES.TEACHER && user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED) {
                 return res.status(403).json({ success: false, error: 'Tài khoản Giáo viên của bạn đang chờ duyệt từ Admin.' });
             }
-        }
 
-        return sendTokenResponse(user, 200, res);
+            req.isNewUser = false;
+            return sendTokenResponse(user, 200, res);
+        }
 
     } catch (error) {
         console.error('Lỗi xác thực Google:', error);

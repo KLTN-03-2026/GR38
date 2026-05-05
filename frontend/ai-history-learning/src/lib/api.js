@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/v1",
+  baseURL: "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 const refreshClient = axios.create({
-  baseURL: "http://localhost:8000/api/v1",
+  baseURL: "/api/v1",
 });
 
 let isRefreshing = false;
@@ -53,7 +53,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response Interceptor
@@ -116,7 +116,7 @@ api.interceptors.response.use(
         JSON.stringify({
           access_token: newAccessToken,
           refresh_token: data.refresh_token ?? refreshToken,
-        })
+        }),
       );
 
       api.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -144,7 +144,7 @@ api.interceptors.response.use(
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
 export default api;

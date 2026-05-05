@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 // Layout & Pages
 import Sidebar from "./components/Layout/Sidebar";
 import Header from "./components/Layout/Header";
+import NotFoundPage from "./pages/NotFoundPage";
 
 // Auth
 import LoginPage from "./pages/Auth/LoginPage.jsx";
@@ -149,7 +150,7 @@ export default function AppRouter() {
       </Route>
 
       {/* FALLBACK */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

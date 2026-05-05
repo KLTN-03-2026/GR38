@@ -41,7 +41,7 @@ export const getAllQuizzesForAdmin = async (req, res, next) => {
       Quiz.countDocuments(query),
       Quiz.find(query)
         .select("-questions")
-        .populate("userId", "name email") // Lấy thông tin người tạo 
+        .populate("teacherId", "name email") // Lấy thông tin người tạo 
         .populate("documentId", "title") // Lấy thông tin tài liệu gốc 
         .sort({ createdAt: -1 }) // Sắp xếp mới nhất lên đầu
         .skip(skip)

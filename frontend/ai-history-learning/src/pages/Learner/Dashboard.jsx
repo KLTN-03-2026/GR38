@@ -78,7 +78,7 @@ export default function LearnerDashboard() {
   const stats = [
     { label: "Tài liệu có sẵn",    value: docs.length,    Icon: BookOpen,      color: "#1473E6", bg: "#EEF4FF" },
     { label: "Bài kiểm tra đã làm", value: history.length, Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
-    { label: "Bộ Flashcard",        value: flashCount,     Icon: LayoutGrid,    color: "#8B5CF6", bg: "#F3F0FF" },
+    { label: "Bộ Flashcard",        value: flashCount,      Icon: LayoutGrid,    color: "#8B5CF6", bg: "#F3F0FF" },
   ];
 
   if (loading) return (
@@ -151,7 +151,7 @@ export default function LearnerDashboard() {
                 {docs.map((doc, idx) => (
                   <div key={doc._id ?? idx}
                     className="doc-card p-4 border border-gray-100 rounded-xl flex flex-col justify-between transition-all cursor-pointer"
-                    onClick={() => navigate(`/learner/documents/${doc._id}`)}>
+                    onClick={() => navigate(`/learner/bai-giang/${doc._id}`)}>
                     <div className="flex justify-between items-start mb-3">
                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                         <FileText size={15} className="text-blue-400"/>
@@ -159,7 +159,13 @@ export default function LearnerDashboard() {
                       <ChevronRight size={14} className="text-gray-300"/>
                     </div>
                     <p className="text-sm font-semibold text-gray-800 line-clamp-2 mb-3">{doc.title}</p>
-                    <button className="w-fit px-4 py-1 bg-[#4ADE80] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/learner/bai-giang/${doc._id}`);
+                      }}
+                      className="w-fit px-4 py-1 bg-[#4ADE80] text-white text-xs font-bold rounded-lg hover:opacity-90 transition"
+                    >
                       Xem
                     </button>
                   </div>

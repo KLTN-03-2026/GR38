@@ -51,7 +51,10 @@ function PrivateRoute({ allowedRole }) {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Đang tải...
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-8 h-8 border-4 border-[#F26739] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Đang tải...</p>
+        </div>
       </div>
     );
   if (!user) return <Navigate to="/" replace />;
@@ -86,51 +89,66 @@ function AppLayout() {
 export default function AppRouter() {
   return (
     <Routes>
+      {/* AUTH ROUTES */}
       <Route element={<PublicRoute />}>
         <Route path="/" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
-      {/* CẤU HÌNH ADMIN: Đã thêm các mục tài liệu, flashcards, quizzes */}
+      {/* ADMIN ROUTES */}
       <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="content" element={<ReportManagement />} />
           <Route path="profile" element={<ProfilePage />} />
-
-          {/* Các Route mới để Admin có thể xem được nội dung */}
+          {/* Admin view-only content routes */}
           <Route path="documents" element={<DocumentsLearner />} />
+          <Route path="documents/:id" element={<BaiGiang />} />{" "}
           <Route path="flashcards" element={<FlashcardsLearner />} />
+          <Route
+            path="flashcards/:id"
+            element={<FlashcardDetailLearner />}
+          />{" "}
           <Route path="quizzes" element={<QuizzesLearner />} />
+          <Route path="quizzes/:id" element={<HocQuiz />} />{" "}
         </Route>
       </Route>
 
-      {/* TEACHER AREA */}
+      {/* TEACHER ROUTES */}
       <Route element={<PrivateRoute allowedRole="TEACHER" />}>
         <Route path="/teacher" element={<AppLayout />}>
           <Route index element={<Teacher />} />
           <Route path="quizzes" element={<QuizPage />} />
           <Route path="documents" element={<DocumentsPage />} />
+          <Route path="documents/:id" element={<DocumentsDetailPage />} />
           <Route path="stats" element={<AssignmentStatistics />} />
           <Route path="flashcards" element={<Flashcards />} />
+          <Route path="flashcards/add" element={<AddFlashcards />} />
+          <Route path="flashcards/:id" element={<FlashcardDetail />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
 
-      {/* LEARNER AREA */}
+      {/* LEARNER ROUTES */}
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="documents" element={<DocumentsLearner />} />
+          <Route path="documents/:id" element={<BaiGiang />} />
+          <Route path="documents/:id/chat" element={<ChatAI />} />
           <Route path="flashcards" element={<FlashcardsLearner />} />
+          <Route path="flashcards/:id" element={<FlashcardDetailLearner />} />
           <Route path="quizzes" element={<QuizzesLearner />} />
+          <Route path="quizzes/:id" element={<HocQuiz />} />
           <Route path="suco" element={<SuCo />} />
           <Route path="tiendo" element={<TienDo />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
 
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

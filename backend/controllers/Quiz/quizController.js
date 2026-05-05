@@ -11,7 +11,7 @@ export const getQuizzes = async (req, res, next) => {
     const quizzes = await Quiz.find({
       documentId: req.params.documentId,
     })
-      .populate("documentId", "title fileName thumbnail") 
+      .populate("documentId", "title fileName thumbnail")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -31,7 +31,7 @@ export const getQuizById = async (req, res, next) => {
   try {
     const quiz = await Quiz.findById(req.params.id).populate(
       "documentId",
-      "title fileName thumbnail" 
+      "title fileName thumbnail",
     );
 
     if (!quiz) {
@@ -64,7 +64,12 @@ export const createQuizManual = async (req, res, next) => {
       questions = JSON.parse(questions);
     }
 
-    if (!title || !questions || !Array.isArray(questions) || questions.length < 5) {
+    if (
+      !title ||
+      !questions ||
+      !Array.isArray(questions) ||
+      questions.length < 5
+    ) {
       return res.status(400).json({
         success: false,
         error: "Vui lòng cung cấp tiêu đề và ít nhất 5 câu hỏi trắc nghiệm.",
@@ -72,11 +77,10 @@ export const createQuizManual = async (req, res, next) => {
       });
     }
 
-
     let finalThumbnail = null;
     if (req.file) {
       // 1. Ưu tiên cao nhất: Giáo viên tự tải ảnh từ máy tính lên
-      finalThumbnail = req.file.path; 
+      finalThumbnail = req.file.path;
     } else if (documentId) {
       // 2. Nếu không up ảnh, nhưng tạo quiz thuộc về 1 tài liệu -> Lấy ảnh của tài liệu
       const doc = await Document.findById(documentId).select("thumbnail");
@@ -87,20 +91,20 @@ export const createQuizManual = async (req, res, next) => {
 
     const formattedQuestions = questions.map((q) => ({
       question: q.question,
-      options: q.options || [], 
+      options: q.options || [],
       correctAnswer: String(q.correctAnswer).trim(),
-      explanation: q.explanation || "Không có giải thích chi tiết.", 
-      difficulty: q.difficulty || "Trung bình"
+      explanation: q.explanation || "Không có giải thích chi tiết.",
+      difficulty: q.difficulty || "Trung bình",
     }));
 
     const newQuiz = await Quiz.create({
       title,
       description: description || "",
-      documentId: documentId || null, 
+      documentId: documentId || null,
       thumbnail: finalThumbnail, // Đã xử lý logic hợp lý
-      teacherId: req.user._id,        
+      teacherId: req.user._id,
       questions: formattedQuestions,
-      isAiGenerated: false // Đánh dấu đây là quiz làm bằng tay         
+      isAiGenerated: false, // Đánh dấu đây là quiz làm bằng tay
     });
 
     res.status(201).json({
@@ -109,7 +113,7 @@ export const createQuizManual = async (req, res, next) => {
       message: "Tạo bài trắc nghiệm thủ công thành công",
     });
   } catch (error) {
-    next(error); 
+    next(error);
   }
 };
 
@@ -136,7 +140,8 @@ export const updateQuiz = async (req, res, next) => {
 
     if (title !== undefined) quiz.title = title;
     if (description !== undefined) quiz.description = description;
-    if (tags !== undefined) quiz.tags = typeof tags === 'string' ? JSON.parse(tags) : tags; 
+    if (tags !== undefined)
+      quiz.tags = typeof tags === "string" ? JSON.parse(tags) : tags;
 
     if (req.file) {
       quiz.thumbnail = req.file.path;
@@ -160,7 +165,8 @@ export const updateQuiz = async (req, res, next) => {
 export const updateQuizQuestion = async (req, res, next) => {
   try {
     const { quizId, questionId } = req.params;
-    const { question, options, correctAnswer, explanation, difficulty } = req.body;
+    const { question, options, correctAnswer, explanation, difficulty } =
+      req.body;
 
     const quiz = await Quiz.findOne({
       _id: quizId,
@@ -188,16 +194,19 @@ export const updateQuizQuestion = async (req, res, next) => {
 
     // Cập nhật các trường nếu có truyền lên
     if (question !== undefined) questionToUpdate.question = question;
-    if (correctAnswer !== undefined) questionToUpdate.correctAnswer = correctAnswer;
+    if (correctAnswer !== undefined)
+      questionToUpdate.correctAnswer = correctAnswer;
     if (explanation !== undefined) questionToUpdate.explanation = explanation;
-    
+
     // Cập nhật mảng options
     if (options !== undefined) {
-       let parsedOptions = options;
-       if (typeof options === "string") {
-         try { parsedOptions = JSON.parse(options); } catch (e) {}
-       }
-       questionToUpdate.options = parsedOptions;
+      let parsedOptions = options;
+      if (typeof options === "string") {
+        try {
+          parsedOptions = JSON.parse(options);
+        } catch (e) {}
+      }
+      questionToUpdate.options = parsedOptions;
     }
 
     if (
@@ -226,7 +235,7 @@ export const getTeacherQuizzes = async (req, res, next) => {
   try {
     const quizzes = await Quiz.find({ teacherId: req.user._id })
       .populate("documentId", "title fileName thumbnail")
-      .sort({ createdAt: -1 }); 
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -271,6 +280,27 @@ export const deleteQuiz = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Quiz đã được xóa thành công",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc Lấy danh sách toàn bộ bài quiz trong hệ thống (Dành cho Admin dashboard)
+//@route GET /api/v1/quizzes/admin/all
+//@access Private (Admin)
+export const getAllQuizzesForAdmin = async (req, res, next) => {
+  try {
+    // Lấy tất cả quiz không phân biệt teacherId
+    const quizzes = await Quiz.find()
+      .populate("documentId", "title fileName thumbnail")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: quizzes.length,
+      data: quizzes,
+      message: "Lấy toàn bộ danh sách đề thi hệ thống thành công",
     });
   } catch (error) {
     next(error);

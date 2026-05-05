@@ -1,14 +1,15 @@
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { documentService } from "../../../services/documentService";
-import api from "../../../lib/api";
+import { useState, useEffect, useCallback } from "react";
+import { documentService } from "@/services/documentService";
+import { flashcardService } from "@/services/flashcardSevice"; // Import service flashcard mới
+import api from "@/lib/api";
 import QuizPageInline      from "./QuizPageInline";
 import FlashcardPageInline from "./FlashcardPageInline";
 import EditDocumentModal   from "./EditDocumentModal";
 import ConfirmGenerateModal from "./ConfirmGenerateModal";
 import TabThongTin         from "./TabThongTin";
 import ChatAI              from "./ChatAI";  
-import { IconBack, IconEdit, IconQuiz, IconCards, IconChat, IconPlus, IconArrowRight, EmptyState } from "./icons";
+import { IconBack, IconEdit, IconQuiz, IconCards, IconPlus, IconArrowRight, EmptyState } from "./icons";
 
 const tabs = ["Thông tin", "Chat", "Quizz", "FlashCard"];
 
@@ -18,7 +19,7 @@ export default function DocumentsDetailPage() {
   const { id }    = useParams();
 
   const [doc, setDoc]           = useState(location.state?.doc ?? null);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]   = useState(!location.state?.doc); 
   const [activeTab, setActiveTab] = useState(location.state?.activeTab ?? "Thông tin");
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -34,65 +35,95 @@ export default function DocumentsDetailPage() {
   const [generatingFlash, setGeneratingFlash] = useState(false);
   const [selectedFlash, setSelectedFlash]   = useState(null);
 
-  const loadDoc = () => {
-    documentService.getById(id)
-      .then(res => setDoc(res.data))
-      .catch(err => console.error("Lỗi tải tài liệu:", err.response?.data ?? err.message))
-      .finally(() => setLoading(false));
+  const loadDoc = useCallback(async () => {
+    try {
+      const res = await documentService.getById(id);
+      setDoc(res.data || res); // Tuỳ thuộc vào cấu trúc trả về của axios interceptor
+    } catch (err) {
+      console.error("Lỗi tải tài liệu:", err.response?.data ?? err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const loadQuizList = useCallback(async () => {
+    try {
+      setQuizLoading(true);
+      const res = await api.get(`/quizzes/document/${id}`);
+      setQuizList(Array.isArray(res.data?.data ?? res.data) ? (res.data?.data ?? res.data) : []);
+    } catch (err) {
+      console.error("Lỗi tải Quiz:", err);
+      setQuizList([]);
+    } finally {
+      setQuizLoading(false);
+    }
+  }, [id]);
+
+  // CẬP NHẬT HÀM NÀY SỬ DỤNG FLASHCARD SERVICE
+  const loadFlashList = useCallback(async () => {
+    try {
+      setFlashLoading(true);
+      // Gọi qua service, truyền documentId (id của params)
+      const res = await flashcardService.getByDocument(id);
+      
+      // Xử lý dữ liệu trả về an toàn (vì service đã return res.data)
+      const dataList = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+      setFlashList(dataList);
+    } catch (err) {
+      console.error("Lỗi tải Flashcard:", err);
+      setFlashList([]);
+    } finally {
+      setFlashLoading(false);
+    }
+  }, [id]);
+
+  const handleGenerateQuiz = async (n) => {
+    try {
+      setGeneratingQuiz(true);
+      const existingCount = quizList.length;
+      const baseName = `${doc.title} - Quiz`;
+      const title = existingCount === 0 ? baseName : `${baseName} v${existingCount + 1}.0`;
+
+      await api.post("/ai/generate-quiz", { documentId: id, numQuestions: n, title });
+      setShowQuizModal(false);
+      await loadQuizList(); 
+    } catch (err) {
+      alert(err.response?.data?.error ?? "Lỗi tạo quiz"); 
+    } finally {
+      setGeneratingQuiz(false);
+    }
   };
-
-  const loadQuizList = async () => {
-    try { setQuizLoading(true); const res = await api.get(`/quizzes/document/${id}`); setQuizList(Array.isArray(res.data.data ?? res.data) ? (res.data.data ?? res.data) : []); }
-    catch { setQuizList([]); } finally { setQuizLoading(false); }
-  };
-
-  const loadFlashList = async () => {
-  try {
-    setFlashLoading(true);
-    const res = await api.get("/flashcards");
-    const all = Array.isArray(res.data.data ?? res.data) ? (res.data.data ?? res.data) : [];
-    // Filter chỉ lấy flashcard thuộc tài liệu hiện tại
-    const filtered = all.filter(f => {
-      const docId = f.documentId?._id ?? f.documentId;
-      return docId === id;
-    });
-    setFlashList(filtered);
-  } catch {
-    setFlashList([]);
-  } finally {
-    setFlashLoading(false);
-  }
-}; 
-
- const handleGenerateQuiz = async (n) => {
-  try {
-    setGeneratingQuiz(true);
-    // Đếm số quiz đã có để đặt tên version
-    const existingCount = quizList.length;
-    const baseName = `${doc.title} - Quiz`;
-    const title = existingCount === 0 ? baseName : `${baseName} v${existingCount + 1}.0`;
-
-    await api.post("/ai/generate-quiz", { documentId: id, numQuestions: n, title });
-    setShowQuizModal(false);
-    await loadQuizList();
-  } catch (err) {
-    alert(err.response?.data?.error ?? "Lỗi tạo quiz");
-  } finally {
-    setGeneratingQuiz(false);
-  }
-};
 
   const handleGenerateFlash = async (n) => {
-    try { setGeneratingFlash(true); await api.post("/ai/generate-flashcards", { documentId: id, numQuestions: n }); setShowFlashModal(false); await loadFlashList(); }
-    catch (err) { alert(err.response?.data?.error ?? "Lỗi tạo flashcard"); } finally { setGeneratingFlash(false); }
+    try {
+      setGeneratingFlash(true);
+      await api.post("/ai/generate-flashcards", { documentId: id, numQuestions: n });
+      setShowFlashModal(false);
+      await loadFlashList(); 
+    } catch (err) {
+      alert(err.response?.data?.error ?? "Lỗi tạo flashcard");
+    } finally {
+      setGeneratingFlash(false);
+    }
   };
 
-  useEffect(() => { loadDoc(); }, [id]);
-  useEffect(() => { if (location.state?.activeTab) setActiveTab(location.state.activeTab); }, [location.key]);
-  useEffect(() => { if (activeTab === "Quizz")     loadQuizList(); },  [activeTab]);
-  useEffect(() => { if (activeTab === "FlashCard") loadFlashList(); }, [activeTab]);
-  useEffect(() => { if (activeTab !== "Quizz")     setSelectedQuiz(null); },  [activeTab]);
-  useEffect(() => { if (activeTab !== "FlashCard") setSelectedFlash(null); }, [activeTab]);
+  useEffect(() => { 
+    if (!doc) loadDoc(); 
+  }, [id, doc, loadDoc]);
+
+  useEffect(() => { 
+    if (location.state?.activeTab) setActiveTab(location.state.activeTab); 
+  }, [location.key]);
+
+  useEffect(() => { 
+    if (activeTab === "Quizz") loadQuizList(); 
+    if (activeTab === "FlashCard") loadFlashList(); 
+  }, [activeTab, loadQuizList, loadFlashList]);
+
+  useEffect(() => { 
+    if (activeTab !== "Quizz") setSelectedQuiz(null); 
+    if (activeTab !== "FlashCard") setSelectedFlash(null); 
+  }, [activeTab]);
 
   if (loading) return (
     <div className="h-full flex items-center justify-center">

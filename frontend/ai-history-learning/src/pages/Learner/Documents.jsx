@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import {
   Search,
   ChevronLeft,
@@ -11,6 +12,7 @@ import api from "../../lib/api";
 
 const Documents = () => {
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [allDocuments, setAllDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -98,13 +100,16 @@ const Documents = () => {
             <div
               key={doc._id}
               className="bg-white rounded-[10px] flex flex-col p-[12px] gap-[12px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-200 group h-fit relative"
-              onClick={() => navigate(`/learner/bai-giang/${doc._id}`)}
+              onClick={() => {
+                const basePath = role === "ADMIN" ? "/admin" : "/learner";
+                navigate(`${basePath}/documents/${doc._id}`);
+              }}
             >
               <button
                 onClick={(e) => {
                   e.stopPropagation(); 
                   // SỬA TẠI ĐÂY: Chuyển hướng đúng route su-co
-                  navigate("/learner/su-co", { 
+                  navigate("/learner/suco", { 
                     state: { 
                       reportTarget: "tài liệu", 
                       targetId: doc._id 

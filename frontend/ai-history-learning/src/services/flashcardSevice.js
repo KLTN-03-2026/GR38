@@ -25,12 +25,32 @@ export const flashcardService = {
   },
 
   /**
+   * Lấy danh sách flashcard của giáo viên hiện tại
+   * @param {Object} params - Tham số lọc / phân trang
+   * @returns {Promise<Object>} Danh sách bộ flashcard
+   */
+  getMyFlashcards: async (params = {}) => {
+    const res = await api.get("/flashcards/my-flashcards", { params });
+    return res.data;
+  },
+
+  /**
    * Lấy chi tiết một bộ flashcard
    * @param {string|number} id - ID bộ flashcard
    * @returns {Promise<Object>} Thông tin bộ flashcard
    */
   getById: async (id) => {
     const res = await api.get(`/flashcards/${id}`);
+    return res.data;
+  },
+
+  /**
+   * Lấy danh sách flashcard theo tài liệu/bai hoc
+   * @param {string|number} documentId - ID tài liệu
+   * @returns {Promise<Object>} Danh sách bộ flashcard
+   */
+  getByDocument: async (documentId) => {
+    const res = await api.get(`/flashcards/document/${documentId}`);
     return res.data;
   },
 
@@ -72,6 +92,17 @@ export const flashcardService = {
   },
 
   /**
+   * Lấy mặt sau của 1 thẻ flashcard
+   * @param {string|number} deckId - ID bộ flashcard
+   * @param {string|number} cardId - ID thẻ
+   * @returns {Promise<Object>} Nội dung mặt sau
+   */
+  getCardBack: async (deckId, cardId) => {
+    const res = await api.get(`/flashcards/${deckId}/cards/${cardId}/back`);
+    return res.data;
+  },
+
+  /**
    * Thêm thẻ mới vào bộ flashcard
    * @param {string|number} deckId - ID bộ flashcard
    * @param {Object} data - Nội dung thẻ
@@ -89,6 +120,18 @@ export const flashcardService = {
   },
 
   /**
+   * Cap nhat noi dung 1 the flashcard
+   * @param {string|number} deckId - ID bo flashcard
+   * @param {string|number} cardId - ID the
+   * @param {Object} data - Noi dung the
+   * @returns {Promise<Object>} The da cap nhat
+   */
+  updateCard: async (deckId, cardId, data) => {
+    const res = await api.put(`/flashcards/${deckId}/cards/${cardId}`, data);
+    return res.data;
+  },
+
+  /**
    * Xoá một thẻ khỏi bộ flashcard
    * @param {string|number} deckId - ID bộ flashcard
    * @param {string|number} cardId - ID thẻ
@@ -96,6 +139,28 @@ export const flashcardService = {
    */
   deleteCard: async (deckId, cardId) => {
     const res = await api.delete(`/flashcards/${deckId}/cards/${cardId}`);
+    return res.data;
+  },
+
+  /**
+   * Danh dau da on tap 1 the
+   * @param {string|number} deckId - ID bo flashcard
+   * @param {string|number} cardId - ID the
+   * @returns {Promise<Object>} Ket qua review
+   */
+  reviewCard: async (deckId, cardId) => {
+    const res = await api.post(`/flashcards/${deckId}/cards/${cardId}/review`);
+    return res.data;
+  },
+
+  /**
+   * Danh dau yeu thich 1 the
+   * @param {string|number} deckId - ID bo flashcard
+   * @param {string|number} cardId - ID the
+   * @returns {Promise<Object>} Ket qua toggle star
+   */
+  toggleStarCard: async (deckId, cardId) => {
+    const res = await api.put(`/flashcards/${deckId}/cards/${cardId}/star`);
     return res.data;
   },
 };

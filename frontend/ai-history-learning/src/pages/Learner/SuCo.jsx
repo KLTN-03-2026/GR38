@@ -1,30 +1,85 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, AlertCircle, Calendar, ChevronsUpDown, Upload, Loader2 } from "lucide-react";
-import Swal from "sweetalert2"; 
-import api from "../../lib/api"; 
+import { X, AlertCircle, ChevronsUpDown, Upload, Loader2, Check, User, GraduationCap } from "lucide-react";
+import Swal from "sweetalert2";
+import api from "../../lib/api";
 
 const SuCo = () => {
   const fileInputRef = useRef(null);
   const [images, setImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser) setCurrentUser(storedUser);
-  }, []);
+  
+  const [apiDataList, setApiDataList] = useState([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [userRoleSelection, setUserRoleSelection] = useState(""); 
 
   const [formData, setFormData] = useState({
-    hoTen: "",
-    gmail: "",
-    sdt: "",
-    ngayGui: new Date().toISOString().split('T')[0],
-    mucDo: "Bình thường",
-    loaiSuCo: "Lỗi Website",
+    nhomNoiDung: "", 
+    doiTuongCuThe: "", 
+    loaiBaoCao: "sai thông tin lịch sử",
     tieuDe: "",
     moTa: "",
   });
+
+  // 1. Fetch dữ liệu Content (Tài liệu, Quizz, Flashcards)
+  useEffect(() => {
+    setApiDataList([]);
+    setFormData(prev => ({ ...prev, doiTuongCuThe: "" }));
+    setUserRoleSelection(""); 
+    setErrors(prev => ({ ...prev, doiTuongCuThe: "" })); // Xóa lỗi khi đổi nhóm
+
+    if (!formData.nhomNoiDung || formData.nhomNoiDung === "khác" || formData.nhomNoiDung === "giáo viên") return;
+
+    const fetchData = async () => {
+      setIsLoadingList(true);
+      try {
+        let endpoint = "";
+        switch (formData.nhomNoiDung) {
+          case "tài liệu": endpoint = "/documents"; break;
+          case "quizz": endpoint = "/quizzes"; break; 
+          case "flashcards": endpoint = "/flashcards"; break;
+          default: break;
+        }
+
+        if (endpoint) {
+          const res = await api.get(endpoint);
+          // Kiểm tra mọi cấu trúc có thể có từ Backend
+          const data = res.data?.quizzes || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+          setApiDataList(data);
+        }
+      } catch (err) {
+        console.error("Lỗi tải danh sách nội dung:", err);
+        setApiDataList([]);
+      } finally {
+        setIsLoadingList(false);
+      }
+    };
+    fetchData();
+  }, [formData.nhomNoiDung]);
+
+  // 2. Fetch dữ liệu User/Teacher
+  useEffect(() => {
+    if (formData.nhomNoiDung === "giáo viên" && userRoleSelection) {
+      setApiDataList([]); // Reset list trước khi load mới
+      setErrors(prev => ({ ...prev, doiTuongCuThe: "" }));
+      
+      const fetchUsers = async () => {
+        setIsLoadingList(true);
+        try {
+          const endpoint = userRoleSelection === "teacher" ? "/users/teachers" : "/users/learners";
+          const res = await api.get(endpoint);
+          const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+          setApiDataList(data);
+        } catch (err) {
+          console.error("Lỗi tải danh sách người dùng:", err);
+          setApiDataList([]);
+        } finally {
+          setIsLoadingList(false);
+        }
+      };
+      fetchUsers();
+    }
+  }, [userRoleSelection, formData.nhomNoiDung]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,77 +87,46 @@ const SuCo = () => {
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
-  const handleUploadClick = () => fileInputRef.current.click();
-
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > 5) {
       Swal.fire({ icon: 'warning', title: 'Giới hạn ảnh', text: 'Tối đa 5 ảnh!' });
       return;
     }
-    const newImages = files.map(file => URL.createObjectURL(file));
-    setImages([...images, ...newImages]);
+    setImages([...images, ...files.map(file => URL.createObjectURL(file))]);
   };
 
   const validate = () => {
     let newErrors = {};
-    if (!formData.hoTen.trim()) newErrors.hoTen = "Vui lòng nhập họ tên";
-    if (!formData.gmail.trim()) newErrors.gmail = "Vui lòng nhập email";
+    if (!formData.nhomNoiDung) newErrors.nhomNoiDung = "Chọn nhóm nội dung";
+    if (formData.nhomNoiDung !== "khác" && !formData.doiTuongCuThe) newErrors.doiTuongCuThe = "Vui lòng chọn mục cụ thể";
     if (!formData.tieuDe.trim()) newErrors.tieuDe = "Vui lòng nhập tiêu đề";
-    if (!formData.moTa.trim()) newErrors.moTa = "Vui lòng nhập mô tả nội dung";
+    if (!formData.moTa.trim()) newErrors.moTa = "Vui lòng nhập mô tả";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validate()) {
-      Swal.fire({ icon: 'error', title: 'Thiếu thông tin', text: 'Vui lòng điền các trường bắt buộc.' });
+      Swal.fire({ icon: 'error', title: 'Thiếu thông tin', text: 'Vui lòng kiểm tra lại các trường đỏ.' });
       return;
     }
 
     try {
       setIsSubmitting(true);
-
-      // --- PHẦN XỬ LÝ ĐỂ GỬI ĐƯỢC NHIỀU LẦN ---
-      // Vì Backend chặn trùng Reporter + Target, ta sẽ đảo ngược:
-      // Nếu lần 1 gửi targetId là ID của mình bị chặn, ta cần 1 ID thật khác.
-      // Bạn hãy mở MongoDB/Compass, lấy 2-3 ID User thật dán vào mảng này:
-      const realUserIds = [
-        "69ec4659f841be9badeebd5c", // ID bạn vừa dùng
-        "66a1f2c9b8d4e01f12349999", // Thay bằng ID thật khác
-        "60d5ec38671f000015fbe549"  // Thay bằng ID thật khác
-      ];
-      
-      // Chọn ngẫu nhiên 1 ID từ danh sách ID THẬT để không bị lỗi 404
-      const randomTargetId = realUserIds[Math.floor(Math.random() * realUserIds.length)];
-
       const payload = {
-        targetType: "User", 
-        targetId: randomTargetId, 
-        issueType: "inappropriate_behavior", 
-        description: `[Báo cáo #${Date.now()}] ${formData.tieuDe}: ${formData.moTa}. Liên hệ: ${formData.sdt}`,
+        targetType: formData.nhomNoiDung === "giáo viên" ? "User" : "Content",
+        targetId: formData.doiTuongCuThe,
+        issueType: formData.loaiBaoCao,
+        description: `[${formData.loaiBaoCao.toUpperCase()}] ${formData.tieuDe}: ${formData.moTa}`,
       };
-
-      const res = await api.post("/reports", payload);
-
-      if (res.status === 200 || res.status === 201) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Gửi thành công!',
-          text: 'Báo cáo đã được ghi nhận.',
-          confirmButtonColor: '#F26739',
-        });
-        setFormData(prev => ({ ...prev, tieuDe: "", moTa: "" }));
-        setImages([]);
-      }
+      await api.post("/reports", payload);
+      Swal.fire({ icon: 'success', title: 'Thành công', text: 'Báo cáo đã được gửi đi.' });
+      setFormData({ nhomNoiDung: "", doiTuongCuThe: "", loaiBaoCao: "sai thông tin lịch sử", tieuDe: "", moTa: "" });
+      setImages([]);
+      setUserRoleSelection("");
     } catch (err) {
-      const msg = err.response?.data?.message || "Dữ liệu không hợp lệ.";
-      Swal.fire({
-        icon: 'error',
-        title: 'Gửi thất bại',
-        html: `<b>Mã lỗi:</b> ${err.response?.status}<br/><b>Chi tiết:</b> ${msg}`,
-        confirmButtonColor: '#d33'
-      });
+      Swal.fire({ icon: 'error', title: 'Lỗi', text: err.response?.data?.message || "Không thể gửi báo cáo" });
     } finally {
       setIsSubmitting(false);
     }
@@ -110,99 +134,186 @@ const SuCo = () => {
 
   return (
     <div className="flex items-center justify-center p-10 bg-[#FAFAFA] min-h-screen font-['Inter']">
-      <div className="relative w-[840px] h-auto bg-white border border-[#E4E4E7] shadow-lg rounded-[10px] flex flex-col items-center p-[24px] gap-[16px]">
-        <button className="absolute right-[16px] top-[16px] opacity-50 hover:opacity-100">
-          <X size={20} className="text-[#09090B]" />
-        </button>
-
-        <div className="flex flex-col items-start w-full gap-[16px]">
-          <h2 className="text-[24px] font-semibold text-[#09090B]">Báo cáo sự cố</h2>
-          <p className="text-[14px] text-[#71717A] -mt-2">Mô tả chi tiết để giúp chúng tôi khắc phục nhanh hơn.</p>
+      <div className="relative w-[840px] bg-white border border-[#E4E4E7] shadow-lg rounded-[10px] p-[24px] flex flex-col gap-[16px]">
+        
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[24px] font-semibold text-[#09090B]">Gửi phản hồi & Báo cáo</h2>
+          <p className="text-[14px] text-[#71717A]">Chúng tôi sẽ xử lý báo cáo của bạn trong vòng 24h.</p>
         </div>
 
-        <div className="flex flex-col items-start gap-[10px] w-full mt-4">
-          <div className="flex items-center p-[4px] w-full h-[50px] bg-[#F4F4F5] rounded-[6px]">
-            <div className="flex justify-center items-center gap-[10px] w-full h-[42px] bg-white shadow-sm rounded-[4px]">
-              <AlertCircle size={16} />
-              <span className="text-[14px] font-medium">Thông tin sự cố</span>
+        <div className="w-full h-[50px] bg-[#F4F4F5] rounded-[6px] flex items-center p-1">
+          <div className="flex justify-center items-center gap-2 w-full h-full bg-white shadow-sm rounded-[4px]">
+            <AlertCircle size={16} />
+            <span className="text-[14px] font-medium">Chi tiết báo cáo</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Phân loại nội dung</label>
+            <div className="relative">
+              <select 
+                name="nhomNoiDung" 
+                value={formData.nhomNoiDung} 
+                onChange={handleChange}
+                className={`appearance-none w-full h-10 px-4 border rounded-md bg-white outline-none focus:border-[#F26739] transition-all ${errors.nhomNoiDung ? 'border-red-500' : 'border-[#E4E4E7]'}`}
+              >
+                <option value="">-- Chọn mục báo cáo --</option>
+                <option value="tài liệu">Tài liệu học tập</option>
+                <option value="quizz">Bài kiểm tra (Quiz)</option>
+                <option value="flashcards">Bộ thẻ ghi nhớ (Flashcards)</option>
+                <option value="giáo viên">Người dùng / Giáo viên</option>
+                <option value="khác">Vấn đề khác</option>
+              </select>
+              <ChevronsUpDown size={14} className="absolute right-3 top-3 opacity-40 pointer-events-none" />
             </div>
           </div>
 
-          <div className="flex flex-wrap md:flex-nowrap gap-[16px] w-full mt-4">
-            <InputGroup label="Họ tên" name="hoTen" value={formData.hoTen} onChange={handleChange} error={errors.hoTen} placeholder="Nguyễn Văn A" />
-            <InputGroup label="Gmail" name="gmail" value={formData.gmail} onChange={handleChange} error={errors.gmail} placeholder="abc@gmail.com" />
-            <InputGroup label="Số điện thoại" name="sdt" value={formData.sdt} onChange={handleChange} error={errors.sdt} placeholder="0123456789" />
-          </div>
-
-          <div className="flex flex-wrap md:flex-nowrap gap-[16px] w-full mt-2">
-            <div className="flex flex-col gap-[12px] flex-1">
-              <label className="text-[14px] font-medium">Ngày gửi yêu cầu</label>
-              <div className="relative flex items-center w-full h-[40px] bg-white border border-[#E4E4E7] rounded-[6px] px-4">
-                <input type="date" name="ngayGui" value={formData.ngayGui} onChange={handleChange} className="w-full bg-transparent outline-none text-[14px]" />
-                <Calendar size={16} className="absolute right-4 text-[#71717A] pointer-events-none" />
-              </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Vấn đề gặp phải</label>
+            <div className="relative">
+              <select 
+                name="loaiBaoCao" 
+                value={formData.loaiBaoCao} 
+                onChange={handleChange}
+                className="appearance-none w-full h-10 px-4 border border-[#E4E4E7] rounded-md bg-white outline-none focus:border-[#F26739]"
+              >
+                <option value="sai thông tin lịch sử">Sai thông tin lịch sử</option>
+                <option value="sai mốc thời gian">Sai mốc thời gian</option>
+                <option value="hành vi không chuẩn mực">Hành vi không chuẩn mực</option>
+                <option value="spam">Nội dung rác (Spam)</option>
+                <option value="lỗi tài liệu">Tài liệu không hiển thị</option>
+                <option value="khác">Khác</option>
+              </select>
+              <ChevronsUpDown size={14} className="absolute right-3 top-3 opacity-40 pointer-events-none" />
             </div>
-            <SelectGroup label="Mức độ" name="mucDo" value={formData.mucDo} onChange={handleChange} options={["Bình thường", "Quan trọng"]} />
-            <SelectGroup label="Loại sự cố" name="loaiSuCo" value={formData.loaiSuCo} onChange={handleChange} options={["Lỗi Website", "Lỗi AI"]} />
           </div>
+        </div>
 
-          <div className="w-full mt-2">
-            <InputGroup label="Tiêu đề" name="tieuDe" value={formData.tieuDe} onChange={handleChange} error={errors.tieuDe} placeholder="Nhập tiêu đề..." />
-          </div>
-
-          <div className="flex flex-col gap-[12px] w-full mt-2">
-            <label className="text-[14px] font-medium">Mô tả chi tiết</label>
-            <textarea name="moTa" value={formData.moTa} onChange={handleChange} placeholder="Mô tả..." className={`w-full h-[120px] p-4 border ${errors.moTa ? 'border-red-500 shadow-[0_0_0_1px_red]' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] resize-none focus:border-black transition-all`} />
-            {errors.moTa && <span className="text-red-500 text-[12px]">{errors.moTa}</span>}
-          </div>
-
-          <div className="w-full mt-4">
-            <p className="text-[14px] text-[#71717A] mb-4">Ảnh minh chứng</p>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/*" className="hidden" />
-            <button type="button" onClick={handleUploadClick} className="flex items-center gap-2 px-4 py-2 border border-black rounded-[6px] hover:bg-gray-50 transition-all active:scale-95">
-              <Upload size={16} /> <span className="text-sm font-semibold">Tải ảnh</span>
+        {/* PHẦN CHỌN NGƯỜI DÙNG / GIÁO VIÊN */}
+        {formData.nhomNoiDung === "giáo viên" && (
+          <div className="flex gap-4 p-2 bg-slate-50 rounded-lg border border-slate-200 shadow-sm">
+            <button
+              type="button"
+              onClick={() => { setUserRoleSelection("learner"); setFormData(prev => ({ ...prev, doiTuongCuThe: "" })); }}
+              className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-md transition-all font-semibold ${userRoleSelection === "learner" ? "bg-[#F26739] text-white shadow-md" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"}`}
+            >
+              <User size={18} /> Người dùng
             </button>
-            <div className="mt-4 flex flex-wrap gap-4 p-4 min-h-[100px] border-2 border-dashed border-[#E4E4E7] rounded-lg bg-[#FAFAFA]">
-              {images.length > 0 ? (
-                images.map((src, idx) => <img key={idx} src={src} className="w-24 h-24 object-cover rounded-md border shadow-sm" alt="preview" />)
+            <button
+              type="button"
+              onClick={() => { setUserRoleSelection("teacher"); setFormData(prev => ({ ...prev, doiTuongCuThe: "" })); }}
+              className={`flex-1 flex items-center justify-center gap-2 h-12 rounded-md transition-all font-semibold ${userRoleSelection === "teacher" ? "bg-[#F26739] text-white shadow-md" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"}`}
+            >
+              <GraduationCap size={18} /> Giáo viên
+            </button>
+          </div>
+        )}
+
+        {/* HIỂN THỊ DANH SÁCH BUTTONS CỤ THỂ */}
+        {((formData.nhomNoiDung && formData.nhomNoiDung !== "khác" && formData.nhomNoiDung !== "giáo viên") || (formData.nhomNoiDung === "giáo viên" && userRoleSelection)) && (
+          <div className="flex flex-col gap-3 p-4 bg-orange-50/50 border border-orange-100 rounded-lg">
+            <label className="text-xs font-bold uppercase text-orange-600 tracking-wider">
+              Chọn {userRoleSelection === "learner" ? "Người dùng" : userRoleSelection === "teacher" ? "Giáo viên" : formData.nhomNoiDung} cụ thể:
+            </label>
+            
+            {isLoadingList ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={16} className="animate-spin"/> Đang tải...</div>
+            ) : (
+              apiDataList.length > 0 ? (
+                <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto p-1">
+                  {apiDataList.map((item) => (
+                    <button
+                      key={item._id}
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, doiTuongCuThe: item._id });
+                        setErrors(prev => ({ ...prev, doiTuongCuThe: "" }));
+                      }}
+                      className={`px-3 py-2 text-xs font-medium rounded-full border transition-all flex items-center gap-1 ${
+                        formData.doiTuongCuThe === item._id 
+                        ? "bg-[#F26739] text-white border-[#F26739] shadow-md" 
+                        : "bg-white text-gray-700 border-gray-200 hover:border-orange-300"
+                      }`}
+                    >
+                      {formData.doiTuongCuThe === item._id && <Check size={12} />}
+                      {item.title || item.fullName || item.name || item.username || "Không rõ tên"}
+                    </button>
+                  ))}
+                </div>
               ) : (
-                <div className="w-full flex items-center justify-center text-[#A1A1AA] text-sm">Chưa có ảnh</div>
-              )}
-            </div>
+                // Chỉ hiển thị "Không tìm thấy" nếu không phải đang trong quá trình chuyển đổi tab userRole
+                !isLoadingList && <span className="text-xs text-gray-400 italic">Hiện tại chưa có dữ liệu hiển thị.</span>
+              )
+            )}
+            {errors.doiTuongCuThe && <span className="text-red-500 text-[11px] font-medium">{errors.doiTuongCuThe}</span>}
+          </div>
+        )}
+
+        {/* PHẦN NHẬP NỘI DUNG */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Tiêu đề ngắn gọn</label>
+            <input 
+              name="tieuDe" 
+              value={formData.tieuDe} 
+              onChange={handleChange} 
+              placeholder="VD: Sai năm diễn ra chiến dịch Điện Biên Phủ"
+              className={`w-full h-10 px-4 border rounded-md outline-none focus:border-black transition-all ${errors.tieuDe ? 'border-red-500' : 'border-[#E4E4E7]'}`}
+            />
           </div>
 
-          <div className="flex justify-end w-full mt-8">
-            <button 
-              disabled={isSubmitting} 
-              onClick={handleSubmit} 
-              className="flex items-center justify-center min-w-[150px] h-[45px] bg-[#F26739] text-white rounded-[6px] font-medium hover:bg-orange-600 transition-all disabled:bg-gray-400 shadow-md">
-              {isSubmitting ? <Loader2 className="animate-spin" /> : "Gửi báo cáo"}
-            </button>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Mô tả chi tiết nội dung lỗi</label>
+            <textarea 
+              name="moTa" 
+              value={formData.moTa} 
+              onChange={handleChange} 
+              className={`w-full h-24 p-4 border rounded-md outline-none resize-none focus:border-black transition-all ${errors.moTa ? 'border-red-500' : 'border-[#E4E4E7]'}`}
+              placeholder="Vui lòng mô tả chi tiết lỗi bạn gặp phải..."
+            />
           </div>
+        </div>
+
+        {/* PHẦN ÚP ẢNH - GIỮ NGUYÊN GIAO DIỆN */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Ảnh minh chứng (tối đa 5)</span>
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current.click()}
+              className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50 text-sm font-semibold transition-all"
+            >
+              <Upload size={14} /> Tải ảnh lên
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="image/*" className="hidden" />
+          </div>
+          <div className="flex flex-wrap gap-3 p-3 border-2 border-dashed border-gray-100 rounded-lg bg-gray-50/50 min-h-[80px]">
+            {images.length > 0 ? images.map((src, idx) => (
+              <img key={idx} src={src} className="w-16 h-16 object-cover rounded border bg-white shadow-sm" alt="preview" />
+            )) : <span className="w-full text-center text-xs text-gray-400 my-auto">Chưa có ảnh được chọn</span>}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 mt-4">
+          <button 
+            type="button" 
+            onClick={() => { setFormData({ nhomNoiDung: "", doiTuongCuThe: "", loaiBaoCao: "sai thông tin lịch sử", tieuDe: "", moTa: "" }); setImages([]); setUserRoleSelection(""); }}
+            className="px-6 h-10 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-all"
+          >
+            Hủy bỏ
+          </button>
+          <button 
+            disabled={isSubmitting} 
+            onClick={handleSubmit}
+            className="flex items-center justify-center min-w-[140px] h-10 bg-[#F26739] text-white rounded-md font-semibold hover:bg-orange-600 shadow-md transition-all active:scale-95 disabled:bg-gray-300"
+          >
+            {isSubmitting ? <Loader2 className="animate-spin" /> : "Gửi báo cáo ngay"}
+          </button>
         </div>
       </div>
     </div>
   );
 };
-
-const InputGroup = ({ label, name, value, onChange, error, placeholder }) => (
-  <div className="flex flex-col gap-[12px] flex-1">
-    <label className="text-[14px] font-medium">{label}</label>
-    <input name={name} value={value} onChange={onChange} placeholder={placeholder} className={`w-full h-[40px] px-4 border ${error ? 'border-red-500 shadow-[0_0_0_1px_red]' : 'border-[#E4E4E7]'} rounded-[6px] outline-none text-[14px] focus:border-black transition-all`} />
-    {error && <span className="text-red-500 text-[12px]">{error}</span>}
-  </div>
-);
-
-const SelectGroup = ({ label, name, value, onChange, options }) => (
-  <div className="flex flex-col gap-[12px] flex-1">
-    <label className="text-[14px] font-medium">{label}</label>
-    <div className="relative">
-      <select name={name} value={value} onChange={onChange} className="appearance-none w-full h-[40px] px-4 border border-[#E4E4E7] rounded-[6px] text-[14px] bg-white outline-none focus:border-black">
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-      <ChevronsUpDown size={16} className="absolute right-4 top-3 text-[#71717A] pointer-events-none opacity-50" />
-    </div>
-  </div>
-);
 
 export default SuCo;

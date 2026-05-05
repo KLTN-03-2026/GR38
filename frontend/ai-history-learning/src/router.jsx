@@ -3,22 +3,18 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 // ================= LAYOUT & PAGES IMPORTS =================
-// Layout
 import Sidebar from "./components/Layout/Sidebar";
 import Header from "./components/Layout/Header";
 
-// Auth
 import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
 import ForgotPasswordPage from "./components/Modal/Auth/ForgotPasswordForm";
 import ProfilePage from "./components/Profile/ProfilePage.jsx";
 
-// Admin
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AccountManagement from "./pages/Admin/AccountManagement";
 import ReportManagement from "./pages/Admin/ReportManagement";
 
-// Teacher
 import Teacher from "./pages/Admin/Teacher.jsx";
 import QuizPage from "./pages/Teacher/Quizzes/QuizPage.jsx";
 import QuizResultPage from "./pages/Teacher/Quizzes/QuizResultPage.jsx";
@@ -31,7 +27,6 @@ import Flashcards from "./pages/Teacher/Flashcards/FlashcardPage.jsx";
 import AddFlashcards from "./pages/Teacher/Flashcards/AddFlashcard.jsx";
 import FlashcardDetail from "./pages/Teacher/Flashcards/FlashcardDetail.jsx";
 
-// Learner
 import Dashboard from "./pages/Learner/Dashboard";
 import BaiGiang from "./pages/Learner/BaiGiang/BaiGiang";
 import ChatAI from "./pages/Learner/BaiGiang/ChatAI";
@@ -46,49 +41,27 @@ import QuizzesLearner from "./pages/Learner/Quizzes";
 import SuCo from "./pages/Learner/SuCo";
 import TienDo from "./pages/Learner/TienDo";
 
-// ================= PRIVATE ROUTE =================
 function PrivateRoute({ allowedRole }) {
   const { user, role, loading } = useAuth();
-
-  // Chờ Context load xong dữ liệu từ LocalStorage rồi mới quyết định
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Đang tải hệ thống...
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center">Đang tải hệ thống...</div>;
   }
-
-  // Chặn khách vãng lai
   if (!user) return <Navigate to="/" replace />;
-
-  // Kiểm tra đúng vai trò
   return role === allowedRole ? <Outlet /> : <Navigate to="/" replace />;
 }
 
-// ================= PUBLIC ROUTE =================
 function PublicRoute() {
   const { user, role, loading } = useAuth();
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Đang tải hệ thống...
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center">Đang tải hệ thống...</div>;
   }
-
   if (!user) return <Outlet />;
-
-  // Nếu đã đăng nhập, tự động vào Dashboard tương ứng
   if (role === "ADMIN") return <Navigate to="/admin" replace />;
   if (role === "TEACHER") return <Navigate to="/teacher" replace />;
   if (role === "LEARNER") return <Navigate to="/learner" replace />;
-
   return <Outlet />;
 }
 
-// ================= SHARED LAYOUT =================
 function AppLayout({ mlWidth = "ml-[220px]" }) {
   return (
     <div className="flex min-h-screen bg-[#FAFAFA]">
@@ -103,18 +76,16 @@ function AppLayout({ mlWidth = "ml-[220px]" }) {
   );
 }
 
-// ================= ROUTER =================
 export default function AppRouter() {
   return (
     <Routes>
-      {/* PUBLIC */}
       <Route element={<PublicRoute />}>
         <Route path="/" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
-      {/* ADMIN */}
+      {/* ADMIN ROUTES - GIỮ NGUYÊN TUYỆT ĐỐI */}
       <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -124,7 +95,7 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* TEACHER */}
+      {/* TEACHER ROUTES - GIỮ NGUYÊN TUYỆT ĐỐI */}
       <Route element={<PrivateRoute allowedRole="TEACHER" />}>
         <Route path="/teacher/baigiang/:id" element={<Baigiangpage />} />
         <Route path="/teacher/baikiemtra/:id" element={<Baikiemtra />} />
@@ -143,25 +114,41 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* LEARNER */}
+      {/* LEARNER ROUTES - Cập nhật để Sidebar sáng đèn */}
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
+          
+          {/* Tài liệu & Học tập */}
           <Route path="documents" element={<DocumentsLearner />} />
           <Route path="bai-giang/:id" element={<BaiGiang />} />
-          <Route path="baikiemtra/:id" element={<BaiKiemTra />} />
-          <Route path="flashcards" element={<FlashcardsLearner />} />
+          
+          {/* Quizzes */}
           <Route path="quizzes" element={<QuizzesLearner />} />
           <Route path="hoc-quizz/:id" element={<HocQuiz />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="suco" element={<SuCo />} />
-          <Route path="chat-ai" element={<ChatAI />} />
-          <Route path="flashcard" element={<FlashCard />} />
+          <Route path="baikiemtra/:id" element={<BaiKiemTra />} />
           <Route path="quiz" element={<Quiz />} />
-          <Route
-            path="hoc-flashcard/:id"
-            element={<FlashcardDetailLearner />}
-          />
+          
+          {/* Flashcards */}
+          <Route path="flashcards" element={<FlashcardsLearner />} />
+          <Route path="flashcard" element={<FlashCard />} />
+          <Route path="hoc-flashcard/:id" element={<FlashcardDetailLearner />} />
+          
+          {/* Tiện ích */}
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="chat-ai" element={<ChatAI />} />
+          
+          {/* --- KHU VỰC SỬA LỖI SIDEBAR SỰ CỐ --- */}
+          {/* 1. Khớp hoàn toàn với Sidebar (path: "/learner/suco") */}
+          <Route path="suco" element={<SuCo />} /> 
+          
+          {/* 2. Khớp hoàn toàn với các nút Báo cáo lỗi (path: "/learner/su-co") */}
+          <Route path="su-co" element={<SuCo />} />
+          
+          {/* 3. Khớp với alias bao-cao (nếu có) */}
+          <Route path="bao-cao-su-co" element={<SuCo />} />
+          
+          {/* --- KHU VỰC SỬA LỖI SIDEBAR TIẾN ĐỘ --- */}
           <Route path="tiendo" element={<TienDo />} />
         </Route>
       </Route>

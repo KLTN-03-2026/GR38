@@ -29,6 +29,8 @@ const Flashcards = () => {
           data = res.data;
         } else if (Array.isArray(res)) {
           data = res;
+        } else if (res?.data && Array.isArray(res.data)) {
+          data = res.data;
         }
 
         setFlashcardSets(data);
@@ -98,7 +100,6 @@ const Flashcards = () => {
     <div className="flex-1 bg-[#FDFDFD] min-h-screen p-6 font-sans">
       <div className="max-w-6xl mx-auto flex flex-col min-h-[calc(100vh-80px)]">
 
-        {/* Search Bar */}
         <div className="w-full h-[50px] bg-white border border-gray-200 rounded-xl mb-8 flex items-center px-4 shadow-sm">
           <div className="flex items-center bg-[#F9F9F9] border border-gray-100 rounded-lg px-3 h-[34px] w-full max-w-[400px] gap-2">
             <Search size={14} className="text-gray-400" />
@@ -119,7 +120,6 @@ const Flashcards = () => {
           Thư viện FlashCards
         </h1>
 
-        {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {loading ? (
             <div className="col-span-full text-center py-20 flex flex-col items-center gap-2">
@@ -133,8 +133,22 @@ const Flashcards = () => {
           ) : currentItems.map((item) => {
             const thumb = item.thumbnail || item.image || PLACEHOLDER;
             return (
-              <div key={item._id} className="flex flex-col bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden">
-                {/* Thumbnail */}
+              <div key={item._id} className="relative flex flex-col bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/learner/su-co", { 
+                      state: { 
+                        reportTarget: "flashcards", 
+                        targetId: item._id 
+                      } 
+                    });
+                  }}
+                  className="absolute top-6 right-6 z-10 p-2 bg-white/90 rounded-full text-gray-400 hover:text-red-500 shadow-sm border border-gray-100 transition-colors"
+                >
+                  <AlertCircle size={18} />
+                </button>
+
                 <div className="w-full h-[160px] overflow-hidden rounded-[14px] mb-4 bg-gray-50 transition-transform group-hover:scale-[1.02]">
                   <img
                     src={thumb}
@@ -168,7 +182,6 @@ const Flashcards = () => {
           })}
         </div>
 
-        {/* Pagination */}
         {!loading && totalPages > 0 && (
           <div className="mt-auto flex justify-between items-center w-full px-2 mb-8">
             <div className="text-[14px] font-medium text-gray-500">

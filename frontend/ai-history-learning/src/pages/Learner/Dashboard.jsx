@@ -57,7 +57,15 @@ export default function LearnerDashboard() {
 
         if (docRes.status === "fulfilled") {
           const all = docRes.value.data?.data ?? docRes.value.data ?? [];
-          setDocs(Array.isArray(all) ? all.slice(0, 4) : []);
+          if (Array.isArray(all)) {
+            // SẮP XẾP: Mới nhất lên đầu và lấy tối đa 4
+            const sortedDocs = [...all]
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .slice(0, 4);
+            setDocs(sortedDocs);
+          } else {
+            setDocs([]);
+          }
         }
         if (histRes.status === "fulfilled") {
           const all = histRes.value.data?.data ?? histRes.value.data ?? [];
@@ -76,9 +84,9 @@ export default function LearnerDashboard() {
   }, []);
 
   const stats = [
-    { label: "Tài liệu có sẵn",    value: docs.length,    Icon: BookOpen,      color: "#1473E6", bg: "#EEF4FF" },
+    { label: "Tài liệu có sẵn",     value: docs.length,    Icon: BookOpen,      color: "#1473E6", bg: "#EEF4FF" },
     { label: "Bài kiểm tra đã làm", value: history.length, Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
-    { label: "Bộ Flashcard",        value: flashCount,      Icon: LayoutGrid,    color: "#8B5CF6", bg: "#F3F0FF" },
+    { label: "Bộ Flashcard",         value: flashCount,      Icon: LayoutGrid,    color: "#8B5CF6", bg: "#F3F0FF" },
   ];
 
   if (loading) return (

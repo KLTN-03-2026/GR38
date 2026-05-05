@@ -153,8 +153,23 @@ const TienDo = () => {
               <BarChart data={data.chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} />
-                <Tooltip cursor={{fill: '#F9FAFB'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                
+                {/* YAxis: allowDecimals={false} để ẩn số thập phân, domain để tự động tăng theo số bài làm tối đa */}
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#9CA3AF', fontSize: 12}} 
+                  allowDecimals={false}
+                  domain={[0, 'dataMax']}
+                />
+                
+                {/* Tooltip khi rơ chuột */}
+                <Tooltip 
+                  cursor={{fill: '#F9FAFB'}} 
+                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                  formatter={(value) => [value, "Tổng Bài Làm"]}
+                />
+
                 <Bar dataKey="value" radius={[6, 6, 6, 6]} barSize={35}>
                   {data.chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill="#4ADE80" />

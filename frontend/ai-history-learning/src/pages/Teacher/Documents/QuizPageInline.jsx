@@ -1,6 +1,5 @@
 // QuizPageInline.jsx
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { quizService } from "../../../services/quizService";
 
 const shuffle = (arr) => {
@@ -12,30 +11,44 @@ const shuffle = (arr) => {
   return a;
 };
 
-// correctAnswer là TEXT string → giữ nguyên, chỉ shuffle options
-const shuffleOpts = (q) => {
-  const shuffled = shuffle(q.options);
-  return { ...q, options: shuffled };
-};
+const shuffleOpts = (q) => ({ ...q, options: shuffle(q.options) });
 
-// Kiểm tra đáp án: so sánh text option được chọn với correctAnswer
 const isCorrect = (q, selectedIndex) => {
   if (selectedIndex === undefined || selectedIndex === null) return false;
-  const selectedText = q.options[selectedIndex];
-  return selectedText === q.correctAnswer;
+  return q.options[selectedIndex] === q.correctAnswer;
 };
 
+const formatTime = (sec) => {
+  const m = Math.floor(sec / 60).toString().padStart(2, "0");
+  const s = (sec % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+};
+
+const TIME_OPTIONS = [15, 20, 25, 30, 35, 40, 45];
+
 export default function QuizPageInline({ quiz, onBack, documentId }) {
-  const navigate = useNavigate();
   const [questions, setQuestions] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Setup screen
+  const [started, setStarted] = useState(false);
+  const [quizName, setQuizName] = useState("");
+  const [timeLimit, setTimeLimit] = useState(30);
+
+  // Quiz screen
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showWarn, setShowWarn] = useState(false);
   const [animDir, setAnimDir] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Result screen
   const [showResult, setShowResult] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+
   const animRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -44,12 +57,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
         const res = await quizService.getById(qid);
         const d = res.data?.data ?? res.data ?? res;
         const raw = d.questions ?? [];
-        if (!raw.length) {
-          alert("Quiz này chưa có câu hỏi!");
-          onBack();
-          return;
-        }
-        // Normalize: giữ correctAnswer là string text
+        if (!raw.length) { alert("Quiz này chưa có câu hỏi!"); onBack(); return; }
         const normalized = raw.map((q) => ({
           question: q.question ?? q.q,
           options: q.options ?? [],
@@ -57,52 +65,51 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
           explanation: q.explanation ?? "",
         }));
         setDetail(d);
+        setQuizName(d.title ?? quiz.title ?? "");
         setQuestions(shuffle(normalized).map(shuffleOpts));
       } catch (err) {
-        console.error("Lỗi:", err);
         alert("Không tải được câu hỏi: " + err.message);
         onBack();
+      } finally {
+        setLoading(false);
       }
     })();
   }, [quiz._id]);
 
-  if (!questions)
-    return (
-      <div className="flex items-center justify-center py-16 gap-3">
-        <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-gray-400">Đang tải câu hỏi...</p>
-      </div>
-    );
+  // Timer
+  useEffect(() => {
+    if (!started) return;
+    const sec = timeLimit * 60;
+    setTimeLeft(sec);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) { clearInterval(timerRef.current); handleSubmit(); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [started]);
 
-  const total = questions.length;
-  const q = questions[currentQ];
-  const selected = answers[currentQ];
-  const progress = ((currentQ + 1) / total) * 100;
-
-  // Tính điểm
-  const correctCount = Object.entries(answers).filter(([i, a]) => {
-    const question = questions[Number(i)];
-    return question && isCorrect(question, a);
-  }).length;
-  const wrongCount = Object.keys(answers).length - correctCount;
-  const unanswered = total - Object.keys(answers).length;
-  const scorePercent = Math.round((correctCount / total) * 100);
-
-  const getMotivation = () => {
-    if (scorePercent >= 80) return { text: "Xuất sắc!", sub: "Bạn đã làm rất tốt 🎉" };
-    if (scorePercent >= 50) return { text: "Khá tốt!", sub: "Cố gắng thêm một chút nữa nhé 💪" };
-    return { text: "Cần cố gắng thêm!", sub: "Xem lại bài và thử lại bạn nhé 📚" };
+  const handleSubmit = () => {
+    clearInterval(timerRef.current);
+    setShowResult(true);
   };
+
+  const total = questions?.length ?? 0;
+  const q = questions?.[currentQ];
+  const selected = answers[currentQ];
+  const progress = total ? ((currentQ + 1) / total) * 100 : 0;
+
+  const correctCount = questions
+    ? Object.entries(answers).filter(([i, a]) => isCorrect(questions[Number(i)], a)).length
+    : 0;
+  const scorePercent = total ? Math.round((correctCount / total) * 100) : 0;
 
   const goTo = (next, dir) => {
     if (next < 0 || next >= total) return;
     setAnimDir(dir);
     clearTimeout(animRef.current);
-    animRef.current = setTimeout(() => {
-      setCurrentQ(next);
-      setAnimDir(null);
-      setShowWarn(false);
-    }, 180);
+    animRef.current = setTimeout(() => { setCurrentQ(next); setAnimDir(null); setShowWarn(false); }, 180);
   };
 
   const handleNext = () => {
@@ -110,46 +117,146 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
     goTo(currentQ + 1, "left");
   };
 
-  const handleSubmit = () => setShowResult(true);
+  const slideClass = animDir === "left" ? "anim-slide-left" : animDir === "right" ? "anim-slide-right" : "";
 
-  const slideClass =
-    animDir === "left"
-      ? "animate-[slideInLeft_0.2s_ease_both]"
-      : animDir === "right"
-        ? "animate-[slideInRight_0.2s_ease_both]"
-        : "";
+  // ── LOADING ──
+  if (loading) return (
+    <div className="flex items-center justify-center py-20 gap-3">
+      <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-gray-400">Đang tải câu hỏi...</p>
+    </div>
+  );
 
-  // ── RESULT SCREEN ──────────────────────────────────────────────
+  // ── SETUP SCREEN ──
+  if (!started) return (
+    <div className="space-y-5">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Danh sách bài kiểm tra
+      </button>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Top banner */}
+        <div className="h-2 w-full" style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)" }} />
+
+        <div className="p-6 space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: "linear-gradient(135deg,#eff6ff,#e0e7ff)" }}>⚙️</div>
+            <div>
+              <h2 className="text-base font-bold text-gray-800">Cài đặt bài quiz</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{total} câu hỏi · Chọn thời gian làm bài</p>
+            </div>
+          </div>
+
+          {/* Tên bài */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-2 block tracking-wide uppercase">Tên bài kiểm tra</label>
+            <input
+              value={quizName}
+              onChange={(e) => setQuizName(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
+              placeholder="Nhập tên bài kiểm tra..."
+            />
+          </div>
+
+          {/* Thời gian */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-3 block tracking-wide uppercase">
+              Thời gian làm bài
+            </label>
+            <div className="grid grid-cols-7 gap-2">
+              {TIME_OPTIONS.map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setTimeLimit(v)}
+                  className="py-2.5 rounded-xl text-xs font-bold border-2 transition-all"
+                  style={timeLimit === v
+                    ? { borderColor: "#3b82f6", background: "#eff6ff", color: "#3b82f6" }
+                    : { borderColor: "#e5e7eb", background: "#fff", color: "#6b7280" }
+                  }
+                >
+                  {v}p
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+              <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs text-blue-600 font-medium">
+                Thời gian: <strong>{timeLimit} phút</strong> · Kết thúc lúc {(() => {
+                  const now = new Date();
+                  now.setMinutes(now.getMinutes() + timeLimit);
+                  return now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                })()}
+              </span>
+            </div>
+          </div>
+
+          {/* Info row */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: "📋", label: "Câu hỏi", value: total },
+              { icon: "⏱", label: "Phút", value: timeLimit },
+              { icon: "🎯", label: "Độ khó", value: quiz.difficulty === "EASY" ? "Dễ" : quiz.difficulty === "MEDIUM" ? "TB" : quiz.difficulty === "HARD" ? "Khó" : "—" },
+            ].map((s) => (
+              <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                <div className="text-lg mb-1">{s.icon}</div>
+                <div className="text-base font-extrabold text-gray-800">{s.value}</div>
+                <div className="text-xs text-gray-400">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setStarted(true)}
+            disabled={!quizName.trim()}
+            className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40"
+            style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)" }}
+          >
+            Bắt đầu làm bài →
+          </button>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideInLeft  { from{opacity:0;transform:translateX(24px)}  to{opacity:1;transform:translateX(0)} }
+        @keyframes slideInRight { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:translateX(0)} }
+      `}</style>
+    </div>
+  );
+
+  // ── RESULT SCREEN ──
   if (showResult) {
-    const mot = getMotivation();
+    const wrongCount = Object.keys(answers).length - correctCount;
+    const mot = scorePercent >= 80
+      ? { text: "Xuất sắc! 🎉", sub: "Bạn đã làm rất tốt" }
+      : scorePercent >= 50
+      ? { text: "Khá tốt! 💪", sub: "Cố gắng thêm một chút nữa nhé" }
+      : { text: "Cần cố gắng thêm! 📚", sub: "Xem lại bài và thử lại bạn nhé" };
     const circumference = 2 * Math.PI * 36;
     const offset = circumference - (scorePercent / 100) * circumference;
 
     return (
       <div className="space-y-4">
-        {/* Result card */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg,#fff0eb 0%,#ffe4dc 100%)", border: "1px solid #fcd5c8" }}>
-          {/* Badge */}
+        <div className="rounded-2xl overflow-hidden border border-orange-100" style={{ background: "linear-gradient(135deg,#fff7ed,#fff0e0)" }}>
           <div className="flex justify-center pt-5 pb-2">
             <span className="flex items-center gap-1.5 bg-green-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow">
-              <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
-              Hoàn Thành
+              <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" /> Hoàn Thành · {quizName}
             </span>
           </div>
 
-          {/* Circle progress */}
           <div className="flex justify-center py-4">
             <div className="relative w-24 h-24">
               <svg className="w-24 h-24 -rotate-90" viewBox="0 0 80 80">
                 <circle cx="40" cy="40" r="36" fill="none" stroke="#fcd5c8" strokeWidth="7" />
-                <circle
-                  cx="40" cy="40" r="36" fill="none"
+                <circle cx="40" cy="40" r="36" fill="none"
                   stroke={scorePercent >= 80 ? "#22c55e" : scorePercent >= 50 ? "#f59e0b" : "#ef4444"}
                   strokeWidth="7" strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={offset}
-                  style={{ transition: "stroke-dashoffset 1s ease" }}
-                />
+                  strokeDasharray={circumference} strokeDashoffset={offset}
+                  style={{ transition: "stroke-dashoffset 1s ease" }} />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-extrabold text-gray-900">{scorePercent}</span>
@@ -158,13 +265,11 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
             </div>
           </div>
 
-          {/* Motivation */}
           <div className="text-center pb-4 px-4">
             <p className="text-base font-bold text-gray-900">{mot.text}</p>
             <p className="text-xs text-gray-500 mt-0.5">{mot.sub}</p>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-2 mx-4 mb-4">
             {[
               { label: "Hoàn thành", value: Object.keys(answers).length, icon: "📋", color: "#6b7280", bg: "#f9fafb" },
@@ -178,37 +283,29 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
               </div>
             ))}
           </div>
-
-          {/* Quiz name */}
-          <p className="text-center text-xs text-gray-400 pb-4">{detail?.title ?? quiz.title}</p>
         </div>
 
-        {/* Toggle detail */}
         <button
           onClick={() => setShowDetail((p) => !p)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
         >
-          <span>{showDetail ? "▲ Ẩn chi tiết" : "▼ Xem chi tiết"}</span>
+          {showDetail ? "▲ Ẩn chi tiết" : "▼ Xem chi tiết"}
         </button>
 
-        {/* Detail list */}
         {showDetail && (
           <div className="space-y-3">
             {questions.map((question, idx) => {
               const userIdx = answers[idx];
               const correct = isCorrect(question, userIdx);
-              const userText = userIdx !== undefined ? question.options[userIdx] : null;
-
               return (
                 <div key={idx} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
                   <div className="flex items-start gap-2 mb-3">
                     <span className="text-xs font-bold text-gray-400 mt-0.5 shrink-0">{idx + 1}</span>
-                    <p className="text-sm font-medium text-gray-800 leading-5">{question.question}</p>
+                    <p className="text-sm font-medium text-gray-800 leading-5 flex-1">{question.question}</p>
                     <span className={`ml-auto shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
                       {correct ? "✓ Đúng" : "✗ Sai"}
                     </span>
                   </div>
-
                   <div className="space-y-1.5">
                     {question.options.map((opt, oi) => {
                       const isAns = opt === question.correctAnswer;
@@ -216,7 +313,6 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
                       let cls = "border-gray-100 bg-gray-50 text-gray-600";
                       if (isAns) cls = "border-green-300 bg-green-50 text-green-800";
                       if (isUser && !correct) cls = "border-red-300 bg-red-50 text-red-700";
-
                       return (
                         <div key={oi} className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs ${cls}`}>
                           <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 font-bold text-[10px]
@@ -230,7 +326,6 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
                       );
                     })}
                   </div>
-
                   {question.explanation && (
                     <div className="mt-2.5 p-2.5 rounded-lg bg-yellow-50 border border-yellow-200 flex gap-2">
                       <span className="text-sm">💡</span>
@@ -243,43 +338,42 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-3 pb-4">
           <button
-            onClick={() => { setShowResult(false); setAnswers({}); setCurrentQ(0); }}
+            onClick={() => { setShowResult(false); setStarted(false); setAnswers({}); setCurrentQ(0); setShowDetail(false); }}
             className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
             Làm lại
           </button>
-          <button
-            onClick={onBack}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition"
-            style={{ background: "#F26739" }}
-          >
+          <button onClick={onBack} className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition" style={{ background: "#F26739" }}>
             Quay lại
           </button>
         </div>
-
-        <style>{`
-          @keyframes slideInLeft  { from{opacity:0;transform:translateX(24px)}  to{opacity:1;transform:translateX(0)} }
-          @keyframes slideInRight { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:translateX(0)} }
-        `}</style>
       </div>
     );
   }
 
-  // ── QUIZ SCREEN ────────────────────────────────────────────────
+  // ── QUIZ SCREEN ──
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Danh sách bài kiểm tra
+          Quay lại
         </button>
-        <span className="text-xs text-gray-400">{quiz.title}</span>
+
+        {/* Timer */}
+        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm transition-all ${
+          timeLeft <= 60 ? "bg-red-500 text-white animate-pulse" : "bg-orange-500 text-white"
+        }`}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="tracking-widest tabular-nums">{formatTime(timeLeft)}</span>
+        </div>
       </div>
 
       {/* Question card */}
@@ -311,12 +405,12 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
         </div>
       </div>
 
-      {/* Progress + Navigation */}
+      {/* Progress + Nav */}
       <div>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-xs text-gray-500 tabular-nums">{currentQ + 1} / {total}</span>
           <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-1.5 bg-blue-500 rounded-full transition-all duration-400" style={{ width: `${progress}%` }} />
+            <div className="h-1.5 bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
           <span className="text-xs text-gray-400 tabular-nums">{Math.round(progress)}%</span>
         </div>
@@ -333,15 +427,12 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
             Trước
           </button>
 
-          {/* Page dots */}
           <div className="flex items-center gap-1.5">
             {Array.from({ length: total }, (_, i) => i)
               .filter((i) => i === 0 || i === total - 1 || Math.abs(i - currentQ) <= 1)
               .map((i, arrIdx, arr) => (
                 <span key={i} className="flex items-center gap-1.5">
-                  {arrIdx > 0 && arr[arrIdx] - arr[arrIdx - 1] > 1 && (
-                    <span className="text-gray-300 text-xs">…</span>
-                  )}
+                  {arrIdx > 0 && arr[arrIdx] - arr[arrIdx - 1] > 1 && <span className="text-gray-300 text-xs">…</span>}
                   <button
                     onClick={() => goTo(i, i > currentQ ? "left" : "right")}
                     className={`w-7 h-7 text-xs rounded-lg border font-medium transition-all ${
@@ -373,7 +464,8 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
           ) : (
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#F26739] hover:bg-orange-600 transition"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition"
+              style={{ background: "#F26739" }}
             >
               Nộp bài
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,6 +492,8 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
       </div>
 
       <style>{`
+        .anim-slide-left  { animation: slideInLeft  0.2s ease both; }
+        .anim-slide-right { animation: slideInRight 0.2s ease both; }
         @keyframes slideInLeft  { from{opacity:0;transform:translateX(24px)}  to{opacity:1;transform:translateX(0)} }
         @keyframes slideInRight { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:translateX(0)} }
         @keyframes warnShake    { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }

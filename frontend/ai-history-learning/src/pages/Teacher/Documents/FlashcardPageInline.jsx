@@ -9,6 +9,9 @@ export default function FlashcardPageInline({ flash, onBack }) {
   const [animDir, setAnimDir] = useState(null);
   const animRef = useRef(null);
 
+  const [deckName, setDeckName] = useState(flash.title ?? "");
+  const [started, setStarted] = useState(false);
+
   useEffect(() => {
     const existingCards = flash.cards ?? [];
     if (existingCards.length > 0) {
@@ -29,6 +32,64 @@ export default function FlashcardPageInline({ flash, onBack }) {
       <div className="flex items-center justify-center py-16 gap-3">
         <div className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
         <p className="text-sm text-gray-400">Đang tải flashcard...</p>
+      </div>
+    );
+
+  // Setup screen — shown after cards are loaded, before starting
+  if (!started)
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Danh sách bộ thẻ
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+          <h2 className="text-base font-bold text-gray-800">
+            ⚙️ Cài đặt bộ flashcard
+          </h2>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-1.5 block">
+              Tên bộ thẻ
+            </label>
+            <input
+              value={deckName}
+              onChange={(e) => setDeckName(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-purple-400 transition"
+              placeholder="Nhập tên bộ thẻ..."
+            />
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
+            <span>🃏 {cards.length} thẻ</span>
+          </div>
+
+          <button
+            onClick={() => setStarted(true)}
+            className="w-full py-3 rounded-xl text-sm font-bold text-white transition"
+            style={{ background: "#8b5cf6" }}
+          >
+            Bắt đầu học →
+          </button>
+        </div>
       </div>
     );
 
@@ -77,7 +138,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
           </svg>
           Danh sách bộ thẻ
         </button>
-        <span className="text-xs text-gray-400">{flash.title}</span>
+        <span className="text-xs text-gray-400">{deckName || flash.title}</span>
       </div>
 
       {/* Flashcard */}

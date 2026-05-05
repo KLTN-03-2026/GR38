@@ -414,5 +414,4 @@ const Quizz = ({ lessonId, lectureTitle, thumbnail }) => {
     </div>
   );
 };
-
 export default Quizz;

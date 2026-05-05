@@ -1,5 +1,81 @@
 paths:
   /api/v1/quizzes:
+    get:
+      summary: Lấy danh sách tất cả các bài Quiz (Dành cho LEARNER)
+      description: Trả về danh sách các bộ đề trắc nghiệm lịch sử. Dữ liệu được tối ưu payload (không bao gồm chi tiết mảng câu hỏi) để giảm tải server và tăng tốc độ tải trang. Có hỗ trợ phân trang và tìm kiếm theo tên.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Trang hiện tại
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 12
+          description: Số lượng bộ Quiz hiển thị trên một trang
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Tìm kiếm theo tiêu đề của bộ Quiz
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: 66a1f2c9b8d4e01f12349999
+                        title:
+                          type: string
+                          example: Đề kiểm tra Lịch sử 12
+                        description:
+                          type: string
+                          example: Ôn tập kiến thức kháng chiến chống Pháp
+                        thumbnail:
+                          type: string
+                          example: "uploads/thumbnail.jpg"
+                        isAiGenerated:
+                          type: boolean
+                          example: true
+                        questionCount:
+                          type: integer
+                          description: Tổng số câu hỏi có trong bộ Quiz (tính toán bằng $size)
+                          example: 15
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 50
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 12
+                      totalPages:
+                        type: integer
+                        example: 5
+        '401':
+          description: Chưa đăng nhập
     post:
       summary: Tạo đề quiz thủ công
       description: Dành cho TEACHER hoặc ADMIN để tự soạn câu hỏi. Hỗ trợ upload ảnh bìa (thumbnail) hoặc tự động lấy ảnh từ Document.
@@ -358,3 +434,71 @@ paths:
           description: Xóa thành công
         '403':
           description: Không có quyền
+/api/v1/quizzes/{id}/play:
+    get:
+      summary: Lấy nội dung Quiz để làm bài (Chống gian lận)
+      description: API dành cho LEARNER khi bắt đầu nhấn vào làm bài. Hệ thống trả về thông tin Quiz và danh sách câu hỏi nhưng **ĐÃ ẨN** trường `correctAnswer` và `explanation` để học sinh không thể dùng công cụ F12 (DevTools) xem trước đáp án.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của bộ Quiz cần lấy để làm bài
+      responses:
+        '200':
+          description: Lấy dữ liệu đề thi thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: 66a1f2c9b8d4e01f12349999
+                      title:
+                        type: string
+                        example: Đề kiểm tra Lịch sử 12
+                      documentId:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                          title:
+                            type: string
+                          thumbnail:
+                            type: string
+                      questions:
+                        type: array
+                        description: Mảng câu hỏi (KHÔNG có đáp án đúng và giải thích)
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: 66a1f2c9b8d4e01f12345678
+                            question:
+                              type: string
+                              example: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
+                            options:
+                              type: array
+                              items:
+                                type: string
+                              example: ["1953", "1954", "1955", "1956"]
+                            difficulty:
+                              type: string
+                              example: Trung bình
+        '401':
+          description: Chưa đăng nhập
+        '404':
+          description: Không tìm thấy bộ câu hỏi

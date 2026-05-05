@@ -205,3 +205,88 @@ paths:
           description: Không có quyền truy cập
         '404':
           description: Không tìm thấy người dùng
+/api/v1/admin/quizzes:
+    get:
+      summary: Lấy danh sách tất cả bài trắc nghiệm (Quản lý Quiz)
+      description: Trả về danh sách toàn bộ các bộ câu hỏi trắc nghiệm (Quiz) trên hệ thống, bao gồm cả các bài do AI tạo và Giáo viên tự soạn. Kèm theo thống kê số lượt làm bài và điểm trung bình. Hỗ trợ tìm kiếm theo tên và phân trang.
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Số thứ tự trang hiện tại
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Số lượng bài trắc nghiệm trên mỗi trang
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Từ khóa tìm kiếm theo tiêu đề của bài trắc nghiệm
+      responses:
+        '200':
+          description: Lấy danh sách bài trắc nghiệm thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: "65d...abc"
+                        title:
+                          type: string
+                          example: "Trắc nghiệm Lịch sử Triều Nguyễn"
+                        description:
+                          type: string
+                          example: "Bộ câu hỏi kiểm tra kiến thức về các đời vua nhà Nguyễn."
+                        isAiGenerated:
+                          type: boolean
+                          example: false
+                        totalAttempts:
+                          type: integer
+                          description: Tổng số lượt học viên đã làm bài này
+                          example: 125
+                        averageScore:
+                          type: number
+                          format: float
+                          description: Điểm trung bình của tất cả lượt làm
+                          example: 8.5
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        description: Tổng số lượng bài quiz thỏa mãn điều kiện
+                        example: 50
+                      page:
+                        type: integer
+                        description: Trang hiện tại
+                        example: 1
+                      limit:
+                        type: integer
+                        description: Số lượng item trên 1 trang
+                        example: 10
+                      totalPages:
+                        type: integer
+                        description: Tổng số trang
+                        example: 5
+        '401':
+          description: Chưa đăng nhập hoặc Token không hợp lệ
+        '403':
+          description: Không có quyền truy cập (Tài khoản không phải Admin)

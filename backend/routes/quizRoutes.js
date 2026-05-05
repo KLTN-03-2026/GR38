@@ -13,7 +13,9 @@ import {
 import {
     submitQuiz,
     getQuizResultDetail,
-    getMyHistory
+    getMyHistory,
+    getAllQuizzesForLearner,
+    getQuizForPlay
 } from '#controllers/Quiz/quizResultController.js';
 
 import protect, { authorize, USER_ROLES } from '#middleware/auth.js';
@@ -43,6 +45,8 @@ router.get('/quiz/:id', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_R
 //Lấy danh sách quiz của giáo viên
 router.get('/my-quizzes', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), getTeacherQuizzes);
 
+// Lấy danh sách quiz cho Người học
+router.get('/', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getAllQuizzesForLearner);
 
 // ==========================================
 // NHÓM 2: CÁC ROUTE PARAMETER ĐỘNG  
@@ -58,5 +62,7 @@ router.put('/:id', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), uploadQuizIm
 router.put('/:quizId/questions/:questionId', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), updateQuizQuestion);
 
 router.delete('/:id', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), deleteQuiz);
+
+router.get('/play/:id', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getQuizForPlay);
 
 export default router;

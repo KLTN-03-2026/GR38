@@ -113,7 +113,7 @@ const Quizzes = () => {
                         <div className="flex flex-col">
                           <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Số câu</span>
                           <span className="text-xs font-bold text-blue-600">
-                            {quiz.totalQuestions || quiz.questions?.length || 0} câu
+                            {quiz.questionCount ?? quiz.totalQuestions ?? 0} câu
                           </span>
                         </div>
                         

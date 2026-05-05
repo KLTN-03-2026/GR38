@@ -57,7 +57,7 @@ const Flashcards = () => {
             id: item._id ?? item.id,
             title: item.title ?? item.documentTitle ?? "Flashcard AI",
             cards: cardArr,
-            cardCount: cardArr.length || item.count || 0,
+            cardCount: cardArr.length || item.cardCount || item.totalCards || item.count || 0,
             progress: item.progress ?? 0,
             image: item.thumbnail ?? imagesList[item._id?.charCodeAt(0) % imagesList.length]?.image ?? null,
             source: docId ? "ai" : "custom",

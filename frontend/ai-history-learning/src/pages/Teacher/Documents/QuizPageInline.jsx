@@ -28,6 +28,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
   const [questions, setQuestions] = useState(null);
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [resultStats, setResultStats] = useState({ correctCount: 0, total: 0 });
 
   // Setup screen
   const [started, setStarted] = useState(false);
@@ -55,15 +56,14 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
     (async () => {
       try {
         const qid = quiz._id ?? quiz.id;
-        const res = await quizService.getById(qid);
+        const res = await quizService.getQuizForPlay(qid);
         const d = res.data?.data ?? res.data ?? res;
         const raw = d.questions ?? [];
         if (!raw.length) { alert("Quiz này chưa có câu hỏi!"); onBack(); return; }
         const normalized = raw.map((q) => ({
+          _id: q._id,
           question: q.question ?? q.q,
           options: q.options ?? [],
-          correctAnswer: q.correctAnswer ?? q.answer ?? "",
-          explanation: q.explanation ?? "",
         }));
         setDetail(d);
         setQuizName(d.title ?? quiz.title ?? "");
@@ -91,9 +91,32 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
     return () => clearInterval(timerRef.current);
   }, [started]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     clearInterval(timerRef.current);
-    setShowResult(true);
+
+    try {
+      const qid = quiz._id ?? quiz.id;
+      const timeSpent = timeLimit * 60 - timeLeft;
+      const formattedAnswers = questions.map((q, i) => {
+        const selectedIdx = answers[i];
+        return {
+          questionId: q._id,
+          selectedAnswer: selectedIdx !== undefined ? q.options[selectedIdx] : null,
+        };
+      });
+
+      const res = await quizService.submit(qid, formattedAnswers, timeSpent);
+      const result = res.data?.data ?? res.data ?? {};
+
+      setResultStats({
+        correctCount: result.score ?? 0,
+        total: result.totalQuestions ?? questions.length,
+      });
+    } catch (err) {
+      setResultStats({ correctCount: 0, total: questions.length });
+    } finally {
+      setShowResult(true);
+    }
   };
 
   const total = questions?.length ?? 0;
@@ -101,9 +124,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
   const selected = answers[currentQ];
   const progress = total ? ((currentQ + 1) / total) * 100 : 0;
 
-  const correctCount = questions
-    ? Object.entries(answers).filter(([i, a]) => isCorrect(questions[Number(i)], a)).length
-    : 0;
+  const correctCount = resultStats.correctCount ?? 0;
   const scorePercent = total ? Math.round((correctCount / total) * 100) : 0;
 
   const goTo = (next, dir) => {
@@ -252,7 +273,33 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
         </div>
 
         <button
-          onClick={() => setShowDetail((p) => !p)}
+          onClick={async () => {
+            const next = !showDetail;
+            setShowDetail(next);
+            if (!next || questions.length === 0) return;
+            if (questions.some((q) => q.correctAnswer)) return;
+            try {
+              const qid = quiz._id ?? quiz.id;
+              const res = await quizService.getById(qid);
+              const detailData = res.data?.data ?? res.data ?? res;
+              const answerMap = new Map(
+                (detailData.questions ?? []).map((q) => [String(q._id), q])
+              );
+              setQuestions((prev) =>
+                prev.map((q) => {
+                  const full = answerMap.get(String(q._id));
+                  if (!full) return q;
+                  return {
+                    ...q,
+                    correctAnswer: full.correctAnswer,
+                    explanation: full.explanation,
+                  };
+                })
+              );
+            } catch (err) {
+              // ignore detail load errors
+            }
+          }}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
         >
           {showDetail ? "▲ Ẩn chi tiết" : "▼ Xem chi tiết"}

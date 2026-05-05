@@ -23,14 +23,8 @@ const Documents = () => {
       try {
         setLoading(true);
         setError(null);
-
-        // GIỮ NGUYÊN LOGIC CALL API
         const res = await api.get("/documents");
-
-        console.log("Dữ liệu API trả về:", res);
-
         let finalData = [];
-
         if (res?.data?.success && Array.isArray(res.data.data)) {
           finalData = res.data.data;
         } else if (res?.success && Array.isArray(res.data)) {
@@ -38,17 +32,10 @@ const Documents = () => {
         } else if (Array.isArray(res)) {
           finalData = res;
         }
-
         setAllDocuments(finalData);
       } catch (err) {
         console.error("Lỗi lấy danh sách tài liệu:", err);
-        if (err.response?.status === 401) {
-          setError("Phiên đăng nhập đã hết hạn.");
-        } else {
-          setError(
-            "Không thể hiển thị tài liệu. Vui lòng kiểm tra kết nối Server.",
-          );
-        }
+        setError(err.response?.status === 401 ? "Phiên đăng nhập đã hết hạn." : "Không thể hiển thị tài liệu.");
       } finally {
         setLoading(false);
       }
@@ -56,7 +43,6 @@ const Documents = () => {
     fetchDocuments();
   }, []);
 
-  // GIỮ NGUYÊN PHƯƠNG THỨC LỌC DỮ LIỆU
   const filteredDocs = allDocuments.filter((doc) =>
     doc.title?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -73,19 +59,13 @@ const Documents = () => {
         <AlertCircle className="text-red-500 w-12 h-12 mb-4" />
         <h2 className="text-xl font-bold text-gray-800 mb-2">Thông báo</h2>
         <p className="text-gray-600 mb-6 text-center">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="bg-orange-500 text-white px-6 py-2 rounded-md font-bold hover:bg-orange-600 transition"
-        >
-          Thử lại
-        </button>
+        <button onClick={() => window.location.reload()} className="bg-orange-500 text-white px-6 py-2 rounded-md font-bold hover:bg-orange-600 transition"> Thử lại </button>
       </div>
     );
   }
 
   return (
     <div className="bg-[#FFFFFF] rounded-[6px] p-[15px] md:p-[20px] flex flex-col gap-[20px] w-full max-w-[1113px] min-h-[700px] mx-auto shadow-sm border border-gray-100">
-      {/* THANH TÌM KIẾM: Tự động chuyển sang cột trên Mobile */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-2 rounded-lg border border-gray-200 shadow-sm mt-2">
           <div className="relative flex-1 w-full">
@@ -95,77 +75,66 @@ const Documents = () => {
               placeholder="Tìm kiếm tài liệu học tập..."
               className="w-full pl-10 pr-4 py-2 rounded-md outline-none bg-gray-50 focus:bg-white border border-transparent focus:border-orange-500 text-[14px]"
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
           </div>
-          <button className="w-full sm:w-auto bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 transition text-[14px]">
-            Tìm kiếm
-          </button>
+          <button className="w-full sm:w-auto bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 transition text-[14px]"> Tìm kiếm </button>
         </div>
-        <h2 className="font-semibold text-[22px] md:text-[26px] text-black">
-          Tài liệu học tập
-        </h2>
+        <h2 className="font-semibold text-[22px] md:text-[26px] text-black"> Tài liệu học tập </h2>
       </div>
 
-      {/* GRID DANH SÁCH: 1 cột (Mobile), 2 cột (Tablet), 3 cột (Laptop) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px] w-full flex-1">
         {loading ? (
           <div className="col-span-full flex flex-col items-center justify-center py-20">
             <Loader2 className="animate-spin text-orange-500 w-10 h-10 mb-2" />
-            <span className="font-medium text-gray-500">
-              Đang truy xuất dữ liệu...
-            </span>
+            <span className="font-medium text-gray-500"> Đang truy xuất dữ liệu... </span>
           </div>
         ) : filteredDocs.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center px-4">
             <p>Hiện chưa có tài liệu nào khả dụng.</p>
-            <p className="text-[12px] mt-1">
-              (Hãy đảm bảo trạng thái tài liệu trong Database là "ready")
-            </p>
           </div>
         ) : (
           currentItems.map((doc) => (
             <div
               key={doc._id}
-              className="bg-white rounded-[10px] flex flex-col p-[12px] gap-[12px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-200 group h-fit"
+              className="bg-white rounded-[10px] flex flex-col p-[12px] gap-[12px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-200 group h-fit relative"
               onClick={() => navigate(`/learner/bai-giang/${doc._id}`)}
             >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation(); 
+                  // SỬA TẠI ĐÂY: Chuyển hướng đúng route su-co
+                  navigate("/learner/su-co", { 
+                    state: { 
+                      reportTarget: "tài liệu", 
+                      targetId: doc._id 
+                    } 
+                  });
+                }}
+                className="absolute top-4 right-4 z-20 p-2 bg-white/80 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors border border-gray-100 shadow-sm"
+                title="Báo cáo lỗi tài liệu này"
+              >
+                <AlertCircle size={18} />
+              </button>
+
               <div className="w-full h-[130px] rounded-[6px] bg-gray-100 overflow-hidden flex items-center justify-center">
                 {doc.thumbnail || doc.image ? (
-                  <img
-                    src={doc.thumbnail || doc.image}
-                    alt={doc.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
+                  <img src={doc.thumbnail || doc.image} alt={doc.title} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                    <span className="text-orange-400 text-xs font-semibold">
-                      Lịch sử Việt Nam
-                    </span>
+                    <span className="text-orange-400 text-xs font-semibold"> Lịch sử Việt Nam </span>
                   </div>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <h3 className="font-bold text-[17px] text-gray-800 line-clamp-1 group-hover:text-orange-500 transition-colors">
-                  {doc.title}
-                </h3>
+                <h3 className="font-bold text-[17px] text-gray-800 line-clamp-1 group-hover:text-orange-500 transition-colors"> {doc.title} </h3>
                 <div className="flex flex-wrap justify-between items-center gap-2 mt-1">
                   <div className="px-3 py-1 bg-blue-500 rounded-full text-white text-[10px] font-bold uppercase">
-                    {doc.status || "Tài liệu"}
+                    Bài học
                   </div>
                   <div className="flex gap-3">
-                    <span className="text-[11px] text-gray-500 font-medium">
-                      {doc.flashcardCount || 0} Flashcards
-                    </span>
-                    <span className="text-[11px] text-gray-500 font-medium">
-                      {doc.quizCount || 0} Quizzes
-                    </span>
+                    <span className="text-[11px] text-gray-500 font-medium"> {doc.flashcardCount || 0} Flashcards </span>
+                    <span className="text-[11px] text-gray-500 font-medium"> {doc.quizCount || 0} Quizzes </span>
                   </div>
                 </div>
               </div>
@@ -174,44 +143,19 @@ const Documents = () => {
         )}
       </div>
 
-      {/* PHÂN TRANG: Tự động sắp xếp lại khi màn hình hẹp */}
       <div className="flex flex-col md:flex-row items-center justify-between px-2 py-4 border-t border-gray-100 mt-auto gap-4">
-        <span className="text-[14px] text-gray-500 font-medium order-2 md:order-1">
-          {currentPage} / {totalPages} trang
-        </span>
+        <span className="text-[14px] text-gray-500 font-medium order-2 md:order-1"> {currentPage} / {totalPages} trang </span>
         <div className="flex items-center gap-1 sm:gap-2 order-1 md:order-2">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
-            className="flex items-center gap-1 px-2 py-1 text-[13px] sm:text-[14px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
-          >
-            <ChevronLeft size={18} />{" "}
-            <span className="hidden sm:inline">Previous</span>
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => prev - 1)} className="flex items-center gap-1 px-2 py-1 text-[13px] sm:text-[14px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30">
+            <ChevronLeft size={18} /> <span className="hidden sm:inline">Previous</span>
           </button>
-
           <div className="flex gap-1 overflow-x-auto max-w-[150px] sm:max-w-none no-scrollbar">
             {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`min-w-[32px] h-8 rounded-md text-[14px] font-bold transition-all ${
-                  currentPage === i + 1
-                    ? "bg-orange-500 text-white shadow-md"
-                    : "text-gray-400 hover:text-black"
-                }`}
-              >
-                {i + 1}
-              </button>
+              <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`min-w-[32px] h-8 rounded-md text-[14px] font-bold transition-all ${currentPage === i + 1 ? "bg-orange-500 text-white shadow-md" : "text-gray-400 hover:text-black"}`}> {i + 1} </button>
             ))}
           </div>
-
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            className="flex items-center gap-1 px-2 py-1 text-[13px] sm:text-[14px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
-          >
-            <span className="hidden sm:inline">Next</span>{" "}
-            <ChevronRight size={18} />
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => prev + 1)} className="flex items-center gap-1 px-2 py-1 text-[13px] sm:text-[14px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30">
+            <span className="hidden sm:inline">Next</span> <ChevronRight size={18} />
           </button>
         </div>
       </div>

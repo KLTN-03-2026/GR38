@@ -1,70 +1,101 @@
 import api from "../lib/api";
 
 export const quizService = {
-  // Lấy danh sách quiz theo tài liệu
+  // ==========================================
+  // 1. NHÓM DÀNH CHO LEARNER (HỌC SINH LÀM BÀI)
+  // ==========================================
+
+  // Lấy danh sách tất cả quiz (Có tối ưu payload, phân trang, tìm kiếm)
+  getAllQuizzes: async (params) => {
+    // params ví dụ: { page: 1, limit: 12, search: "Quang Trung" }
+    const res = await api.get("/quizzes", { params });
+    return res;
+  },
+
+  // Lấy danh sách quiz theo ID của tài liệu/bài học
   getByDocument: async (documentId) => {
     const res = await api.get(`/quizzes/document/${documentId}`);
     return res;
   },
 
-  // Lấy chi tiết 1 quiz (để làm bài)
-  getById: async (id) => {
-    const res = await api.get(`/quizzes/quiz/${id}`);
+  // Lấy chi tiết đề thi để LÀM BÀI (Đã bị ẩn đáp án đúng từ Backend)
+  getQuizForPlay: async (id) => {
+    const res = await api.get(`/quizzes/play/${id}`);
     return res;
   },
 
-  // Lấy lịch sử tất cả quiz đã làm (dùng cho trang Tạo Quiz standalone)
+  // Nộp bài thi và chấm điểm
+  submit: async (quizId, userAnswers, timeSpent = 0) => {
+    const res = await api.post(`/quizzes/${quizId}/submit`, {
+      userAnswers: userAnswers,
+      timeSpent: timeSpent, // Đẩy lên số giây học sinh đã dùng để làm bài
+    });
+    return res;
+  },
+
+  // Lấy lịch sử tất cả các bài quiz đã làm của user hiện tại
   getMyHistory: async () => {
     const res = await api.get(`/quizzes/my-history`);
     return res;
   },
 
-  // Xem chi tiết 1 kết quả đã nộp
-  getResult: async (resultId) => {
+  // Xem chi tiết lại 1 bài thi đã nộp (để xem câu đúng/sai)
+  getResultDetail: async (resultId) => {
     const res = await api.get(`/quizzes/detail/${resultId}`);
     return res;
   },
-create: async (data) => {
-  const payload = {
-    title:       data.title,
-    description: data.description,
-    difficulty:  data.difficulty,
-    time_limit:  data.timeLimit,   
-    documentId:  data.documentId,  
-    questions:   data.questions,
-  };
-  console.log("📤 Gửi lên server:", JSON.stringify(payload, null, 2));
-  const res = await api.post("/quizzes", payload);
+
+  // ==========================================
+  // 2. NHÓM DÀNH CHO TEACHER / ADMIN (QUẢN LÝ ĐỀ THI)
+  // ==========================================
+
+  // Lấy danh sách tất cả các đề thi do chính Giáo viên này tạo ra
+  getTeacherQuizzes: async () => {
+    const res = await api.get("/quizzes/my-quizzes");
+    return res;
+  },
+
+  // Lấy chi tiết đề thi (Full thông tin bao gồm đáp án đúng để sửa)
+  getById: async (id) => {
+    const res = await api.get(`/quizzes/quiz/${id}`);
+    return res;
+  },
+
+  // Tạo đề thi mới (Dùng FormData vì có upload ảnh bìa)
+create: async (data, thumbnailFile) => {
+  const formData = new FormData();
+  formData.append("title",       data.title);
+  formData.append("description", data.description || "");
+  if (data.documentId) formData.append("documentId", data.documentId);
+  formData.append("questions",   JSON.stringify(data.questions));
+  if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
+
+  const res = await api.post("/quizzes", formData);
+  // Không set Content-Type — để axios tự set boundary
   return res;
 },
 
-  update: async (id, data) => {
-    const res = await api.put(`/quizzes/${id}`, {
-      title:       data.title,
-      description: data.description,
-      difficulty:  data.difficulty,
-      time_limit:  data.timeLimit,
-      questions:   data.questions,
-    });
+update: async (id, data, thumbnailFile) => {
+  const formData = new FormData();
+  if (data.title)       formData.append("title",       data.title);
+  if (data.description) formData.append("description", data.description);
+  if (data.tags)        formData.append("tags",        JSON.stringify(data.tags));
+  if (thumbnailFile)    formData.append("thumbnail",   thumbnailFile);
+
+  const res = await api.put(`/quizzes/${id}`, formData);
+  // Không set Content-Type — để axios tự set boundary
+  return res;
+},
+
+  // Sửa chi tiết nội dung của MỘT câu hỏi cụ thể trong đề
+  updateQuestion: async (quizId, questionId, questionData) => {
+    const res = await api.put(`/quizzes/${quizId}/questions/${questionId}`, questionData);
     return res;
   },
 
+  // Xóa đề thi
   delete: async (id) => {
     const res = await api.delete(`/quizzes/${id}`);
-    return res;
-  },
-
- submit: async (quizId, answers) => {
-    const res = await api.post(
-      `/quizzes/${quizId}/submit`,
-      JSON.stringify(answers),
-      { headers: { "Content-Type": "application/json" } }
-    );
-    return res;
-  },
-
-  getResults: async (quizId) => {
-    const res = await api.get(`/quizzes/${quizId}/results`);
     return res;
   },
 };

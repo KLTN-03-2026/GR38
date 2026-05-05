@@ -35,36 +35,19 @@ export const flashcardService = {
   },
 
   /**
-   * Tạo bộ flashcard mới
-   * @param {Object} data - Thông tin bộ flashcard
-   * @param {string} data.title - Tiêu đề
-   * @param {string} data.description - Mô tả
-   * @param {string} data.category - Danh mục / chủ đề lịch sử
-   * @returns {Promise<Object>} Bộ flashcard vừa tạo
+   * Tạo bộ flashcard mới (Hỗ trợ FormData chứa ảnh)
+   * @param {Object|FormData} data - Dữ liệu form hoặc FormData
    */
   create: async (data) => {
-    const payload = {
-      title: data.title,
-      description: data.description,
-      category: data.category,
-    };
-    const res = await api.post("/flashcards", payload);
+    const res = await api.post("/flashcards", data);
     return res.data;
   },
 
   /**
    * Cập nhật bộ flashcard
-   * @param {string|number} id - ID bộ flashcard
-   * @param {Object} data - Thông tin cần cập nhật
-   * @returns {Promise<Object>} Bộ flashcard sau khi cập nhật
    */
   update: async (id, data) => {
-    const payload = {
-      title: data.title,
-      description: data.description,
-      category: data.category,
-    };
-    const res = await api.put(`/flashcards/${id}`, payload);
+    const res = await api.put(`/flashcards/${id}`, data);
     return res.data;
   },
 

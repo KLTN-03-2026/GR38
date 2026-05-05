@@ -116,7 +116,9 @@ export const getDocuments = async (req, res, next) => {
   try {
     let matchQuery = {};
 
-    if (req.user.role === 'TEACHER') {
+    if (req.user.role === 'ADMIN') {
+      matchQuery = {};
+    } else if (req.user.role === 'TEACHER') {
       matchQuery = { userId: new mongoose.Types.ObjectId(req.user._id) };
     } else if (req.user.role === 'LEARNER') {
       matchQuery = { status: "ready" };
@@ -142,8 +144,12 @@ export const getDocument = async (req, res, next) => {
   try {
     let query = { _id: req.params.id };
 
-    if (req.user.role === 'TEACHER') query.userId = req.user._id;
-    if (req.user.role === 'LEARNER') query.status = "ready";
+    if (req.user.role === 'ADMIN') {
+    } else if (req.user.role === 'TEACHER') {
+      query.userId = req.user._id;
+    } else if (req.user.role === 'LEARNER') {
+      query.status = "ready";
+    }
 
     const document = await Document.findOne(query);
 

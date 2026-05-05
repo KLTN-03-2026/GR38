@@ -12,12 +12,13 @@ import {
 import {
     getFlashcardSetWithProgress,
     getFlashcardsByDocument,
+    getFlashcardCardBack,
     reviewFlashcard,
     toggleStarFlashcard
 } from '#controllers/Flashcard/flashcardProgressController.js';
 
 import protect, { authorize, USER_ROLES } from '../middleware/auth.js';
-import { uploadFlashcardImage } from '../config/uploadImage.js';
+import { uploadFlashcardImage } from '#config/uploadImage.js';
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ router.post('/', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), uploadFlashcar
 
 // Lấy danh sách flashcard theo tài liệu/bài học
 router.get('/document/:documentId', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getFlashcardsByDocument);
+
+// Lấy mặt sau của 1 thẻ flashcard
+router.get('/:setId/cards/:cardId/back', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getFlashcardCardBack);
 
 // Lấy chi tiết 1 bộ flashcard và tiến độ học tập của User
 router.get('/:id', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getFlashcardSetWithProgress);

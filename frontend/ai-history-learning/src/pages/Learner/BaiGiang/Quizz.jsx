@@ -51,13 +51,22 @@ const Quizz = ({ lessonId, lectureTitle, thumbnail }) => {
   const currentQuizzes = quizzesList.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(quizzesList.length / itemsPerPage) || 1;
 
-  const handleStartQuiz = (quiz) => {
-    setSelectedQuiz(quiz);
-    setQuestions(quiz.questions || []);
-    setCurrentQuestionIndex(0);
-    setUserAnswers({});
-    setIsSubmitted(false);
-    setResult(null);
+  const handleStartQuiz = async (quiz) => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/quizzes/play/${quiz._id}`);
+      const data = res?.data?.data || res?.data || {};
+      setSelectedQuiz(quiz);
+      setQuestions(Array.isArray(data.questions) ? data.questions : []);
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+      setIsSubmitted(false);
+      setResult(null);
+    } catch (err) {
+      alert("Khong the tai cau hoi. Vui long thu lai.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelectOption = (option) => {
@@ -161,7 +170,7 @@ const Quizz = ({ lessonId, lectureTitle, thumbnail }) => {
                   </h3>
                   <div className="flex justify-between items-center pt-2 border-t border-gray-50">
                     <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                      {quiz.questions?.length || 0} CÂU
+                      {quiz.questionCount ?? quiz.totalQuestions ?? 0} CÂU
                     </span>
                     <button
                       onClick={() => handleStartQuiz(quiz)}

@@ -180,7 +180,7 @@ export default function DocumentsDetailPage() {
                     <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-[#F26739] shrink-0 text-xs font-bold">{idx + 1}</div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{quiz.title ?? `Bài kiểm tra ${idx + 1}`}</p>
-                      <p className="text-xs text-gray-400">{quiz.questionCount ?? quiz.questions?.length ?? 0} câu hỏi{quiz.createdAt && ` · ${new Date(quiz.createdAt).toLocaleDateString("vi-VN")}`}</p>
+                      <p className="text-xs text-gray-400">{quiz.questionCount ?? quiz.totalQuestions ?? 0} câu hỏi{quiz.createdAt && ` · ${new Date(quiz.createdAt).toLocaleDateString("vi-VN")}`}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -228,7 +228,7 @@ export default function DocumentsDetailPage() {
                     <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 shrink-0 text-xs font-bold">{idx + 1}</div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{flash.title ?? `Bộ thẻ ${idx + 1}`}</p>
-                      <p className="text-xs text-gray-400">{Array.isArray(flash.cards) ? flash.cards.length : (flash.count ?? 0)} thẻ học{flash.createdAt && ` · ${new Date(flash.createdAt).toLocaleDateString("vi-VN")}`}</p>
+                      <p className="text-xs text-gray-400">{flash.cardCount ?? flash.totalCards ?? flash.count ?? 0} thẻ học{flash.createdAt && ` · ${new Date(flash.createdAt).toLocaleDateString("vi-VN")}`}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

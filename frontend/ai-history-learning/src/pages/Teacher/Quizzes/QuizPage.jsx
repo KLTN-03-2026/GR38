@@ -1,6 +1,6 @@
 // QuizPage.jsx
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { quizService } from "../../../services/quizService";
 import { documentService } from "../../../services/documentService";
 import { GlobalStyles } from "./GlobalStyles";
@@ -49,10 +49,9 @@ function QuizCard({
   onDelete,
   docThumbnail,
 }) {
-  const questionCount =
-    quiz.questionCount ??
-    (Array.isArray(quiz.questions) ? quiz.questions.length : 0);
+  const questionCount = quiz.questionCount ?? quiz.totalQuestions ?? 0;
   const coverSrc = quiz.coverImage || docThumbnail || null;
+
   return (
     <div
       className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
@@ -183,7 +182,7 @@ function ByDocumentTab({
   const [docsLoading, setDocsLoading] = useState(true);
   const [selectedDocId, setSelectedDocId] = useState("");
   const [selectedDocTitle, setSelectedDocTitle] = useState("");
-  const [selectedDocThumb, setSelectedDocThumb] = useState(""); 
+  const [selectedDocThumb, setSelectedDocThumb] = useState("");
   const [docSearch, setDocSearch] = useState("");
   const [quizzes, setQuizzes] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);
@@ -227,7 +226,7 @@ function ByDocumentTab({
             q.questionCount ??
             (Array.isArray(q.questions) ? q.questions.length : 0),
           questions: q.questions ?? [],
-          coverImage: q.coverImage ?? null,
+          coverImage: q.thumbnail ?? q.coverImage ?? null,
         })),
       );
     } catch {
@@ -237,7 +236,6 @@ function ByDocumentTab({
     }
   }, []);
 
-  // ✅ FIX: lưu thumbnail khi chọn tài liệu
   const handleSelectDoc = (id, title, thumbnail) => {
     setSelectedDocId(id);
     setSelectedDocTitle(title);
@@ -274,7 +272,7 @@ function ByDocumentTab({
 
   return (
     <div className="flex gap-5">
-      {/* Panel trái: danh sách tài liệu */}
+      {/* Panel trái */}
       <div
         className="w-64 shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col"
         style={{ maxHeight: "calc(100vh - 220px)" }}
@@ -311,7 +309,7 @@ function ByDocumentTab({
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {docsLoading ? (
             <div className="flex items-center justify-center py-8 gap-2 text-xs text-gray-400">
-              <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />{" "}
               Đang tải...
             </div>
           ) : filteredDocs.length === 0 ? (
@@ -335,11 +333,7 @@ function ByDocumentTab({
                   onClick={() =>
                     handleSelectDoc(id, title, doc.thumbnail ?? "")
                   }
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left mb-1 transition ${
-                    isSel
-                      ? "bg-orange-50 border border-orange-200"
-                      : "hover:bg-gray-50 border border-transparent"
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left mb-1 transition ${isSel ? "bg-orange-50 border border-orange-200" : "hover:bg-gray-50 border border-transparent"}`}
                 >
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSel ? "bg-orange-100" : "bg-gray-100"}`}
@@ -381,7 +375,7 @@ function ByDocumentTab({
         </div>
       </div>
 
-      {/* Panel phải: danh sách quiz */}
+      {/* Panel phải */}
       <div className="flex-1 min-w-0">
         {!selectedDocId ? (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
@@ -513,7 +507,7 @@ function ByDocumentTab({
                     onStart={onStartQuiz}
                     onEdit={onOpenEditModal}
                     onDelete={(q) => setDeleteTarget(q)}
-                    docThumbnail={selectedDocThumb} // ✅ FIX: truyền thumbnail xuống card
+                    docThumbnail={selectedDocThumb}
                   />
                 ))}
               </div>
@@ -549,6 +543,7 @@ function ManualTab({
   onOpenAddModal,
   onOpenEditModal,
   quizzes,
+  loading,
   onDeleteQuiz,
 }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -558,6 +553,7 @@ function ManualTab({
   const handleDeleteConfirm = async () => {
     try {
       setDeleting(true);
+      await quizService.delete(deleteTarget.id ?? deleteTarget._id);
       onDeleteQuiz(deleteTarget.id ?? deleteTarget._id);
       setDeleteTarget(null);
     } catch {
@@ -619,7 +615,9 @@ function ManualTab({
         </div>
       </div>
 
-      {quizzes.length === 0 ? (
+      {loading ? (
+        <QuizSkeleton />
+      ) : quizzes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 border-2 border-dashed border-gray-200 rounded-2xl">
           <div className="w-14 h-14 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center">
             <svg
@@ -652,9 +650,9 @@ function ManualTab({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((quiz) => (
+          {filtered.map((quiz, index) => (
             <QuizCard
-              key={quiz._id ?? quiz.id}
+              key={quiz._id || quiz.id || `manual-quiz-${index}`}
               quiz={quiz}
               isTeacher={isTeacher}
               onStart={onStartQuiz}
@@ -680,7 +678,6 @@ function ManualTab({
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function QuizPage() {
   const navigate = useNavigate();
-
   const role = getUserRole();
   const isTeacher = role === "TEACHER";
 
@@ -690,19 +687,45 @@ export default function QuizPage() {
   const [addDocumentId, setAddDocumentId] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
 
-  const [manualQuizzes, setManualQuizzes] = useState(() => {
+  // ── Manual quizzes — fetched from API ──────────────────────────────────
+  const [manualQuizzes, setManualQuizzes] = useState([]);
+  const [manualLoading, setManualLoading] = useState(false);
+
+  const fetchManualQuizzes = useCallback(async () => {
+    setManualLoading(true);
     try {
-      const saved = localStorage.getItem("manualQuizzes");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+      const res = await quizService.getTeacherQuizzes();
+      const raw = res.data?.data ?? res.data ?? [];
+      const list = Array.isArray(raw) ? raw : (raw.quizzes ?? []);
+      // Chỉ lấy quiz không gắn tài liệu (thủ công)
+      const manual = list
+        .filter((q) => !q.documentId)
+        .map((q) => ({
+          id: q._id ?? q.id,
+          _id: q._id ?? q.id,
+          title: q.title,
+          description: q.description,
+          difficulty: q.difficulty,
+          time_limit: q.time_limit,
+          questionCount:
+            q.questionCount ??
+            (Array.isArray(q.questions) ? q.questions.length : 0),
+          questions: q.questions ?? [],
+          coverImage: q.thumbnail ?? q.coverImage ?? null, // ← thumbnail từ Cloudinary
+        }));
+      setManualQuizzes(manual);
+    } catch (err) {
+      console.error("fetchManualQuizzes error:", err);
+    } finally {
+      setManualLoading(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem("manualQuizzes", JSON.stringify(manualQuizzes));
-  }, [manualQuizzes]);
+    fetchManualQuizzes();
+  }, [fetchManualQuizzes]);
 
+  // ── Handlers ───────────────────────────────────────────────────────────
   const handleStartQuiz = async (quiz) => {
     try {
       const id = quiz._id ?? quiz.id;
@@ -734,7 +757,7 @@ export default function QuizPage() {
         return;
       }
 
-      const res = await quizService.getById(id);
+      const res = await quizService.getQuizForPlay(id);
       const detail = res.data?.data ?? res.data ?? res;
       const rawQs = detail.questions ?? [];
       if (rawQs.length === 0) {
@@ -744,8 +767,9 @@ export default function QuizPage() {
       const normalized = rawQs.map((q) => ({
         _id: q._id ?? q.id,
         question: q.question ?? q.q,
+
         options: q.options,
-        answer: q.correctAnswerIndex ?? q.correctAnswer ?? q.answer,
+        answer: q.correctAnswerIndex ?? q.answer ?? null,
       }));
       setQuizView({
         quiz: detail,
@@ -778,34 +802,10 @@ export default function QuizPage() {
   };
 
   const handleSaveQuiz = (result, isEdit, localQuestions = []) => {
-    const data = result?.data?.data ?? result?.data ?? result;
-    const finalQuestions =
-      localQuestions.length > 0 ? localQuestions : (data.questions ?? []);
-    const normalized = {
-      id: data._id ?? data.id,
-      _id: data._id ?? data.id,
-      title: data.title,
-      description: data.description,
-      difficulty: data.difficulty,
-      time_limit: data.time_limit,
-      questionCount: finalQuestions.length,
-      questions: finalQuestions,
-    };
-
-    if (isEdit) {
-      setManualQuizzes((prev) =>
-        prev.map((q) =>
-          q._id === normalized._id || q.id === normalized.id ? normalized : q,
-        ),
-      );
-      setEditTarget(null);
-    } else {
-      if (!addDocumentId) {
-        setManualQuizzes((prev) => [normalized, ...prev]);
-        setActiveTab("manual");
-      }
-      setShowAddModal(false);
-    }
+    setShowAddModal(false);
+    setEditTarget(null);
+    fetchManualQuizzes();
+    if (!addDocumentId) setActiveTab("manual");
   };
 
   if (quizView)
@@ -833,11 +833,7 @@ export default function QuizPage() {
           <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 w-fit shadow-sm">
             <button
               onClick={() => setActiveTab("document")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === "document"
-                  ? "text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "document" ? "text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               style={activeTab === "document" ? { background: "#F26739" } : {}}
             >
               <svg
@@ -858,11 +854,7 @@ export default function QuizPage() {
             </button>
             <button
               onClick={() => setActiveTab("manual")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === "manual"
-                  ? "text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "manual" ? "text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               style={activeTab === "manual" ? { background: "#F26739" } : {}}
             >
               <svg
@@ -882,11 +874,7 @@ export default function QuizPage() {
               Thủ công
               {manualQuizzes.length > 0 && (
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                    activeTab === "manual"
-                      ? "bg-white/30 text-white"
-                      : "bg-orange-100 text-orange-600"
-                  }`}
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === "manual" ? "bg-white/30 text-white" : "bg-orange-100 text-orange-600"}`}
                 >
                   {manualQuizzes.length}
                 </span>
@@ -911,6 +899,7 @@ export default function QuizPage() {
             onOpenAddModal={handleOpenAddModal}
             onOpenEditModal={setEditTarget}
             quizzes={manualQuizzes}
+            loading={manualLoading}
             onDeleteQuiz={(id) =>
               setManualQuizzes((p) => p.filter((q) => (q.id ?? q._id) !== id))
             }

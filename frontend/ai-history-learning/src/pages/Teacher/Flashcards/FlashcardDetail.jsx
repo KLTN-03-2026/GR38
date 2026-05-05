@@ -21,6 +21,7 @@ const FlashcardDetail = () => {
 
   const handleToggleStar = async (e, cardId, idx) => {
     e.stopPropagation();
+    if (!cardId) return;
     const next = !getStarred(idx);
     setStarredMap(prev => ({ ...prev, [idx]: next }));
     try {
@@ -51,13 +52,14 @@ const FlashcardDetail = () => {
           const questions = (Array.isArray(found.cards) ? found.cards : [])
             .map((c) => ({
               _id: c._id ?? c.id ?? null,
-              q: c.front ?? c.q ?? "",
-              a: c.back ?? c.a ?? "",
+              q: c.front ?? c.question ?? c.term ?? "",
+              a: c.back ?? c.answer ?? c.definition ?? "",
               difficulty: c.difficulty ?? null,
               isStarred: c.isStarred ?? false,
             }))
             .filter((c) => c.q || c.a);
-          if (questions.length > 0) {
+          const hasMissingIds = questions.some((q) => !q._id);
+          if (questions.length > 0 && !hasMissingIds) {
             setFlashcardSet({ title: found.title, questions });
             return;
           }
@@ -87,8 +89,25 @@ const FlashcardDetail = () => {
 
   const goBack = () => navigate("/teacher/flashcards");
 
-  const handleFlip = () => {
+  const handleFlip = async () => {
     if (animating) return;
+    const current = flashcardSet?.questions?.[currentIndex];
+    if (!isFlipped && current && !current.a && current._id) {
+      try {
+        const res = await api.get(`/flashcards/${id}/cards/${current._id}/back`);
+        const backData = res?.data?.data || res?.data || null;
+        if (backData?.back !== undefined) {
+          setFlashcardSet((prev) => ({
+            ...prev,
+            questions: prev.questions.map((q, idx) =>
+              idx === currentIndex ? { ...q, a: backData.back } : q
+            )
+          }));
+        }
+      } catch (err) {
+        // ignore back fetch error
+      }
+    }
     if (!isFlipped) setAnswered((prev) => new Set(prev).add(currentIndex));
     setIsFlipped((prev) => !prev);
   };
@@ -459,7 +478,7 @@ const FlashcardDetail = () => {
                   fontSize: 20, fontWeight: 700, color: "#FFFFFF",
                   lineHeight: 1.45, textAlign: "center", margin: 0
                 }}>
-                  {questions[currentIndex].a}
+                  {questions[currentIndex].a || "..."}
                 </p>
               </div>
               <div style={{ display: "flex", justifyContent: "center" }}>

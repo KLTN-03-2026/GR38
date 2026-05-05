@@ -40,7 +40,6 @@ const ACTIVITIES = [
     time: "1 giờ trước",
   },
 ];
-
 const RANKS = [
   { name: "Công Phúc", score: 10 },
   { name: "Nguyễn Toàn Chung", score: 9 },
@@ -217,60 +216,6 @@ export default function TeacherDashboard() {
           </div>
         ))}
       </div>
-
-      {/* STUDENT OVERVIEW */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {[
-          {
-            label: "Tổng Người học",
-            value: "500",
-            Icon: Users,
-            color: "#1473E6",
-            note: "Đang hoạt động",
-          },
-          {
-            label: "Người học làm bài kiểm tra",
-            value: "200",
-            Icon: GraduationCap,
-            color: "#10B981",
-            note: "Trong tháng này",
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center gap-5 rounded-2xl p-6 shadow-sm border"
-            style={{
-              background: `linear-gradient(135deg, ${item.color}18, #fff 60%)`,
-              borderColor: item.color + "22",
-            }}
-          >
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: item.color,
-                boxShadow: `0 6px 18px ${item.color}55`,
-              }}
-            >
-              <item.Icon size={26} color="#fff" strokeWidth={1.8} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest mb-1">
-                {item.label}
-              </p>
-              <p className="text-3xl font-extrabold text-gray-900 mb-0.5">
-                <AnimatedNumber target={item.value} />
-              </p>
-              <p
-                className="text-xs font-semibold"
-                style={{ color: item.color }}
-              >
-                ● {item.note}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* ACTIVITY + RANKING */}
       <div className="grid gap-4" style={{ gridTemplateColumns: "1.1fr 1fr" }}>
         {/* Activity */}

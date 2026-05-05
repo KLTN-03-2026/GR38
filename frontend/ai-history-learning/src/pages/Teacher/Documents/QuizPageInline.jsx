@@ -24,8 +24,6 @@ const formatTime = (sec) => {
   return `${m}:${s}`;
 };
 
-const TIME_OPTIONS = [15, 20, 25, 30, 35, 40, 45];
-
 export default function QuizPageInline({ quiz, onBack, documentId }) {
   const [questions, setQuestions] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -34,7 +32,10 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
   // Setup screen
   const [started, setStarted] = useState(false);
   const [quizName, setQuizName] = useState("");
-  const [timeLimit, setTimeLimit] = useState(30);
+
+  // Lấy timeLimit từ quiz object (đã set lúc tạo), fallback 30p
+  const defaultTime = quiz.timeLimit ?? quiz.timeLimitMinutes ?? 30;
+  const [timeLimit] = useState(defaultTime);
 
   // Quiz screen
   const [currentQ, setCurrentQ] = useState(0);
@@ -76,7 +77,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
     })();
   }, [quiz._id]);
 
-  // Timer
+  // Timer — bắt đầu khi started
   useEffect(() => {
     if (!started) return;
     const sec = timeLimit * 60;
@@ -127,7 +128,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
     </div>
   );
 
-  // ── SETUP SCREEN ──
+  // ── SETUP SCREEN — không còn chọn thời gian ──
   if (!started) return (
     <div className="space-y-5">
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
@@ -138,7 +139,6 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
       </button>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Top banner */}
         <div className="h-2 w-full" style={{ background: "linear-gradient(90deg,#3b82f6,#6366f1)" }} />
 
         <div className="p-6 space-y-6">
@@ -146,7 +146,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: "linear-gradient(135deg,#eff6ff,#e0e7ff)" }}>⚙️</div>
             <div>
               <h2 className="text-base font-bold text-gray-800">Cài đặt bài quiz</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{total} câu hỏi · Chọn thời gian làm bài</p>
+              <p className="text-xs text-gray-400 mt-0.5">{total} câu hỏi · {timeLimit} phút</p>
             </div>
           </div>
 
@@ -159,40 +159,6 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
               placeholder="Nhập tên bài kiểm tra..."
             />
-          </div>
-
-          {/* Thời gian */}
-          <div>
-            <label className="text-xs font-semibold text-gray-500 mb-3 block tracking-wide uppercase">
-              Thời gian làm bài
-            </label>
-            <div className="grid grid-cols-7 gap-2">
-              {TIME_OPTIONS.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setTimeLimit(v)}
-                  className="py-2.5 rounded-xl text-xs font-bold border-2 transition-all"
-                  style={timeLimit === v
-                    ? { borderColor: "#3b82f6", background: "#eff6ff", color: "#3b82f6" }
-                    : { borderColor: "#e5e7eb", background: "#fff", color: "#6b7280" }
-                  }
-                >
-                  {v}p
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
-              <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-xs text-blue-600 font-medium">
-                Thời gian: <strong>{timeLimit} phút</strong> · Kết thúc lúc {(() => {
-                  const now = new Date();
-                  now.setMinutes(now.getMinutes() + timeLimit);
-                  return now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-                })()}
-              </span>
-            </div>
           </div>
 
           {/* Info row */}

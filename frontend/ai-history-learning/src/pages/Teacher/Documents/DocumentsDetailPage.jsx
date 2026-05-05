@@ -7,7 +7,7 @@ import FlashcardPageInline from "./FlashcardPageInline";
 import EditDocumentModal   from "./EditDocumentModal";
 import ConfirmGenerateModal from "./ConfirmGenerateModal";
 import TabThongTin         from "./TabThongTin";
-import ChatAI              from "./ChatAI";   // ← import ChatAI
+import ChatAI              from "./ChatAI";  
 import { IconBack, IconEdit, IconQuiz, IconCards, IconChat, IconPlus, IconArrowRight, EmptyState } from "./icons";
 
 const tabs = ["Thông tin", "Chat", "Quizz", "FlashCard"];

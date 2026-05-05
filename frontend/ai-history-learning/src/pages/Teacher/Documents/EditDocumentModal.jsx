@@ -154,7 +154,7 @@ export default function EditDocumentModal({ doc, onClose, onSaved }) {
                 <><p className="text-xs font-medium text-gray-700 truncate max-w-full">{pdfFile.name}</p>
                   <p className="text-[10px] text-gray-400">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB · Nhấn để đổi file</p></>
               ) : (
-                <><p className="text-xs font-medium text-gray-600">Nhấn để chọn file PDF</p><p className="text-[10px] text-gray-400">Tối đa 100MB</p></>
+                <><p className="text-xs font-medium text-gray-600">Nhấn để chọn file PDF</p><p className="text-[10px] text-gray-400">Tối đa 10MB</p></>
               )}
             </div>
             <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handlePdfChange} />

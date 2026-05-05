@@ -118,7 +118,7 @@ const Quizzes = () => {
                         </div>
                         
                         <button 
-                          onClick={() => navigate(`/learner/hoc-quizz/${quiz._id}`)}
+                          onClick={() => navigate(`/learner/quizzes/${quiz._id}`)}
                           className="bg-[#F26739] text-white px-5 py-2.5 rounded-lg font-bold text-xs hover:bg-[#d8562c] transition-all shadow-sm active:scale-95"
                         >
                           Làm bài ngay

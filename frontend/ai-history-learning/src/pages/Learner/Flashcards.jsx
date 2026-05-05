@@ -171,7 +171,7 @@ const Flashcards = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => navigate(`/learner/hoc-flashcard/${item._id}`)}
+                    onClick={() => navigate(`/learner/flashcards/${item._id}`)}
                     className="w-full bg-[#F26739] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#d9562d] transition-colors shadow-sm active:scale-[0.98]"
                   >
                     Bắt đầu học ngay

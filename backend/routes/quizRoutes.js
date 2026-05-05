@@ -7,13 +7,14 @@ import {
   updateQuiz,
   updateQuizQuestion,
   getTeacherQuizzes,
-  getAllQuizzesForAdmin, // Đảm bảo đã import hàm này
+  getAllQuizzesForAdmin,
 } from "#controllers/Quiz/quizController.js";
 
 import {
   submitQuiz,
   getQuizResultDetail,
   getMyHistory,
+  getTeacherStatistics
 } from "#controllers/Quiz/quizResultController.js";
 
 import protect, { authorize, USER_ROLES } from "#middleware/auth.js";
@@ -103,4 +104,9 @@ router.delete(
   deleteQuiz,
 );
 
+router.get(
+  "/statistics",
+  authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN),
+  getTeacherStatistics
+);
 export default router;

@@ -11,13 +11,25 @@ export const getQuizzes = async (req, res, next) => {
     const quizzes = await Quiz.find({
       documentId: req.params.documentId,
     })
+      .select("-questions")
       .populate("documentId", "title fileName thumbnail")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const sanitizedQuizzes = quizzes.map((quiz) => ({
+      ...quiz,
+      questionCount: quiz.totalQuestions || 0,
+    }));
+
+    sanitizedQuizzes.forEach((quiz) => {
+      delete quiz.totalQuestions;
+      delete quiz.questions;
+    });
 
     res.status(200).json({
       success: true,
-      count: quizzes.length,
-      data: quizzes,
+      count: sanitizedQuizzes.length,
+      data: sanitizedQuizzes,
     });
   } catch (error) {
     next(error);
@@ -29,10 +41,17 @@ export const getQuizzes = async (req, res, next) => {
 //@access Private
 export const getQuizById = async (req, res, next) => {
   try {
-    const quiz = await Quiz.findById(req.params.id).populate(
+    const includeAnswers = req.query.includeAnswers === "true" && req.user?.role !== USER_ROLES.LEARNER;
+    const query = Quiz.findById(req.params.id).populate(
       "documentId",
-      "title fileName thumbnail",
+      "title fileName thumbnail" 
     );
+
+    if (!includeAnswers) {
+      query.select("-questions.correctAnswer -questions.explanation");
+    }
+
+    const quiz = await query;
 
     if (!quiz) {
       return res.status(404).json({

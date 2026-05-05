@@ -26,7 +26,10 @@ const FlashcardDetail = () => {
 
         if (responseData) {
           setFlashcardSet(responseData);
-          setQuestions(responseData.cards || []);
+          setQuestions((responseData.cards || []).map((card) => ({
+            ...card,
+            back: card.back ?? null,
+          })));
         }
       } catch (err) {
         console.error("Lỗi fetch chi tiết:", err);
@@ -72,6 +75,26 @@ const FlashcardDetail = () => {
     </div>
   );
 
+  const handleFlip = async () => {
+    const current = questions[currentIndex];
+    if (!isFlipped && current && !current.back && flashcardSet?._id) {
+      try {
+        const res = await api.get(`/flashcards/${flashcardSet._id}/cards/${current._id}/back`);
+        const backData = res?.data?.data || res?.data || null;
+        if (backData?.back !== undefined) {
+          setQuestions((prev) =>
+            prev.map((q, idx) =>
+              idx === currentIndex ? { ...q, back: backData.back } : q
+            )
+          );
+        }
+      } catch (err) {
+        // ignore back fetch error
+      }
+    }
+    setIsFlipped((prev) => !prev);
+  };
+
   return (
     <div className="flex flex-col items-center p-8 w-full min-h-screen bg-[#FAFAFA]">
       <div className="w-full max-w-[1000px] bg-white p-10 rounded-3xl shadow-lg border border-gray-100">
@@ -84,7 +107,7 @@ const FlashcardDetail = () => {
         </div>
 
         <div 
-          onClick={() => setIsFlipped(!isFlipped)}
+          onClick={handleFlip}
           className={`relative w-full min-h-[400px] rounded-[40px] flex flex-col p-10 cursor-pointer transition-all duration-500 border-b-8 active:translate-y-1 ${
             isFlipped ? "bg-gradient-to-br from-[#47ED70] to-[#36BA58] border-[#2A9144] text-white" : "bg-white border-[#E4E4E7] border-2 text-[#18181B]"
           }`}
@@ -98,7 +121,7 @@ const FlashcardDetail = () => {
 
           <div className="flex-1 flex items-center justify-center text-center">
             <p className="text-[28px] font-bold leading-relaxed">
-              {isFlipped ? questions[currentIndex].back : questions[currentIndex].front}
+              {isFlipped ? (questions[currentIndex].back || "...") : questions[currentIndex].front}
             </p>
           </div>
           {!isFlipped && <div className="text-center mt-6 animate-bounce text-gray-300 font-bold text-[11px]">CHẠM ĐỂ LẬT 👆</div>}

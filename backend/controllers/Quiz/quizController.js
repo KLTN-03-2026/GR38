@@ -3,6 +3,25 @@ import QuizResult from "#models/QuizResult.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
 
+const stripAnswerFields = (quiz) => {
+  if (!quiz || !Array.isArray(quiz.questions)) {
+    return quiz;
+  }
+
+  quiz.questions.forEach((question) => {
+    if (!question) return;
+    delete question.correctAnswer;
+    delete question.explanation;
+  });
+
+  return quiz;
+};
+
+const stripAnswerFieldsFromList = (quizzes) => {
+  if (!Array.isArray(quizzes)) return quizzes;
+  return quizzes.map((quiz) => stripAnswerFields(quiz));
+};
+
 
 //@desc Lấy danh sách tất cả các bài trắc nghiệm (Kèm thống kê số người làm)
 //@route GET /api/admin/quizzes
@@ -21,6 +40,7 @@ export const getAllQuizzesForAdmin = async (req, res, next) => {
     const [totalQuizzes, quizzes] = await Promise.all([
       Quiz.countDocuments(query),
       Quiz.find(query)
+        .select("-questions")
         .populate("userId", "name email") // Lấy thông tin người tạo 
         .populate("documentId", "title") // Lấy thông tin tài liệu gốc 
         .sort({ createdAt: -1 }) // Sắp xếp mới nhất lên đầu
@@ -40,9 +60,15 @@ export const getAllQuizzesForAdmin = async (req, res, next) => {
       const stat = participationStats.find(s => s._id.toString() === quiz._id.toString());
       return {
         ...quiz,
+        questionCount: quiz.totalQuestions || 0,
         totalAttempts: stat ? stat.totalAttempts : 0,
         averageScore: stat ? parseFloat(stat.avgScore.toFixed(1)) : 0,
       };
+    });
+
+    quizzesWithStats.forEach((quiz) => {
+      delete quiz.totalQuestions;
+      delete quiz.questions;
     });
 
     res.status(200).json({
@@ -60,21 +86,34 @@ export const getAllQuizzesForAdmin = async (req, res, next) => {
   }
 };
 
+
 //@desc Lấy danh sách quiz cho một tài liệu
-//@route GET /api/v1/quizzes/:documentId
+//@route GET /api/v1/quizzes/document/:documentId
 //@access Private
 export const getQuizzes = async (req, res, next) => {
   try {
     const quizzes = await Quiz.find({
       documentId: req.params.documentId,
     })
+      .select("-questions") 
       .populate("documentId", "title fileName thumbnail") 
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); 
+
+    const sanitizedQuizzes = quizzes.map((quiz) => ({
+      ...quiz,
+      questionCount: quiz.totalQuestions || 0,
+    }));
+
+    sanitizedQuizzes.forEach((quiz) => {
+      delete quiz.totalQuestions;
+      delete quiz.questions;
+    });
 
     res.status(200).json({
       success: true,
-      count: quizzes.length,
-      data: quizzes,
+      count: sanitizedQuizzes.length,
+      data: sanitizedQuizzes,
     });
   } catch (error) {
     next(error);
@@ -282,13 +321,24 @@ export const updateQuizQuestion = async (req, res, next) => {
 export const getTeacherQuizzes = async (req, res, next) => {
   try {
     const quizzes = await Quiz.find({ teacherId: req.user._id })
+      .select("-questions")
       .populate("documentId", "title fileName thumbnail")
       .sort({ createdAt: -1 }); 
 
+    const sanitizedQuizzes = quizzes.map((quiz) => ({
+      ...quiz,
+      questionCount: quiz.totalQuestions || 0,
+    }));
+
+    sanitizedQuizzes.forEach((quiz) => {
+      delete quiz.totalQuestions;
+      delete quiz.questions;
+    });
+
     res.status(200).json({
       success: true,
-      count: quizzes.length,
-      data: quizzes,
+      count: sanitizedQuizzes.length,
+      data: sanitizedQuizzes,
       message: "Lấy danh sách đề thi của giáo viên thành công",
     });
   } catch (error) {

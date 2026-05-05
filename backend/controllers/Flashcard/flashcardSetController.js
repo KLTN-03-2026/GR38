@@ -21,7 +21,12 @@ export const getAllFlashcardSets = async (req, res, next) => {
       return {
         ...setObj,
         thumbnail: setObj.thumbnail || setObj.documentId?.thumbnail || null,
+        cardCount: Array.isArray(setObj.cards) ? setObj.cards.length : 0,
       };
+    });
+
+    mappedSets.forEach((set) => {
+      delete set.cards;
     });
 
     res.status(200).json({
@@ -48,7 +53,12 @@ export const getTeacherFlashcardSets = async (req, res, next) => {
       return {
         ...setObj,
         thumbnail: setObj.thumbnail || setObj.documentId?.thumbnail || null,
+        cardCount: Array.isArray(setObj.cards) ? setObj.cards.length : 0,
       };
+    });
+
+    mappedSets.forEach((set) => {
+      delete set.cards;
     });
 
     res.status(200).json({

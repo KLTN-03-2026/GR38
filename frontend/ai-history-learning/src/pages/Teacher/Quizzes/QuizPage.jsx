@@ -51,7 +51,8 @@ function QuizCard({
 }) {
   const questionCount =
     quiz.questionCount ??
-    (Array.isArray(quiz.questions) ? quiz.questions.length : 0);
+    quiz.totalQuestions ??
+    0;
   const coverSrc = quiz.coverImage || docThumbnail || null;
   return (
     <div
@@ -225,8 +226,8 @@ function ByDocumentTab({
           time_limit: q.time_limit,
           questionCount:
             q.questionCount ??
-            (Array.isArray(q.questions) ? q.questions.length : 0),
-          questions: q.questions ?? [],
+            q.totalQuestions ??
+            0,
           coverImage: q.coverImage ?? null,
         })),
       );
@@ -734,7 +735,7 @@ export default function QuizPage() {
         return;
       }
 
-      const res = await quizService.getById(id);
+      const res = await quizService.getQuizForPlay(id);
       const detail = res.data?.data ?? res.data ?? res;
       const rawQs = detail.questions ?? [];
       if (rawQs.length === 0) {
@@ -745,7 +746,7 @@ export default function QuizPage() {
         _id: q._id ?? q.id,
         question: q.question ?? q.q,
         options: q.options,
-        answer: q.correctAnswerIndex ?? q.correctAnswer ?? q.answer,
+        answer: q.correctAnswerIndex ?? q.answer ?? null,
       }));
       setQuizView({
         quiz: detail,

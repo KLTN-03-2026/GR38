@@ -7,6 +7,7 @@ const FlashCard = ({ documentId, lectureTitle }) => {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [setId, setSetId] = useState(null);
 
   useEffect(() => {
     const fetchFlashcards = async () => {
@@ -20,7 +21,11 @@ const FlashCard = ({ documentId, lectureTitle }) => {
         const responseData = res?.data?.data || res?.data || res;
         
         if (responseData && responseData.cards && Array.isArray(responseData.cards)) {
-          setCards(responseData.cards);
+          setSetId(responseData._id ?? null);
+          setCards(responseData.cards.map((card) => ({
+            ...card,
+            back: card.back ?? null,
+          })));
         } else {
           setCards([]);
         }
@@ -62,6 +67,27 @@ const FlashCard = ({ documentId, lectureTitle }) => {
     setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length);
   };
 
+  const handleFlip = async () => {
+    if (!cards.length) return;
+    const currentCard = cards[currentIndex];
+    if (!showAnswer && currentCard && !currentCard.back && setId) {
+      try {
+        const res = await api.get(`/flashcards/${setId}/cards/${currentCard._id}/back`);
+        const backData = res?.data?.data || res?.data || null;
+        if (backData?.back !== undefined) {
+          setCards((prev) =>
+            prev.map((card, idx) =>
+              idx === currentIndex ? { ...card, back: backData.back } : card
+            )
+          );
+        }
+      } catch (err) {
+        // ignore back fetch error
+      }
+    }
+    setShowAnswer((prev) => !prev);
+  };
+
   return (
     <div className="w-full flex flex-col items-center p-6 bg-white min-h-[500px]">
       <div className="text-center mb-8">
@@ -73,7 +99,7 @@ const FlashCard = ({ documentId, lectureTitle }) => {
       
       <div 
         className="relative w-full max-w-[550px] h-[320px] cursor-pointer"
-        onClick={() => setShowAnswer(!showAnswer)}
+        onClick={handleFlip}
       >
         <div className={`w-full h-full rounded-[32px] shadow-2xl flex flex-col items-center justify-center p-10 text-center transition-all duration-500 transform ${
           showAnswer ? "bg-[#f26739] text-white rotate-y-180 scale-[1.02]" : "bg-white border-2 border-gray-100 text-gray-800"
@@ -82,7 +108,7 @@ const FlashCard = ({ documentId, lectureTitle }) => {
             {showAnswer ? "ĐÁP ÁN" : "CÂU HỎI"}
           </span>
           <h2 className={`text-[22px] md:text-[26px] font-bold leading-tight px-4 ${showAnswer ? "rotate-y-180" : ""}`}>
-            {showAnswer ? currentCard.back : currentCard.front}
+            {showAnswer ? (currentCard.back || "...") : currentCard.front}
           </h2>
           <div className={`absolute bottom-8 flex items-center gap-2 text-[12px] font-bold opacity-50 ${showAnswer ? "text-white" : "text-gray-400"}`}>
             <RefreshCcw size={14} /> 

@@ -44,7 +44,6 @@ export const getFlashcardSetWithProgress = async (req, res, next) => {
       return {
         _id: card._id,
         front: card.front,
-        back: card.back,
         difficulty: card.difficulty,
         isStarred: cardProg ? cardProg.isStarred : false,
         reviewCount: cardProg ? cardProg.reviewCount : 0,
@@ -109,7 +108,6 @@ export const getFlashcardsByDocument = async (req, res, next) => {
       return {
         _id: card._id,
         front: card.front,
-        back: card.back,
         difficulty: card.difficulty,
         isStarred: cardProg ? cardProg.isStarred : false,
         reviewCount: cardProg ? cardProg.reviewCount : 0,
@@ -135,7 +133,45 @@ export const getFlashcardsByDocument = async (req, res, next) => {
         thumbnail: displayThumbnail,
         teacherId: flashcardSet.teacherId,
         description: flashcardSet.description,
+        totalCards: flashcardSet.cards.length,
         cards: cardsWithUserStatus,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc Lấy mặt sau của một thẻ flashcard
+// @route GET /api/v1/flashcards/:setId/cards/:cardId/back
+// @access Private
+export const getFlashcardCardBack = async (req, res, next) => {
+  try {
+    const { setId, cardId } = req.params;
+
+    const flashcardSet = await Flashcard.findById(setId);
+    if (!flashcardSet) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy bộ flashcard",
+        statusCode: 404,
+      });
+    }
+
+    const card = flashcardSet.cards.id(cardId);
+    if (!card) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy thẻ flashcard",
+        statusCode: 404,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: card._id,
+        back: card.back,
       },
     });
   } catch (error) {
@@ -150,6 +186,13 @@ export const getFlashcardsByDocument = async (req, res, next) => {
 export const reviewFlashcard = async (req, res, next) => {
   try {
     const { setId, cardId } = req.params;
+    if (!cardId || cardId === "null") {
+      return res.status(400).json({
+        success: false,
+        error: "cardId không hợp lệ",
+        statusCode: 400,
+      });
+    }
     const flashcardSetId = await resolveFlashcardSetId({ setId, cardId });
 
     if (!flashcardSetId) {
@@ -207,6 +250,13 @@ export const reviewFlashcard = async (req, res, next) => {
 export const toggleStarFlashcard = async (req, res, next) => {
   try {
     const { setId, cardId } = req.params;
+    if (!cardId || cardId === "null") {
+      return res.status(400).json({
+        success: false,
+        error: "cardId không hợp lệ",
+        statusCode: 400,
+      });
+    }
     const flashcardSetId = await resolveFlashcardSetId({ setId, cardId });
 
     if (!flashcardSetId) {

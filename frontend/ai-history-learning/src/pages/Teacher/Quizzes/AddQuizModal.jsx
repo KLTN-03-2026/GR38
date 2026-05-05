@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { quizService } from "../../../services/quizService";
 
 const emptyQuestion = { question: "", optionA: "", optionB: "", optionC: "", optionD: "", correctAnswer: "" };
@@ -11,35 +11,75 @@ const inputCls = (err) =>
 
 export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) {
   const isEdit   = !!editQuiz;
-  const isManual = !documentId; // thủ công khi không có documentId
+  const isManual = !documentId;
 
-  const [step, setStep]             = useState(1);
-  const [quizTitle, setQuizTitle]   = useState("");
-  const [description, setDesc]      = useState("");
-  const [difficulty, setDifficulty] = useState("EASY");
-  const [timeLimit, setTimeLimit]   = useState(30);
-  const [titleErr, setTitleErr]     = useState("");
-  const [questions, setQuestions]   = useState([]);
-  const [currentQ, setCurrentQ]     = useState(emptyQuestion);
-  const [currentQErrors, setCQErr]  = useState({});
-  const [editingIndex, setEditIdx]  = useState(null);
-  const [saving, setSaving]         = useState(false);
-  const [saveErr, setSaveErr]       = useState("");
-  const [listErr, setListErr]       = useState("");
+  const [step, setStep]               = useState(1);
+  const [quizTitle, setQuizTitle]     = useState("");
+  const [description, setDesc]        = useState("");
+  const [difficulty, setDifficulty]   = useState("EASY");
+  const [timeLimit, setTimeLimit]     = useState(30);
+  const [titleErr, setTitleErr]       = useState("");
+  const [questions, setQuestions]     = useState([]);
+  const [currentQ, setCurrentQ]       = useState(emptyQuestion);
+  const [currentQErrors, setCQErr]    = useState({});
+  const [editingIndex, setEditIdx]    = useState(null);
+  const [saving, setSaving]           = useState(false);
+  const [saveErr, setSaveErr]         = useState("");
+  const [listErr, setListErr]         = useState("");
 
+  // ── Thumbnail state ──────────────────────────────────────────────────────
+  const [thumbnail, setThumbnail]       = useState(null);   // File object
+  const [thumbPreview, setThumbPreview] = useState("");     // blob / remote URL
+  const [thumbErr, setThumbErr]         = useState("");
+  const thumbInputRef                   = useRef(null);
+
+  const MAX_THUMB_MB = 5;
+
+  // ── Populate form when editing ───────────────────────────────────────────
   useEffect(() => {
     if (!editQuiz) return;
     setQuizTitle(editQuiz.title ?? "");
     setDesc(editQuiz.description ?? "");
     setDifficulty(editQuiz.difficulty ?? "EASY");
     setTimeLimit(editQuiz.time_limit ?? 30);
+    if (editQuiz.thumbnail) setThumbPreview(editQuiz.thumbnail);
+
     const normalized = (editQuiz.questions ?? []).map((q) => {
-      const idx = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.options?.indexOf(q.correctAnswer) ?? 0;
-      return { question: q.question, options: q.options ?? [], correctAnswer: q.options?.[idx] ?? q.correctAnswer ?? "", correctAnswerIndex: idx };
+      const idx = q.correctAnswerIndex !== undefined
+        ? q.correctAnswerIndex
+        : q.options?.indexOf(q.correctAnswer) ?? 0;
+      return {
+        question: q.question,
+        options: q.options ?? [],
+        correctAnswer: q.options?.[idx] ?? q.correctAnswer ?? "",
+        correctAnswerIndex: idx,
+      };
     });
     setQuestions(normalized);
   }, [editQuiz]);
 
+  // ── Thumbnail handlers ───────────────────────────────────────────────────
+  const handleThumbChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_THUMB_MB * 1024 * 1024) {
+      setThumbErr(`Ảnh quá lớn, tối đa ${MAX_THUMB_MB}MB`);
+      return;
+    }
+    setThumbErr("");
+    setThumbnail(file);
+    setThumbPreview(URL.createObjectURL(file));
+    // reset input so same file can be re-selected
+    if (thumbInputRef.current) thumbInputRef.current.value = "";
+  };
+
+  const handleRemoveThumb = () => {
+    setThumbnail(null);
+    setThumbPreview("");
+    setThumbErr("");
+  };
+
+  // ── Validation ───────────────────────────────────────────────────────────
   const validateTitle = () => {
     if (!quizTitle.trim()) { setTitleErr("Vui lòng nhập tên Quiz"); return false; }
     setTitleErr(""); return true;
@@ -57,6 +97,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     return Object.keys(err).length === 0;
   };
 
+  // ── Question handlers ────────────────────────────────────────────────────
   const handleQChange = (e) => {
     const { name, value } = e.target;
     setCurrentQ((p) => ({ ...p, [name]: value }));
@@ -64,7 +105,6 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   };
 
   const handleAddQuestion = () => {
-    // Giới hạn 20 câu (chỉ áp dụng khi thêm mới, không áp dụng khi đang sửa)
     if (editingIndex === null && questions.length >= MAX_QUESTIONS) {
       setListErr(`Tối đa ${MAX_QUESTIONS} câu hỏi cho một Quiz`);
       return;
@@ -91,7 +131,9 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
 
   const handleEdit = (i) => {
     const q = questions[i];
-    const correctIndex = q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : q.options.indexOf(q.correctAnswer);
+    const correctIndex = q.correctAnswerIndex !== undefined
+      ? q.correctAnswerIndex
+      : q.options.indexOf(q.correctAnswer);
     setCurrentQ({
       question: q.question,
       optionA: q.options[0] ?? "",
@@ -105,61 +147,69 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
 
   const handleRemoveQ = (i) => {
     setQuestions((p) => p.filter((_, idx) => idx !== i));
-    setListErr(""); // xóa lỗi giới hạn khi xóa câu
-  };
-
-  const handleFinish = async () => {
-    if (questions.length < MIN_QUESTIONS) {
-      setListErr(`Cần ít nhất ${MIN_QUESTIONS} câu hỏi để tạo Quiz`);
-      return;
-    }
     setListErr("");
-    try {
-      setSaving(true);
-      setSaveErr("");
-      const payload = {
-        title:       quizTitle,
-        description,
-        difficulty:  isManual ? undefined : difficulty, 
-        timeLimit:   Number(timeLimit),
-        documentId:  documentId ?? null,
-        questions:   questions.map((q) => ({
-          question:           q.question,
-          options:            q.options,
-          correctAnswer:      q.correctAnswer,
-          correctAnswerIndex: q.correctAnswerIndex,
-        })),
-      };
-
-      let result;
-      if (isEdit) {
-        const quizId = editQuiz._id ?? editQuiz.id;
-        result = await quizService.update(quizId, payload);
-      } else {
-        result = await quizService.create(payload);
-      }
-      onSave(result, isEdit, questions);
-    } catch (err) {
-      setSaveErr(err?.response?.data?.message || `Lỗi ${isEdit ? "cập nhật" : "tạo"} Quiz, vui lòng thử lại.`);
-      console.error("❌ Lỗi chi tiết:", err?.response?.data);
-    } finally {
-      setSaving(false);
-    }
   };
 
-  // Nhãn nút tạo/lưu
+  // ── Save ─────────────────────────────────────────────────────────────────
+ const handleFinish = async () => {
+  if (questions.length < MIN_QUESTIONS) {
+    setListErr(`Cần ít nhất ${MIN_QUESTIONS} câu hỏi để tạo Quiz`);
+    return;
+  }
+  setListErr("");
+  try {
+    setSaving(true);
+    setSaveErr("");
+
+    const data = {
+      title:       quizTitle,
+      description,
+      difficulty:  isManual ? undefined : difficulty,
+      timeLimit:   Number(timeLimit),
+      documentId:  documentId ?? null,
+      questions:   questions.map((q) => ({
+        question:           q.question,
+        options:            q.options,
+        correctAnswer:      q.correctAnswer,
+        correctAnswerIndex: q.correctAnswerIndex,
+      })),
+    };
+
+    let result;
+    if (isEdit) {
+      const quizId = editQuiz._id ?? editQuiz.id;
+      result = await quizService.update(quizId, data, thumbnail ?? undefined);
+    } else {
+      result = await quizService.create(data, thumbnail ?? undefined);
+    }
+
+    console.log("✅ result:", result); // ← xem response ở đây
+    onSave(result, isEdit, questions);
+  } catch (err) {
+    console.error("❌ Lỗi chi tiết:", err?.response?.data ?? err); // ← log đầy đủ
+    setSaveErr(err?.response?.data?.message || `Lỗi ${isEdit ? "cập nhật" : "tạo"} Quiz, vui lòng thử lại.`);
+  } finally {
+    setSaving(false);
+  }
+};
+
   const submitLabel = saving
     ? "Đang lưu..."
     : isEdit
       ? `Lưu thay đổi (${questions.length} câu)`
       : "Tạo Quiz";
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"
-      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col modal-box" style={{ maxHeight: "90vh" }}>
-
-        {/* Header */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"
+      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col modal-box"
+        style={{ maxHeight: "90vh" }}
+      >
+        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-gray-800">
@@ -170,39 +220,150 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
             <div className="flex items-center gap-2 mt-1.5">
               {[1, 2].map((s) => (
                 <div key={s} className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all duration-300"
-                    style={{ background: step >= s ? "#F26739" : "#e5e7eb", color: step >= s ? "white" : "#9ca3af" }}>
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all duration-300"
+                    style={{ background: step >= s ? "#F26739" : "#e5e7eb", color: step >= s ? "white" : "#9ca3af" }}
+                  >
                     {s}
                   </div>
                   <span className="text-[11px]" style={{ color: step >= s ? "#F26739" : "#9ca3af" }}>
                     {s === 1 ? "Thông tin" : `${questions.length}/${MAX_QUESTIONS} câu`}
                   </span>
-                  {s < 2 && <div className="w-5 h-px" style={{ background: step > s ? "#F26739" : "#e5e7eb" }} />}
+                  {s < 2 && (
+                    <div className="w-5 h-px" style={{ background: step > s ? "#F26739" : "#e5e7eb" }} />
+                  )}
                 </div>
               ))}
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all text-xl leading-none">×</button>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all text-xl leading-none"
+          >
+            ×
+          </button>
         </div>
 
-        {/* Body */}
+        {/* ── Body ────────────────────────────────────────────────────────── */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
           {step === 1 ? (
             <div className="space-y-4">
+              {/* Tên Quiz */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Tên Quiz <span className="text-red-400">*</span></label>
-                <input type="text" placeholder="Nhập tên quiz..." value={quizTitle}
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Tên Quiz <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên quiz..."
+                  value={quizTitle}
                   onChange={(e) => { setQuizTitle(e.target.value); if (titleErr) setTitleErr(""); }}
-                  className={inputCls(titleErr)} autoFocus />
+                  className={inputCls(titleErr)}
+                  autoFocus
+                />
                 {titleErr && <p className="text-xs text-red-500 mt-1">{titleErr}</p>}
               </div>
+
+              {/* Mô tả */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Mô tả</label>
-                <textarea placeholder="Nhập mô tả quiz..." value={description}
-                  onChange={(e) => setDesc(e.target.value)} rows={2} className={`${inputCls(false)} resize-none`} />
+                <textarea
+                  placeholder="Nhập mô tả quiz..."
+                  value={description}
+                  onChange={(e) => setDesc(e.target.value)}
+                  rows={2}
+                  className={`${inputCls(false)} resize-none`}
+                />
               </div>
 
-              {/* Độ khó chỉ hiện khi gắn tài liệu (không thủ công) */}
+              {/* ── Thumbnail ─────────────────────────────────────────────── */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Ảnh bìa (Thumbnail)
+                </label>
+
+                {thumbPreview ? (
+                  /* Preview */
+                  <div className="relative w-full rounded-xl overflow-hidden border border-gray-200 group" style={{ height: 160 }}>
+                    <img
+                      src={thumbPreview}
+                      alt="thumbnail preview"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ background: "rgba(0,0,0,0.45)" }}>
+                      <label
+                        className="cursor-pointer px-3 py-1.5 bg-white rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                        title="Đổi ảnh"
+                      >
+                        Đổi ảnh
+                        <input
+                          ref={thumbInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleThumbChange}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleRemoveThumb}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+                        style={{ background: "#EF4444" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#DC2626")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#EF4444")}
+                      >
+                        Xoá ảnh
+                      </button>
+                    </div>
+                    {/* Filename badge */}
+                    {thumbnail && (
+                      <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5">
+                        <span className="text-[10px] text-white truncate max-w-[200px] block">{thumbnail.name}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Drop zone */
+                  <label
+                    className="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl cursor-pointer transition-all group"
+                    style={{ height: 140, borderColor: "#E5E7EB", background: "#FAFAFA" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#F26739";
+                      e.currentTarget.style.background  = "#FFF8F5";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E5E7EB";
+                      e.currentTarget.style.background  = "#FAFAFA";
+                    }}
+                  >
+                    {/* Icon */}
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors"
+                      style={{ background: "#F3F4F6" }}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6}
+                          d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 12h.008v.008H13.5V12zm-4.5 9h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0021 4.5H6a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 006 21h3z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-medium text-gray-500">Nhấn để chọn ảnh bìa</span>
+                    <span className="text-[11px] text-gray-400 mt-0.5">PNG, JPG, WEBP — tối đa {MAX_THUMB_MB}MB</span>
+                    <input
+                      ref={thumbInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleThumbChange}
+                    />
+                  </label>
+                )}
+
+                {thumbErr && <p className="text-xs text-red-500 mt-1">{thumbErr}</p>}
+              </div>
+
+              {/* Độ khó / Thời gian */}
               {!isManual ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -228,21 +389,25 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
               {isManual && (
                 <div className="flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
                   <svg width="15" height="15" className="text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-xs text-orange-600">Quiz này sẽ được tạo <strong>không gắn với tài liệu</strong> nào. Bạn có thể gắn tài liệu sau.</p>
+                  <p className="text-xs text-orange-600">
+                    Quiz này sẽ được tạo <strong>không gắn với tài liệu</strong> nào. Bạn có thể gắn tài liệu sau.
+                  </p>
                 </div>
               )}
             </div>
           ) : (
+            /* ── Step 2: Questions ──────────────────────────────────────── */
             <div className="space-y-4">
-              {/* Danh sách câu hỏi đã thêm */}
               {questions.length > 0 && (
                 <div className="space-y-1.5">
                   {questions.map((q, i) => (
-                    <div key={i}
+                    <div
+                      key={i}
                       className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-gray-100 bg-gray-50"
-                      style={{ opacity: 1, visibility: "visible" }}>
+                    >
                       <span className="text-[11px] font-semibold text-gray-400 shrink-0 w-5">#{i + 1}</span>
                       <p className="text-xs text-gray-600 flex-1 truncate">{q.question}</p>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">
@@ -255,15 +420,20 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                 </div>
               )}
 
-              {/* Form nhập câu hỏi mới — ẩn khi đã đủ 20 câu (và không đang sửa) */}
               {(editingIndex !== null || questions.length < MAX_QUESTIONS) && (
                 <div className="border border-dashed border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/40">
                   <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                     {editingIndex !== null ? `Chỉnh sửa câu ${editingIndex + 1}` : "Câu hỏi mới"}
                   </p>
                   <div>
-                    <textarea name="question" placeholder="Nhập câu hỏi..." value={currentQ.question}
-                      onChange={handleQChange} rows={2} className={`${inputCls(currentQErrors.question)} resize-none`} />
+                    <textarea
+                      name="question"
+                      placeholder="Nhập câu hỏi..."
+                      value={currentQ.question}
+                      onChange={handleQChange}
+                      rows={2}
+                      className={`${inputCls(currentQErrors.question)} resize-none`}
+                    />
                     {currentQErrors.question && <p className="text-xs text-red-500 mt-1">{currentQErrors.question}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -271,8 +441,13 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                       const key = `option${letter}`;
                       return (
                         <div key={letter}>
-                          <input type="text" name={key} placeholder={`Đáp án ${letter}`}
-                            value={currentQ[key]} onChange={handleQChange} className={inputCls(currentQErrors[key])} />
+                          <input
+                            type="text" name={key}
+                            placeholder={`Đáp án ${letter}`}
+                            value={currentQ[key]}
+                            onChange={handleQChange}
+                            className={inputCls(currentQErrors[key])}
+                          />
                           {currentQErrors[key] && <p className="text-xs text-red-500 mt-0.5">{currentQErrors[key]}</p>}
                         </div>
                       );
@@ -288,23 +463,26 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                     </select>
                     {currentQErrors.correctAnswer && <p className="text-xs text-red-500 mt-1">{currentQErrors.correctAnswer}</p>}
                   </div>
-                  <button onClick={handleAddQuestion}
+                  <button
+                    onClick={handleAddQuestion}
                     className="w-full py-2.5 text-sm border border-orange-200 text-orange-500 rounded-xl font-medium transition-all"
                     style={{ background: "#fff8f5" }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#ffefe8")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "#fff8f5")}>
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#fff8f5")}
+                  >
                     {editingIndex !== null ? "Cập nhật câu hỏi" : "+ Thêm câu hỏi này"}
                   </button>
                 </div>
               )}
 
-              {/* Thông báo đã đủ 20 câu */}
               {questions.length >= MAX_QUESTIONS && editingIndex === null && (
                 <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
                   <svg width="15" height="15" className="text-orange-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-xs text-orange-600">Đã đạt tối đa <strong>{MAX_QUESTIONS} câu hỏi</strong>. Xoá bớt để thêm câu mới.</p>
+                  <p className="text-xs text-orange-600">
+                    Đã đạt tối đa <strong>{MAX_QUESTIONS} câu hỏi</strong>. Xoá bớt để thêm câu mới.
+                  </p>
                 </div>
               )}
 
@@ -314,17 +492,26 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ──────────────────────────────────────────────────────── */}
         <div className="flex justify-end gap-2.5 px-6 pb-5 pt-3.5 border-t border-gray-100 shrink-0">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-600 ghost-btn">Huỷ</button>
+          <button onClick={onClose} className="px-5 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-600 ghost-btn">
+            Huỷ
+          </button>
           {step === 1 ? (
-            <button onClick={() => { if (validateTitle()) setStep(2); }}
-              className="px-5 py-2.5 text-sm text-white rounded-xl font-medium primary-btn" style={{ background: "#F26739" }}>
+            <button
+              onClick={() => { if (validateTitle()) setStep(2); }}
+              className="px-5 py-2.5 text-sm text-white rounded-xl font-medium primary-btn"
+              style={{ background: "#F26739" }}
+            >
               Tiếp theo →
             </button>
           ) : (
-            <button onClick={handleFinish} disabled={saving}
-              className="px-5 py-2.5 text-sm text-white rounded-xl font-medium primary-btn disabled:opacity-60" style={{ background: "#F26739" }}>
+            <button
+              onClick={handleFinish}
+              disabled={saving}
+              className="px-5 py-2.5 text-sm text-white rounded-xl font-medium primary-btn disabled:opacity-60"
+              style={{ background: "#F26739" }}
+            >
               {submitLabel}
             </button>
           )}

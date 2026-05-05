@@ -31,7 +31,7 @@ router.use(protect);
 // ==========================================
 
 // Tạo đề thủ công
-router.post('/', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), createQuizManual);
+router.post('/', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), uploadQuizImage.single('thumbnail'), createQuizManual);
 
 // Xem lịch sử toàn bộ bài đã làm (Dashboard Người học)
 router.get('/my-history', authorize(USER_ROLES.LEARNER,USER_ROLES.TEACHER), getMyHistory);

@@ -62,42 +62,30 @@ export const quizService = {
   },
 
   // Tạo đề thi mới (Dùng FormData vì có upload ảnh bìa)
-  create: async (data, thumbnailFile) => {
-    const formData = new FormData();
-    formData.append("title", data.title);
-    formData.append("description", data.description || "");
-    if (data.documentId) formData.append("documentId", data.documentId);
-    
-    // Convert mảng câu hỏi thành JSON String để đính kèm vào Form Data
-    formData.append("questions", JSON.stringify(data.questions));
+create: async (data, thumbnailFile) => {
+  const formData = new FormData();
+  formData.append("title",       data.title);
+  formData.append("description", data.description || "");
+  if (data.documentId) formData.append("documentId", data.documentId);
+  formData.append("questions",   JSON.stringify(data.questions));
+  if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
 
-    // Đính kèm file ảnh nếu giáo viên có tải lên
-    if (thumbnailFile) {
-      formData.append("thumbnail", thumbnailFile);
-    }
+  const res = await api.post("/quizzes", formData);
+  // Không set Content-Type — để axios tự set boundary
+  return res;
+},
 
-    const res = await api.post("/quizzes/manual", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return res;
-  },
+update: async (id, data, thumbnailFile) => {
+  const formData = new FormData();
+  if (data.title)       formData.append("title",       data.title);
+  if (data.description) formData.append("description", data.description);
+  if (data.tags)        formData.append("tags",        JSON.stringify(data.tags));
+  if (thumbnailFile)    formData.append("thumbnail",   thumbnailFile);
 
-  // Sửa thông tin chung của đề thi (Tiêu đề, mô tả, ảnh bìa...)
-  update: async (id, data, thumbnailFile) => {
-    const formData = new FormData();
-    if (data.title) formData.append("title", data.title);
-    if (data.description) formData.append("description", data.description);
-    if (data.tags) formData.append("tags", JSON.stringify(data.tags));
-    
-    if (thumbnailFile) {
-      formData.append("thumbnail", thumbnailFile);
-    }
-
-    const res = await api.put(`/quizzes/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return res;
-  },
+  const res = await api.put(`/quizzes/${id}`, formData);
+  // Không set Content-Type — để axios tự set boundary
+  return res;
+},
 
   // Sửa chi tiết nội dung của MỘT câu hỏi cụ thể trong đề
   updateQuestion: async (quizId, questionId, questionData) => {

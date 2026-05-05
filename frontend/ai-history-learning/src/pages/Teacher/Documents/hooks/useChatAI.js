@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import api from "../../../../lib/api";
-import logoUserDefault from "../../../../assets/logohs.png";
+import api from "@/lib/api";
+import logoUserDefault from "@/assets/img/logohs.png";
 
 // ── Thông báo loading cho từng action ─────────────────────────────────────────
 const LOADING_MESSAGES = {

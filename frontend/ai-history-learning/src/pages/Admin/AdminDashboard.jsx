@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import LogoHS from "../../assets/logohs.png";
+import LogoHS from "../../assets/img/logohs.png";
 import api from "../../lib/api";
 import {
   FileText,

@@ -1,5 +1,5 @@
 import React from "react";
-import logoApp from "../../../assets/logo.jpg";
+import logoApp from "@/assets/img/logo.jpg";
 import { IconBot, IconSend, IconLoader, IconRotateCcw, IconChevronsUpDown, IconSearch, IconSettings, IconMoreHoriz, IconMessageSquare } from "./icons";
 
 import { THEME, GRAD, QUICK_ACTIONS, GLOBAL_CSS } from "./constants/chatConstants";

@@ -137,7 +137,7 @@ const Flashcards = () => {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate("/learner/su-co", { 
+                    navigate("/learner/suco", { 
                       state: { 
                         reportTarget: "flashcards", 
                         targetId: item._id 

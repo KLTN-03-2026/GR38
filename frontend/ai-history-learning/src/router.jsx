@@ -103,7 +103,7 @@ export default function AppRouter() {
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="content" element={<ReportManagement />} />
           <Route path="profile" element={<ProfilePage />} />
-          {/* Admin view-only content routes */}
+          
           <Route path="documents" element={<DocumentsLearner />} />
           <Route path="documents/:id" element={<BaiGiang />} />{" "}
           <Route path="flashcards" element={<FlashcardsLearner />} />
@@ -123,6 +123,8 @@ export default function AppRouter() {
           <Route path="quizzes" element={<QuizPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="documents/:id" element={<DocumentsDetailPage />} />
+          <Route path="baigiang/:id" element={<Baigiangpage />} />
+          <Route path="baikiemtra/:id" element={<Baikiemtra />} />
           <Route path="stats" element={<AssignmentStatistics />} />
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="flashcards/add" element={<AddFlashcards />} />

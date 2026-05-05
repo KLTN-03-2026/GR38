@@ -142,22 +142,44 @@ export const getDocuments = async (req, res, next) => {
 // @desc Lấy chi tiết một tài liệu
 export const getDocument = async (req, res, next) => {
   try {
-    let query = { _id: req.params.id };
+    // 1. Kiểm tra ID có hợp lệ chuẩn MongoDB không
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.log("Lỗi: ID tài liệu không hợp lệ:", req.params.id);
+      return res.status(400).json({ success: false, error: 'ID tài liệu không hợp lệ' });
+    }
 
-    if (req.user.role === 'ADMIN') {
-    } else if (req.user.role === 'TEACHER') {
-      query.userId = req.user._id;
-    } else if (req.user.role === 'LEARNER') {
+    // 2. Đảm bảo req.user tồn tại (phòng hờ thiếu middleware verifyToken)
+    if (!req.user) {
+      console.log("Lỗi: Không tìm thấy req.user. Vui lòng kiểm tra lại middleware xác thực.");
+      return res.status(401).json({ success: false, error: 'Chưa xác thực người dùng' });
+    }
+
+    let query = { _id: req.params.id };
+    
+    // 3. Chuẩn hóa Role về chữ in hoa để so sánh chính xác
+    const userRole = req.user.role ? req.user.role.toUpperCase() : '';
+
+    if (userRole === 'ADMIN') {
+    } else if (userRole === 'TEACHER') {
+      // Lưu ý: Nếu muốn Teacher xem được tài liệu của người khác, bạn phải bỏ dòng dưới.
+      // Dòng này bắt buộc Teacher chỉ xem được tài liệu CỦA CHÍNH HỌ.
+      query.userId = req.user._id; 
+    } else if (userRole === 'LEARNER') {
       query.status = "ready";
     }
 
     const document = await Document.findOne(query);
 
-    if (!document) return res.status(404).json({ success: false, error: 'Không tìm thấy tài liệu' });
+    if (!document) {
+      console.log(`Lỗi: Không tìm thấy tài liệu ${req.params.id} cho user ${req.user._id} (Role: ${userRole})`);
+      return res.status(404).json({ success: false, error: 'Không tìm thấy tài liệu hoặc bạn không có quyền xem' });
+    }
 
+    // Đếm số lượng liên quan
     const flashcardCount = await Flashcard.countDocuments({ documentId: document._id });
     const quizCount = await Quiz.countDocuments({ documentId: document._id });
 
+    // Cập nhật thời gian truy cập
     await Document.updateOne({ _id: document._id }, { $set: { lastAccessed: Date.now() } });
 
     const documentData = document.toObject();
@@ -166,10 +188,10 @@ export const getDocument = async (req, res, next) => {
 
     res.status(200).json({ success: true, data: documentData });
   } catch (error) {
+    console.error("Lỗi Server tại getDocument:", error);
     next(error);
   }
 };
-
 // @desc Xóa tài liệu
 export const deleteDocument = async (req, res, next) => {
   try {

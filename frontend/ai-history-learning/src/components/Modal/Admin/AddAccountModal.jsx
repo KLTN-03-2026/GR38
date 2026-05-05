@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, User, Info } from "lucide-react";
+import { X, Info } from "lucide-react";
 
 const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
   const [formData, setFormData] = useState({
@@ -12,7 +12,21 @@ const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onAdd(formData);
+
+    // Tự động gán mật khẩu dựa trên vai trò để tránh lỗi thiếu dữ liệu phía API
+    const defaultPassword =
+      formData.role === "TEACHER" ? "Teacher@123" : "Learner@123";
+
+    const payload = {
+      ...formData,
+      password: defaultPassword,
+      isActive: true, // Admin thêm thì mặc định kích hoạt luôn
+      isDisabledByAdmin: false,
+    };
+
+    onAdd(payload);
+    onClose();
+    setFormData({ fullName: "", email: "", role: "TEACHER" }); // Reset form
   };
 
   return (
@@ -81,10 +95,11 @@ const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
             <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl flex gap-3">
               <Info size={20} className="text-[#F26739] shrink-0" />
               <div className="text-xs text-slate-600">
-                <p className="font-bold text-[#F26739]">Mật khẩu tự động:</p>-
-                Giáo viên: <span className="font-bold">Teacher@123</span>
-                <br />- Người học:{" "}
-                <span className="font-bold">Learner@123</span>
+                <p className="font-bold text-[#F26739]">Thông tin mật khẩu:</p>
+                Mật khẩu mặc định:{" "}
+                <span className="font-bold">
+                  {formData.role === "TEACHER" ? "Teacher@123" : "Learner@123"}
+                </span>
               </div>
             </div>
           </div>
@@ -101,7 +116,7 @@ const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
               type="submit"
               className="px-8 py-2.5 bg-[#F26739] text-white font-bold rounded-xl shadow-lg hover:opacity-90"
             >
-              Thêm tài khoản
+              Xác nhận thêm
             </button>
           </div>
         </form>

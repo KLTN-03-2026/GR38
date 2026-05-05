@@ -2,7 +2,14 @@ import React, { useState, useMemo, useEffect } from "react";
 import api from "../../lib/api";
 import AccountDetail from "../../components/Modal/Admin/AccountDetail";
 import AddAccountModal from "../../components/Modal/Admin/AddAccountModal";
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Edit2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+} from "lucide-react";
 import Swal from "sweetalert2";
 
 const AccountManagement = () => {
@@ -11,6 +18,13 @@ const AccountManagement = () => {
   const [viewingAccount, setViewingAccount] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  const normalizeRole = (role) => (role || "").toString().toUpperCase();
+  const getRoleLabel = (role) => {
+    const normalized = normalizeRole(role);
+    if (normalized === "TEACHER") return "Giáo viên";
+    if (normalized === "LEARNER") return "Người học";
+    return role || "";
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("Trạng thái");
   const [filterRole, setFilterRole] = useState("Chức vụ");
@@ -25,7 +39,7 @@ const AccountManagement = () => {
       if (response.data.success) {
         // Loại bỏ Admin khỏi danh sách quản lý
         const filteredData = response.data.data.filter(
-          (a) => a.role !== "ADMIN" && a.role !== "Quản trị viên",
+          (a) => normalizeRole(a.role) !== "ADMIN",
         );
         setAccounts(filteredData);
       }
@@ -45,6 +59,20 @@ const AccountManagement = () => {
     setCurrentPage(1);
   }, [searchQuery, filterStatus, filterRole]);
 
+  // Logic nhận diện trạng thái
+  const getStatusText = (acc) => {
+    if (acc.isDisabledByAdmin) return "Đã vô hiệu hóa";
+    if (acc.isActive) return "Đang hoạt động";
+    return "Chờ xử lý";
+  };
+
+  const getStatusClass = (acc) => {
+    const status = getStatusText(acc);
+    if (status === "Đang hoạt động") return "bg-green-500";
+    if (status === "Chờ xử lý") return "bg-amber-500";
+    return "bg-red-500";
+  };
+
   const accountStats = useMemo(
     () => [
       { label: "Tổng tài khoản", value: accounts.length.toString() },
@@ -56,23 +84,17 @@ const AccountManagement = () => {
       },
       {
         label: "Đang hoạt động",
-        value: accounts.filter((a) => a.isActive).length.toString(),
+        value: accounts
+          .filter((a) => a.isActive && !a.isDisabledByAdmin)
+          .length.toString(),
       },
       {
         label: "Vô hiệu hóa",
-        value: accounts
-          .filter((a) => !a.isActive && a.isDisabledByAdmin)
-          .length.toString(),
+        value: accounts.filter((a) => a.isDisabledByAdmin).length.toString(),
       },
     ],
     [accounts],
   );
-
-  const getStatusText = (acc) => {
-    if (acc.isActive) return "Đang hoạt động";
-    if (acc.isDisabledByAdmin) return "Đã vô hiệu hóa";
-    return "Chờ xử lý";
-  };
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter((acc) => {
@@ -84,7 +106,9 @@ const AccountManagement = () => {
       const currentStatusText = getStatusText(acc);
       const matchStatus =
         filterStatus === "Trạng thái" || currentStatusText === filterStatus;
-      const matchRole = filterRole === "Chức vụ" || acc.role === filterRole;
+      const matchRole =
+        filterRole === "Chức vụ" ||
+        normalizeRole(acc.role) === normalizeRole(filterRole);
 
       return matchSearch && matchStatus && matchRole;
     });
@@ -102,19 +126,73 @@ const AccountManagement = () => {
   const handleUpdate = async (updatedData) => {
     try {
       const id = updatedData._id || updatedData.id;
-      const response = await api.put(`/admin/users/${id}`, updatedData);
+      const normalizedRole = normalizeRole(updatedData.role);
+      const payload = {
+        ...updatedData,
+        role: normalizedRole,
+      };
+
+      if (normalizedRole === "TEACHER") {
+        if (updatedData.isActive && !updatedData.isDisabledByAdmin) {
+          payload.teacherApprovalStatus = "approved";
+        } else if (!updatedData.isActive && !updatedData.isDisabledByAdmin) {
+          payload.teacherApprovalStatus = "pending";
+        }
+      }
+
+      const response = await api.put(`/admin/users/${id}`, payload);
       if (response.data.success) {
-        fetchAccounts();
+        await fetchAccounts();
         setViewingAccount(null);
         Swal.fire(
           "Thành công!",
-          "Trạng thái tài khoản đã được cập nhật.",
+          "Thông tin tài khoản đã được cập nhật.",
           "success",
         );
       }
     } catch (err) {
       Swal.fire("Lỗi!", "Cập nhật thất bại.", "error");
     }
+  };
+
+  const handleCreateAccount = async (payload) => {
+    try {
+      setLoading(true);
+      const response = await api.post("/admin/users", payload);
+      if (response.data.success) {
+        await fetchAccounts();
+        Swal.fire("Thành công!", "Tạo tài khoản mới thành công.", "success");
+      }
+    } catch (err) {
+      Swal.fire(
+        "Lỗi!",
+        err.response?.data?.error || "Không thể tạo tài khoản.",
+        "error",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = (acc) => {
+    Swal.fire({
+      title: "Phê duyệt tài khoản?",
+      text: `Kích hoạt quyền hoạt động cho ${acc.fullName || acc.name}?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      confirmButtonText: "Đồng ý duyệt",
+      cancelButtonText: "Hủy",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleUpdate({
+          ...acc,
+          isActive: true,
+          isDisabledByAdmin: false,
+          teacherApprovalStatus: "approved",
+        });
+      }
+    });
   };
 
   const handleDelete = (id, name) => {
@@ -158,7 +236,7 @@ const AccountManagement = () => {
           </h1>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-[#F26739] text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90"
+            className="bg-[#F26739] text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90 flex items-center gap-2"
           >
             Thêm tài khoản
           </button>
@@ -258,7 +336,7 @@ const AccountManagement = () => {
                       <td className="p-4 text-sm font-semibold text-slate-900">
                         <button
                           onClick={() => setViewingAccount(acc)}
-                          className="hover:text-[#F26739] hover:underline uppercase"
+                          className="hover:text-[#F26739] hover:underline"
                         >
                           {acc.fullName || acc.name}
                         </button>
@@ -268,9 +346,9 @@ const AccountManagement = () => {
                       </td>
                       <td className="p-4 text-center">
                         <span
-                          className={`px-3 py-1 rounded-md text-[10px] font-bold text-white ${acc.role === "TEACHER" ? "bg-blue-600" : "bg-indigo-500"}`}
+                          className={`px-3 py-1 rounded-md text-[10px] font-bold text-white ${normalizeRole(acc.role) === "TEACHER" ? "bg-blue-600" : "bg-indigo-500"}`}
                         >
-                          {acc.role}
+                          {getRoleLabel(acc.role)}
                         </span>
                       </td>
                       <td className="p-4 text-center">
@@ -288,9 +366,19 @@ const AccountManagement = () => {
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
+                          {getStatusText(acc) === "Chờ xử lý" && (
+                            <button
+                              onClick={() => handleApprove(acc)}
+                              className="p-1.5 border border-green-200 rounded-md text-green-600 hover:bg-green-50"
+                              title="Phê duyệt"
+                            >
+                              <UserCheck size={14} />
+                            </button>
+                          )}
                           <button
                             onClick={() => setViewingAccount(acc)}
                             className="p-1.5 border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100"
+                            title="Chỉnh sửa"
                           >
                             <Edit2 size={14} />
                           </button>
@@ -302,6 +390,7 @@ const AccountManagement = () => {
                               )
                             }
                             className="p-1.5 border border-slate-200 rounded-md text-red-500 hover:bg-red-50"
+                            title="Xóa"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -312,6 +401,7 @@ const AccountManagement = () => {
               </tbody>
             </table>
           </div>
+
           {totalPages > 1 && (
             <div className="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
               <p className="text-sm text-slate-500">
@@ -340,7 +430,7 @@ const AccountManagement = () => {
       <AddAccountModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={fetchAccounts}
+        onAdd={handleCreateAccount}
       />
     </div>
   );

@@ -113,7 +113,6 @@ export default function useChatAI(documentId) {
         }
       } catch (err) {
         const status = err?.response?.status;
-        // 404 = chưa có lịch sử → bình thường
         if (status === 404 || !err?.response) {
           addMsg("ai",
             "Xin chào! Tôi là trợ lý AI dành cho giáo viên. Chọn hành động bên dưới hoặc đặt câu hỏi về tài liệu."
@@ -134,30 +133,51 @@ export default function useChatAI(documentId) {
   }, [messages, isTyping]);
 
   // ── Xử lý confirm số lượng flashcard/quiz ─────────────────────────────────
-  const handleConfirmCount = async (num, { onDone, onError }) => {
+  // Nhận object: { count, title, timeLimit }
+  const handleConfirmCount = async ({ count, title, timeLimit }, { onDone, onError } = {}) => {
     const action = pendingAction; // "flashcard" | "quiz"
-    addMsg("user", action === "flashcard" ? `Tạo ${num} Flashcard` : `Tạo ${num} câu Quiz`);
+    setPendingAction(null);
+
+    const displayTitle = title || (action === "flashcard" ? "Flashcard mới" : "Quiz ôn tập");
+
+    addMsg(
+      "user",
+      action === "flashcard"
+        ? `Tạo ${count} Flashcard${title ? ` — "${title}"` : ""}`
+        : `Tạo Quiz "${displayTitle}" — ${count} câu · ${timeLimit} phút`
+    );
 
     const loadId = addLoadingMsg(LOADING_MESSAGES[action] || "Đang xử lý...");
+
     try {
       if (action === "flashcard") {
-        const res = await api.post("/ai/generate-flashcards", { documentId, count: num });
+        const res = await api.post("/ai/generate-flashcards", {
+          documentId,
+          count,
+          title: displayTitle,
+        });
         if (res.data?.success) {
-          const count = res.data.data?.cards?.length ?? num;
-          const msg = `Đã tạo ${count} Flashcard thành công!\n\nBạn có thể xem và chỉnh sửa trong tab Flashcard.`;
+          const created = res.data.data?.cards?.length ?? count;
+          const msg = `Đã tạo ${created} Flashcard thành công!\n\nBạn có thể xem và chỉnh sửa trong tab Flashcard.`;
           removeMsg(loadId);
-          onDone(msg);
+          onDone?.(msg);
           addMsg("ai", msg, { type: "action-result", actionLabel: "Tạo Flashcard" });
         } else {
           throw new Error(res.data?.error || "Tạo flashcard thất bại");
         }
       } else {
-        const res = await api.post("/ai/generate-quiz", { documentId, numQuestions: num, title: "Quiz ôn tập" });
+        // quiz
+        const res = await api.post("/ai/generate-quiz", {
+          documentId,
+          numQuestions: count,
+          title: displayTitle,
+          timeLimit,          // phút — backend lưu để hiển thị sau
+        });
         if (res.data?.success) {
-          const total = res.data.data?.totalQuestions ?? num;
-          const msg = `Đã tạo Quiz với ${total} câu hỏi!\n\nHọc sinh có thể làm bài trong mục Quiz bên cạnh.`;
+          const total = res.data.data?.totalQuestions ?? count;
+          const msg = `Đã tạo Quiz "${displayTitle}" với ${total} câu hỏi · ${timeLimit} phút!\n\nHọc sinh có thể làm bài trong mục Quiz bên cạnh.`;
           removeMsg(loadId);
-          onDone(msg);
+          onDone?.(msg);
           addMsg("ai", msg, { type: "action-result", actionLabel: "Tạo Quiz" });
         } else {
           throw new Error(res.data?.error || "Tạo quiz thất bại");
@@ -167,13 +187,13 @@ export default function useChatAI(documentId) {
       console.error(err?.response?.data || err.message);
       removeMsg(loadId);
       const errMsg = getErrorMessage(err, action);
-      onError(errMsg);
+      onError?.(errMsg);
       addMsg("ai", `❌ ${errMsg}`, { type: "error" });
     }
   };
 
   // ── Xử lý confirm giải thích khái niệm ───────────────────────────────────
-  const handleConfirmConcept = async (concept, { onDone, onError }) => {
+  const handleConfirmConcept = async (concept, { onDone, onError } = {}) => {
     addMsg("user", `Giải thích khái niệm: ${concept}`);
     const loadId = addLoadingMsg(LOADING_MESSAGES.concept);
     try {
@@ -181,7 +201,7 @@ export default function useChatAI(documentId) {
       if (res.data?.success) {
         const explanation = res.data.data?.explanation || res.data.data;
         removeMsg(loadId);
-        onDone("Đã giải thích xong!");
+        onDone?.("Đã giải thích xong!");
         addMsg("ai", explanation, { type: "action-result", actionLabel: "Giải thích khái niệm" });
       } else {
         throw new Error(res.data?.error || "Giải thích thất bại");
@@ -190,7 +210,7 @@ export default function useChatAI(documentId) {
       console.error(err?.response?.data || err.message);
       removeMsg(loadId);
       const errMsg = getErrorMessage(err, "concept");
-      onError(errMsg);
+      onError?.(errMsg);
       addMsg("ai", `❌ ${errMsg}`, { type: "error" });
     }
   };
@@ -201,7 +221,6 @@ export default function useChatAI(documentId) {
     if (!text || isTyping) return;
     const lower = text.toLowerCase();
 
-    // Bắt các lệnh quick action → mở dialog tương ứng
     if (lower.includes("tạo flashcard")) {
       setPendingAction("flashcard");
       setInput("");
@@ -218,13 +237,11 @@ export default function useChatAI(documentId) {
       return;
     }
 
-    // Gửi message user
     addMsg("user", text);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "40px";
     setIsTyping(true);
 
-    // Thêm loading message
     const loadId = addLoadingMsg(
       lower.includes("tóm tắt") ? LOADING_MESSAGES.summary : LOADING_MESSAGES.chat
     );
@@ -233,7 +250,6 @@ export default function useChatAI(documentId) {
       let res;
 
       if (lower.includes("tóm tắt")) {
-        // ── Tóm tắt tài liệu ──
         res = await api.post("/ai/generate-summary", { documentId });
         removeMsg(loadId);
         if (res.data?.success) {
@@ -246,7 +262,6 @@ export default function useChatAI(documentId) {
         }
 
       } else if (lower.includes("giải thích") && !lower.includes("khái niệm")) {
-        // ── Giải thích concept từ câu hỏi tự do ──
         const concept = text.replace(/giải thích/i, "").trim() || text;
         res = await api.post("/ai/explain-concept", { documentId, concept });
         removeMsg(loadId);
@@ -258,7 +273,6 @@ export default function useChatAI(documentId) {
         }
 
       } else {
-        // ── Chat thông thường ──
         res = await api.post("/ai/chat", { documentId, question: text });
         removeMsg(loadId);
         if (res.data?.success) {

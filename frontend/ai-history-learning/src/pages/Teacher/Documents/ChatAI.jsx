@@ -9,10 +9,9 @@ import Bubble            from "./components/Bubble";
 import TypingDots        from "./components/TypingDots";
 import ThemeToggle       from "./components/ThemeToggle";
 import CountPickerDialog from "./components/CountPickerDialog";
-import ConceptInputDialog from "./components/ConceptInputDialog";
 import { SidebarItem, ActionItem } from "./components/SidebarItem";
 
-export default function ChatAI({ documentId }) {
+export default function ChatAI({ documentId, documentTitle }) {
   const {
     messages, input, setInput,
     isTyping, isLoadingHistory,
@@ -42,17 +41,6 @@ export default function ChatAI({ documentId }) {
           T={T}
         />
       )}
-
-      {/* Dialog nhập khái niệm cần giải thích */}
-      {pendingAction === "concept" && (
-        <ConceptInputDialog
-          onConfirm={handleConfirmConcept}
-          onCancel={() => setPendingAction(null)}
-          dark={dark}
-          T={T}
-        />
-      )}
-
       <div style={{
         display: "flex", width: "100%", height: "calc(100vh - 220px)",
         fontFamily: "'DM Sans',system-ui,sans-serif", borderRadius: 20, overflow: "hidden",
@@ -80,7 +68,7 @@ export default function ChatAI({ documentId }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 500, color: T.sbBright, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {documentId ? `Tài liệu #${documentId.slice(-6)}` : "Chọn tài liệu"}
+{documentTitle ?? (documentId ? `Tài liệu #${documentId.slice(-6)}` : "Chọn tài liệu")}
                 </div>
                 <div style={{ fontSize: 9.5, color: T.sbMuted, marginTop: 1 }}>
                   {isLoadingHistory ? "Đang tải lịch sử..." : "Đang hoạt động"}

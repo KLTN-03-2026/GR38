@@ -1,165 +1,220 @@
-import React, { useState } from "react";
-import { IconZap, IconClipboardList } from "../icons";
-import { GRAD } from "../constants/chatConstants";
+// CountPickerDialog.jsx
+import { useState } from "react";
 
-// ── Circular progress ─────────────────────────────────────────────────────────
-function CircularProgress({ percent, color }) {
-  const r = 52, circ = 2 * Math.PI * r;
-  return (
-    <svg width="130" height="130" viewBox="0 0 130 130">
-      <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(128,128,128,0.2)" strokeWidth="8"/>
-      <circle cx="65" cy="65" r={r} fill="none" stroke={color} strokeWidth="8"
-        strokeDasharray={circ} strokeDashoffset={circ - (percent / 100) * circ}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.4s ease", transformOrigin: "65px 65px", transform: "rotate(-90deg)" }}/>
-      <text x="65" y="65" textAnchor="middle" dominantBaseline="central"
-        style={{ fontSize: 22, fontWeight: 700, fill: color, fontFamily: "inherit" }}>
-        {percent}%
-      </text>
-    </svg>
-  );
-}
+const TIME_OPTIONS = [15, 20, 25, 30, 35, 40, 45];
 
-// ── CountPickerDialog ─────────────────────────────────────────────────────────
 export default function CountPickerDialog({ action, onConfirm, onCancel, dark, T }) {
-  const [step, setStep]           = useState("pick");
-  const [count, setCount]         = useState("");
-  const [error, setError]         = useState("");
-  const [percent, setPercent]     = useState(0);
-  const [resultMsg, setResultMsg] = useState("");
+  const isQuiz = action === "quiz";
 
-  const isFlash    = action === "flashcard";
-  const title      = isFlash ? "Tạo Flashcard" : "Tạo Quiz";
-  const ActionIcon = isFlash ? IconZap : IconClipboardList;
-  const color      = isFlash ? "#5b5ef4" : "#f59e0b";
-  const grad       = isFlash ? GRAD.indigo : GRAD.amber;
+  const [count, setCount] = useState(10);
+  const [title, setTitle] = useState("");
+  const [timeLimit, setTimeLimit] = useState(30);
 
-  const confirm = () => {
-    const n = parseInt(count);
-    if (!n || n < 5 || n > 20) { setError("Vui lòng nhập số từ 5 đến 20"); return; }
-    setStep("loading"); setPercent(0);
-    let cur = 0;
-    const iv = setInterval(() => {
-      cur += Math.floor(Math.random() * 8) + 3;
-      if (cur >= 90) { cur = 90; clearInterval(iv); }
-      setPercent(cur);
-    }, 300);
-    onConfirm(n, {
-      onDone:  (msg) => { clearInterval(iv); setPercent(100); setTimeout(() => { setResultMsg(msg); setStep("done"); }, 500); },
-      onError: ()    => { clearInterval(iv); setResultMsg("Có lỗi xảy ra, vui lòng thử lại."); setStep("done"); },
-    });
+  const maxCount = isQuiz ? 50 : 100;
+  const minCount = 5;
+
+  const handleConfirm = () => {
+    onConfirm({ count, title: title.trim(), timeLimit: isQuiz ? timeLimit : undefined });
   };
 
-  const overlay = {
-    position: "fixed", inset: 0, zIndex: 50,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    background: T.dialogOverlay, backdropFilter: "blur(6px)",
-  };
-  const card = {
-    background: T.dialogBg, borderRadius: 20, padding: "24px",
-    boxShadow: dark ? "0 24px 64px rgba(0,0,0,0.6)" : "0 24px 64px rgba(0,0,0,0.18)",
-    border: `0.5px solid ${T.dialogBorder}`, fontFamily: "inherit",
-    transition: "background 0.3s, border-color 0.3s",
-  };
-
-  // ── Step: pick ──
-  if (step === "pick") return (
-    <div style={overlay}><div style={{ ...card, width: 340 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <div style={{ width: 46, height: 46, borderRadius: 14, background: grad, flexShrink: 0,
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <ActionIcon size={20} style={{ color: "#fff" }}/>
-        </div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.dialogTitle }}>{title}</div>
-          <div style={{ fontSize: 12, color: T.dialogSub, marginTop: 2 }}>Chọn số lượng (5 – 20)</div>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 14 }}>
-        {[5, 10, 15, 20].map(n => (
-          <button key={n} onClick={() => { setCount(String(n)); setError(""); }}
-            className="chatai-dialog-pick"
-            style={{
-              padding: "10px 0", borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              border: count === String(n) ? "2px solid transparent" : `1.5px solid ${T.dialogPickBdr}`,
-              background: count === String(n) ? grad : T.dialogPickBg,
-              color: count === String(n) ? "#fff" : T.dialogPickClr,
-              boxShadow: count === String(n) ? `0 4px 14px ${color}35` : "none",
-              transition: "all 0.15s",
-            }}>{n}</button>
-        ))}
-      </div>
-
-      <p style={{ textAlign: "center", fontSize: 11, color: T.dialogSub, marginBottom: 10 }}>hoặc nhập số tuỳ ý</p>
-
-      <input type="number" min={5} max={20} value={count}
-        onChange={e => { setCount(e.target.value); setError(""); }}
-        onKeyDown={e => e.key === "Enter" && confirm()}
-        placeholder="Nhập số từ 5 đến 20..."
-        className="chatai-dialog-input"
-        style={{
-          width: "100%", padding: "10px 14px", fontSize: 13, fontWeight: 600,
-          border: `1.5px solid ${T.dialogInputBdr}`, borderRadius: 12,
-          outline: "none", textAlign: "center",
-          background: T.dialogInput, color: T.dialogInputClr,
-          boxSizing: "border-box", fontFamily: "inherit",
-          transition: "background 0.2s, border-color 0.2s, color 0.2s",
-        }}/>
-
-      {error && <p style={{ fontSize: 11, color: "#ef4444", textAlign: "center", marginTop: 6 }}>{error}</p>}
-
-      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-        <button onClick={onCancel}
-          style={{
-            flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 500,
-            border: `1.5px solid ${T.dialogBtnBdr}`, background: T.dialogBtnBg,
-            color: T.dialogBtnClr, cursor: "pointer", fontFamily: "inherit",
-          }}>Huỷ</button>
-        <button onClick={confirm}
-          style={{
-            flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 700,
-            border: "none", background: grad, color: "#fff", cursor: "pointer",
-            boxShadow: `0 4px 16px ${color}40`, fontFamily: "inherit",
-          }}>Tạo ngay ✦</button>
-      </div>
-    </div></div>
-  );
-
-  // ── Step: loading ──
-  if (step === "loading") return (
-    <div style={overlay}><div style={{ ...card, width: 280, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 13, background: grad,
-        display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <ActionIcon size={20} style={{ color: "#fff" }}/>
-      </div>
-      <p style={{ fontSize: 13, fontWeight: 600, color: T.loadText, margin: 0 }}>Đang tạo {title}...</p>
-      <CircularProgress percent={percent} color={color}/>
-      <p style={{ fontSize: 11, color: T.loadSub, textAlign: "center", margin: 0 }}>
-        {percent < 30 ? "Đang phân tích tài liệu..." : percent < 60 ? "Đang tạo nội dung..." : percent < 90 ? "Hoàn thiện câu hỏi..." : "Sắp xong rồi..."}
-      </p>
-    </div></div>
-  );
-
-  // ── Step: done ──
-  const ok = !resultMsg.startsWith("Có lỗi");
   return (
-    <div style={overlay}><div style={{ ...card, width: 280, display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-      <div style={{ width: 60, height: 60, borderRadius: "50%",
-        background: ok ? T.okCircleBg : T.errCircleBg,
-        display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {ok
-          ? <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "0 16px",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        style={{
+          background: dark ? "#1a1a2e" : "#fff",
+          borderRadius: 20,
+          width: "100%",
+          maxWidth: 420,
+          overflow: "hidden",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          animation: "dialogFadeIn 0.2s ease both",
+        }}
+      >
+        {/* Top accent bar */}
+        <div style={{ height: 4, background: isQuiz ? "linear-gradient(90deg,#f97316,#ef4444)" : "linear-gradient(90deg,#8b5cf6,#6366f1)" }} />
+
+        <div style={{ padding: "24px 24px 20px" }}>
+          {/* Icon + Title */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 24 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 16,
+              background: isQuiz ? "#fff7ed" : "#f5f3ff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 26,
+              border: `1.5px solid ${isQuiz ? "#fed7aa" : "#ede9fe"}`,
+            }}>
+              {isQuiz ? "📋" : "🃏"}
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: dark ? "#f1f5f9" : "#111827", margin: 0 }}>
+                Tạo {isQuiz ? "bài kiểm tra" : "Flashcard"} bằng AI?
+              </p>
+              <p style={{ fontSize: 12, color: dark ? "#94a3b8" : "#6b7280", marginTop: 4 }}>
+                AI sẽ tự động phân tích và tạo {isQuiz ? "câu hỏi kiểm tra" : "thẻ ghi nhớ"} phù hợp.
+              </p>
+            </div>
+          </div>
+
+          {/* Tiêu đề */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: dark ? "#94a3b8" : "#6b7280", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+              Tiêu đề {isQuiz ? "bài kiểm tra" : "bộ thẻ"}
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={`Nhập tiêu đề ${isQuiz ? "bài kiểm tra" : "bộ thẻ"}...`}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                border: `1.5px solid ${dark ? "#2d2d4a" : "#e5e7eb"}`,
+                borderRadius: 12, padding: "10px 14px",
+                fontSize: 13, color: dark ? "#f1f5f9" : "#111827",
+                background: dark ? "#12122a" : "#f9fafb",
+                outline: "none", transition: "border-color 0.2s",
+                fontFamily: "inherit",
+              }}
+              onFocus={(e) => e.target.style.borderColor = isQuiz ? "#f97316" : "#8b5cf6"}
+              onBlur={(e) => e.target.style.borderColor = dark ? "#2d2d4a" : "#e5e7eb"}
+            />
+          </div>
+
+          {/* Số câu / thẻ */}
+          <div style={{ marginBottom: isQuiz ? 18 : 24 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: dark ? "#94a3b8" : "#6b7280", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+              Số {isQuiz ? "câu hỏi" : "thẻ"}
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button
+                onClick={() => setCount((c) => Math.max(minCount, c - 5))}
+                style={{
+                  width: 40, height: 40, borderRadius: 10, border: `1.5px solid ${dark ? "#2d2d4a" : "#e5e7eb"}`,
+                  background: dark ? "#12122a" : "#f9fafb", color: dark ? "#94a3b8" : "#374151",
+                  fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, lineHeight: 1,
+                }}
+              >−</button>
+              <div style={{
+                flex: 1, textAlign: "center", fontSize: 22, fontWeight: 800,
+                color: dark ? "#f1f5f9" : "#111827",
+                border: `1.5px solid ${dark ? "#2d2d4a" : "#e5e7eb"}`,
+                borderRadius: 12, padding: "8px 0",
+                background: dark ? "#12122a" : "#f9fafb",
+              }}>
+                {count}
+              </div>
+              <button
+                onClick={() => setCount((c) => Math.min(maxCount, c + 5))}
+                style={{
+                  width: 40, height: 40, borderRadius: 10, border: `1.5px solid ${dark ? "#2d2d4a" : "#e5e7eb"}`,
+                  background: dark ? "#12122a" : "#f9fafb", color: dark ? "#94a3b8" : "#374151",
+                  fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, lineHeight: 1,
+                }}
+              >+</button>
+            </div>
+            <p style={{ fontSize: 11, color: dark ? "#64748b" : "#9ca3af", marginTop: 5, textAlign: "center" }}>
+              Tối đa {maxCount} {isQuiz ? "câu" : "thẻ"} · Tối thiểu {minCount} {isQuiz ? "câu" : "thẻ"}
+            </p>
+          </div>
+
+          {/* Thời gian — chỉ cho quiz */}
+          {isQuiz && (
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: dark ? "#94a3b8" : "#6b7280", letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 8 }}>
+                Thời gian làm bài
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+                {TIME_OPTIONS.map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setTimeLimit(v)}
+                    style={{
+                      padding: "8px 0", borderRadius: 10,
+                      fontSize: 11, fontWeight: 700,
+                      border: `2px solid ${timeLimit === v ? "#f97316" : (dark ? "#2d2d4a" : "#e5e7eb")}`,
+                      background: timeLimit === v ? "#fff7ed" : (dark ? "#12122a" : "#f9fafb"),
+                      color: timeLimit === v ? "#f97316" : (dark ? "#94a3b8" : "#6b7280"),
+                      cursor: "pointer", transition: "all 0.15s",
+                    }}
+                  >
+                    {v}p
+                  </button>
+                ))}
+              </div>
+
+              {/* Preview thời gian */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                marginTop: 10, padding: "9px 12px",
+                borderRadius: 10, background: dark ? "#1c1c35" : "#fff7ed",
+                border: `1px solid ${dark ? "#2d2d4a" : "#fed7aa"}`,
+              }}>
+                <svg width="14" height="14" fill="none" stroke="#f97316" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span style={{ fontSize: 12, color: dark ? "#fb923c" : "#c2410c", fontWeight: 500 }}>
+                  Thời gian: <strong>{timeLimit} phút</strong> · Kết thúc lúc{" "}
+                  {(() => {
+                    const now = new Date();
+                    now.setMinutes(now.getMinutes() + timeLimit);
+                    return now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                  })()}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onCancel}
+              style={{
+                flex: 1, padding: "12px 0", borderRadius: 12,
+                border: `1.5px solid ${dark ? "#2d2d4a" : "#e5e7eb"}`,
+                background: "transparent",
+                color: dark ? "#94a3b8" : "#6b7280",
+                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                transition: "background 0.15s",
+                fontFamily: "inherit",
+              }}
+            >
+              Huỷ
+            </button>
+            <button
+              onClick={handleConfirm}
+              style={{
+                flex: 2, padding: "12px 0", borderRadius: 12,
+                border: "none",
+                background: isQuiz
+                  ? "linear-gradient(90deg,#f97316,#ef4444)"
+                  : "linear-gradient(90deg,#8b5cf6,#6366f1)",
+                color: "#fff",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                fontFamily: "inherit",
+                transition: "opacity 0.15s",
+              }}
+            >
+              ✨ Tạo ngay
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes dialogFadeIn {
+          from { opacity: 0; transform: scale(0.94) translateY(10px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0);    }
         }
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: T.dialogTitle, textAlign: "center" }}>
-        {ok ? `${title} hoàn tất!` : "Có lỗi xảy ra"}
-      </div>
-      <p style={{ fontSize: 12, color: T.dialogSub, textAlign: "center", lineHeight: 1.6, margin: 0 }}>{resultMsg}</p>
-      <button onClick={onCancel}
-        style={{ width: "100%", padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 700,
-          border: "none", background: grad, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>Đóng</button>
-    </div></div>
+      `}</style>
+    </div>
   );
 }

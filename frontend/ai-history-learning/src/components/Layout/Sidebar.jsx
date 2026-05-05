@@ -1,58 +1,35 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Home,
-  BookOpen,
-  Layers,
-  HelpCircle,
-  BarChart2,
-  Users,
-  FileText,
-  LayoutDashboard,
-  AlertCircle,
-  TrendingUp,
-  ChevronRight,
+  Home, BookOpen, Layers, HelpCircle, BarChart2,
+  Users, FileText, LayoutDashboard, AlertCircle, TrendingUp, ChevronRight,
 } from "lucide-react";
 
-/* ─── NAV CONFIG ─── */
 const NAV_CONFIG = {
   ADMIN: [
-    { label: "Trang chủ", path: "/admin", icon: LayoutDashboard },
+    { label: "Trang chủ",         path: "/admin",          icon: LayoutDashboard },
     { label: "Quản lý tài khoản", path: "/admin/accounts", icon: Users },
-    { label: "Quản lý nội dung", path: "/admin/content", icon: FileText },
-    { label: "Tài liệu", path: "/admin/documents", icon: BookOpen },
-    { label: "Flashcards", path: "/admin/flashcards", icon: Layers },
-    { label: "Quizzes", path: "/admin/quizzes", icon: HelpCircle },
+    { label: "Quản lý nội dung",  path: "/admin/content",  icon: FileText },
   ],
   TEACHER: [
-    { label: "Trang chủ", path: "/teacher", icon: Home },
-    { label: "Tài liệu", path: "/teacher/documents", icon: BookOpen },
-    { label: "Flashcards", path: "/teacher/flashcards", icon: Layers },
-    { label: "Tạo Quiz", path: "/teacher/quizzes", icon: HelpCircle },
-    { label: "Thống kê bài làm", path: "/teacher/stats", icon: BarChart2 },
+    { label: "Trang chủ",        path: "/teacher",            icon: Home },
+    { label: "Tài liệu",         path: "/teacher/documents",  icon: BookOpen },
+    { label: "Flashcards",       path: "/teacher/flashcards", icon: Layers },
+    { label: "Tạo Quiz",         path: "/teacher/quizzes",    icon: HelpCircle },
+    { label: "Thống kê bài làm", path: "/teacher/stats",      icon: BarChart2 },
   ],
   LEARNER: [
-    { label: "Trang chủ", path: "/learner", icon: Home },
-    { label: "Tài liệu", path: "/learner/documents", icon: BookOpen },
-    { label: "Flashcards", path: "/learner/flashcards", icon: Layers },
-    { label: "Quizzes", path: "/learner/quizzes", icon: HelpCircle },
-    { label: "Sự cố", path: "/learner/suco", icon: AlertCircle },
-    { label: "Tiến độ học tập", path: "/learner/tiendo", icon: TrendingUp },
+    { label: "Trang chủ",        path: "/learner",            icon: Home },
+    { label: "Tài liệu",         path: "/learner/documents",  icon: BookOpen },
+    { label: "Flashcards",       path: "/learner/flashcards", icon: Layers },
+    { label: "Quizzes",          path: "/learner/quizzes",    icon: HelpCircle },
+    { label: "Sự cố",            path: "/learner/suco",       icon: AlertCircle },
+    { label: "Tiến độ học tập",  path: "/learner/tiendo",     icon: TrendingUp },
   ],
 };
 
-const ROLE_LABEL = {
-  ADMIN: "Quản trị viên",
-  TEACHER: "Giáo viên",
-  LEARNER: "Người học",
-};
-const ROOT_PATHS = {
-  ADMIN: "/admin",
-  TEACHER: "/teacher",
-  LEARNER: "/learner",
-};
+const ROOT_PATHS = { ADMIN: "/admin", TEACHER: "/teacher", LEARNER: "/learner" };
 
-/* ─── STYLES ─── */
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&display=swap');
 
@@ -60,8 +37,9 @@ const STYLES = `
     font-family: 'Be Vietnam Pro', sans-serif;
     width: 220px;
     position: fixed;
-    top: 0; left: 0;
-    height: 100vh;
+    top: 64px;
+    left: 0;
+    height: calc(100vh - 64px);
     background: #ffffff;
     display: flex;
     flex-direction: column;
@@ -70,28 +48,6 @@ const STYLES = `
     box-shadow: 2px 0 16px rgba(0,0,0,.04);
   }
 
-  /* LOGO */
-  .vsn-logo {
-    height: 64px;
-    padding: 0 18px;
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    border-bottom: 1px solid #f5f5f5;
-    flex-shrink: 0;
-  }
-  .vsn-logo-img {
-    width: 34px; height: 34px;
-    border-radius: 10px;
-    overflow: hidden;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(242,103,57,.25);
-  }
-  .vsn-logo-img img { width: 100%; height: 100%; object-fit: cover; }
-  .vsn-logo-title { font-size: 13.5px; font-weight: 600; color: #1a1a1a; line-height: 1.3; }
-  .vsn-logo-role  { font-size: 11.5px; color: #F26739; font-weight: 500; margin-top: 1px; }
-
-  /* NAV */
   .vsn-nav {
     flex: 1;
     padding: 10px;
@@ -101,7 +57,6 @@ const STYLES = `
     gap: 2px;
   }
 
-  /* NAV ITEM — zero hover, only active state */
   .vsn-item {
     position: relative;
     width: 100%;
@@ -114,7 +69,6 @@ const STYLES = `
   }
   .vsn-item:active { opacity: .85; }
 
-  /* Orange fill — ONLY when .active */
   .vsn-item-fill {
     position: absolute;
     inset: 0;
@@ -137,7 +91,6 @@ const STYLES = `
     text-align: left;
   }
 
-  /* ICON */
   .vsn-icon {
     display: flex;
     align-items: center;
@@ -155,7 +108,6 @@ const STYLES = `
     transform: scale(1.08);
   }
 
-  /* LABEL */
   .vsn-label {
     font-size: 13.5px;
     font-weight: 500;
@@ -164,7 +116,6 @@ const STYLES = `
   }
   .vsn-item.active .vsn-label { color: #fff; font-weight: 600; }
 
-  /* CHEVRON */
   .vsn-chevron {
     margin-left: auto;
     opacity: 0;
@@ -175,19 +126,17 @@ const STYLES = `
   }
   .vsn-item.active .vsn-chevron { opacity: 1; transform: translateX(0); }
 
-  /* SCROLLBAR */
   .vsn-nav::-webkit-scrollbar { width: 3px; }
   .vsn-nav::-webkit-scrollbar-track { background: transparent; }
   .vsn-nav::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
 `;
 
-/* ─── COMPONENT ─── */
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const role = (user.role || "LEARNER").toUpperCase();
+  const user     = JSON.parse(localStorage.getItem("user") || "{}");
+  const role     = (user.role || "LEARNER").toUpperCase();
   const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.LEARNER;
 
   const isActive = (path) =>
@@ -199,21 +148,9 @@ const Sidebar = () => {
     <>
       <style>{STYLES}</style>
       <aside className="vsn-sidebar">
-        {/* Logo */}
-        <div className="vsn-logo">
-          <div className="vsn-logo-img">
-            <img src="/Logo.jpg" alt="Logo" />
-          </div>
-          <div>
-            <div className="vsn-logo-title">Lịch Sử Việt Nam</div>
-            <div className="vsn-logo-role">{ROLE_LABEL[role]}</div>
-          </div>
-        </div>
-
-        {/* Navigation */}
         <nav className="vsn-nav">
           {navItems.map((item) => {
-            const Icon = item.icon;
+            const Icon   = item.icon;
             const active = isActive(item.path);
             return (
               <button
@@ -227,11 +164,7 @@ const Sidebar = () => {
                     <Icon size={16} strokeWidth={2} />
                   </span>
                   <span className="vsn-label">{item.label}</span>
-                  <ChevronRight
-                    size={13}
-                    strokeWidth={2.5}
-                    className="vsn-chevron"
-                  />
+                  <ChevronRight size={13} strokeWidth={2.5} className="vsn-chevron" />
                 </span>
               </button>
             );
@@ -241,5 +174,4 @@ const Sidebar = () => {
     </>
   );
 };
-
 export default Sidebar;

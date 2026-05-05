@@ -1,7 +1,5 @@
 // FlashcardPageInline.jsx
 import { useState, useEffect, useRef } from "react";
-import api from "../../../lib/api";
-
 export default function FlashcardPageInline({ flash, onBack }) {
   const [cards, setCards] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);

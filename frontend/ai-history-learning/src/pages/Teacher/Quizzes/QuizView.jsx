@@ -144,8 +144,8 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
 
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between shrink-0">
+      {/* Header — chỉ còn nút Trở về */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center shrink-0">
         <button
           onClick={onBack}
           className="flex items-center gap-2 text-sm text-gray-500 back-btn"
@@ -165,32 +165,6 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
           </svg>
           Trở về
         </button>
-
-        {/* Timer */}
-        <div
-          className={`flex items-center gap-2.5 px-5 py-2 rounded-2xl text-base font-bold shadow-md transition-all ${
-            timeLeft <= 60
-              ? "bg-red-500 text-white animate-pulse shadow-red-200"
-              : "bg-orange-500 text-white shadow-orange-200"
-          }`}
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span className="text-lg tracking-widest">
-            {formatTime(timeLeft)}
-          </span>
-        </div>
       </div>
 
       {/* Body */}
@@ -264,7 +238,8 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
 
                 {/* Navigation */}
                 <div className="mt-5">
-                  <div className="flex items-center gap-3 mb-4">
+                  {/* Question progress bar */}
+                  <div className="flex items-center gap-3 mb-1">
                     <span className="text-xs font-medium text-gray-500 whitespace-nowrap tabular-nums">
                       {currentQ + 1} / {total}
                     </span>
@@ -276,6 +251,47 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                     </div>
                     <span className="text-xs text-gray-400 tabular-nums">
                       {Math.round(progress)}%
+                    </span>
+                  </div>
+
+                  {/* Time countdown bar */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <span
+                      className={`flex items-center gap-1 text-xs font-bold tabular-nums whitespace-nowrap transition-colors ${
+                        timeLeft <= 60 ? "text-red-500" : "text-orange-500"
+                      }`}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      {formatTime(timeLeft)}
+                    </span>
+                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-1.5 rounded-full transition-all duration-1000"
+                        style={{
+                          width: `${(timeLeft / timeLimitSec) * 100}%`,
+                          background:
+                            timeLeft <= 60
+                              ? "#ef4444"
+                              : timeLeft <= timeLimitSec * 0.25
+                                ? "#f97316"
+                                : "#f59e0b",
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 tabular-nums">
+                      {Math.round((timeLeft / timeLimitSec) * 100)}%
                     </span>
                   </div>
 

@@ -56,7 +56,7 @@ const AdminDashboard = () => {
           api.get("/admin/users"),
           api.get("/documents"),
           api.get("/reports"),
-          api.get("/quizzes/my-quizzes"), // Đảm bảo API này trả về danh sách tất cả các bài quiz
+          api.get("/quizzes/admin/all"),
         ]);
 
         // 1. Phân loại và đếm User
@@ -113,7 +113,6 @@ const AdminDashboard = () => {
       </div>
     );
   }
-
   return (
     <div className="p-8 bg-slate-50 min-h-screen">
       {/* Header Section */}
@@ -168,8 +167,8 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Biểu đồ */}
-        <div className="lg:col-span-6 p-6 border border-slate-200 shadow-sm rounded-xl bg-white">
+        {/* Biểu đồ - Thêm h-[500px] để cố định chiều cao */}
+        <div className="lg:col-span-6 p-6 border border-slate-200 shadow-sm rounded-xl bg-white h-[500px] flex flex-col">
           <div className="mb-8">
             <p className="text-base font-semibold text-slate-900">
               Tăng trưởng tài khoản {new Date().getFullYear()}
@@ -178,7 +177,9 @@ const AdminDashboard = () => {
               Dữ liệu người dùng mới theo từng tháng
             </p>
           </div>
-          <div className="relative h-[300px] w-full">
+          <div className="relative flex-1 w-full mt-4">
+            {" "}
+            {/* flex-1 để chiếm nốt khoảng trống */}
             {yAxisLabels.map((y) => (
               <span
                 key={y.val}
@@ -227,9 +228,9 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Báo cáo sự cố */}
-        <div className="lg:col-span-6 border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col">
-          <div className="p-6 border-b border-slate-100">
+        {/* Báo cáo sự cố - Thêm h-[500px] và overflow ẩn */}
+        <div className="lg:col-span-6 border border-slate-200 rounded-xl bg-white shadow-sm h-[500px] flex flex-col overflow-hidden">
+          <div className="p-6 border-b border-slate-100 shrink-0">
             <p className="text-base font-semibold text-slate-900">
               Báo cáo sự cố hệ thống
             </p>
@@ -238,7 +239,8 @@ const AdminDashboard = () => {
             </p>
           </div>
 
-          <div className="p-6 space-y-6 overflow-y-auto max-h-[600px]">
+          {/* Container danh sách: Tự động cuộn, chiếm nốt chiều cao còn lại */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {allReports.length === 0 ? (
               <div className="flex flex-col items-center py-10 opacity-30">
                 <FileText size={40} />

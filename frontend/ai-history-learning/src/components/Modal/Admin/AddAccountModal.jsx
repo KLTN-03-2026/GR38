@@ -73,8 +73,8 @@ const AddAccountModal = ({ isOpen, onClose, onAdd }) => {
                   setFormData({ ...formData, role: e.target.value })
                 }
               >
-                <option value="TEACHER">Giáo viên (Teacher)</option>
-                <option value="LEARNER">Người học (Learner)</option>
+                <option value="TEACHER">Giáo viên</option>
+                <option value="LEARNER">Người học</option>
               </select>
             </div>
 

@@ -17,29 +17,40 @@ import {
 /* ─── NAV CONFIG ─── */
 const NAV_CONFIG = {
   ADMIN: [
-    { label: "Trang chủ",         path: "/admin",          icon: LayoutDashboard },
+    { label: "Trang chủ", path: "/admin", icon: LayoutDashboard },
     { label: "Quản lý tài khoản", path: "/admin/accounts", icon: Users },
-    { label: "Quản lý nội dung",  path: "/admin/content",  icon: FileText },
+    { label: "Quản lý nội dung", path: "/admin/content", icon: FileText },
+    { label: "Tài liệu", path: "/admin/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/admin/flashcards", icon: Layers },
+    { label: "Quizzes", path: "/admin/quizzes", icon: HelpCircle },
   ],
   TEACHER: [
-    { label: "Trang chủ",        path: "/teacher",            icon: Home },
-    { label: "Tài liệu",         path: "/teacher/documents",  icon: BookOpen },
-    { label: "Flashcards",       path: "/teacher/flashcards", icon: Layers },
-    { label: "Tạo Quiz",         path: "/teacher/quizzes",    icon: HelpCircle },
-    { label: "Thống kê bài làm", path: "/teacher/stats",      icon: BarChart2 },
+    { label: "Trang chủ", path: "/teacher", icon: Home },
+    { label: "Tài liệu", path: "/teacher/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/teacher/flashcards", icon: Layers },
+    { label: "Tạo Quiz", path: "/teacher/quizzes", icon: HelpCircle },
+    { label: "Thống kê bài làm", path: "/teacher/stats", icon: BarChart2 },
   ],
   LEARNER: [
-    { label: "Trang chủ",        path: "/learner",            icon: Home },
-    { label: "Tài liệu",         path: "/learner/documents",  icon: BookOpen },
-    { label: "Flashcards",       path: "/learner/flashcards", icon: Layers },
-    { label: "Quizzes",          path: "/learner/quizzes",    icon: HelpCircle },
-    { label: "Sự cố",            path: "/learner/suco",       icon: AlertCircle },
-    { label: "Tiến độ học tập",  path: "/learner/tiendo",     icon: TrendingUp },
+    { label: "Trang chủ", path: "/learner", icon: Home },
+    { label: "Tài liệu", path: "/learner/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/learner/flashcards", icon: Layers },
+    { label: "Quizzes", path: "/learner/quizzes", icon: HelpCircle },
+    { label: "Sự cố", path: "/learner/suco", icon: AlertCircle },
+    { label: "Tiến độ học tập", path: "/learner/tiendo", icon: TrendingUp },
   ],
 };
 
-const ROLE_LABEL = { ADMIN: "Quản trị viên", TEACHER: "Giáo viên", LEARNER: "Người học" };
-const ROOT_PATHS = { ADMIN: "/admin", TEACHER: "/teacher", LEARNER: "/learner" };
+const ROLE_LABEL = {
+  ADMIN: "Quản trị viên",
+  TEACHER: "Giáo viên",
+  LEARNER: "Người học",
+};
+const ROOT_PATHS = {
+  ADMIN: "/admin",
+  TEACHER: "/teacher",
+  LEARNER: "/learner",
+};
 
 /* ─── STYLES ─── */
 const STYLES = `
@@ -173,10 +184,10 @@ const STYLES = `
 /* ─── COMPONENT ─── */
 const Sidebar = () => {
   const location = useLocation();
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
 
-  const user     = JSON.parse(localStorage.getItem("user") || "{}");
-  const role     = (user.role || "LEARNER").toUpperCase();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = (user.role || "LEARNER").toUpperCase();
   const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.LEARNER;
 
   const isActive = (path) =>
@@ -202,7 +213,7 @@ const Sidebar = () => {
         {/* Navigation */}
         <nav className="vsn-nav">
           {navItems.map((item) => {
-            const Icon   = item.icon;
+            const Icon = item.icon;
             const active = isActive(item.path);
             return (
               <button
@@ -216,7 +227,11 @@ const Sidebar = () => {
                     <Icon size={16} strokeWidth={2} />
                   </span>
                   <span className="vsn-label">{item.label}</span>
-                  <ChevronRight size={13} strokeWidth={2.5} className="vsn-chevron" />
+                  <ChevronRight
+                    size={13}
+                    strokeWidth={2.5}
+                    className="vsn-chevron"
+                  />
                 </span>
               </button>
             );

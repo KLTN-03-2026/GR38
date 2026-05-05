@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import api from "../../lib/api";
 import ReportDetail from "../../components/Modal/Admin/ReportDetail";
 import {
   Info,
@@ -14,92 +15,97 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 
-const API = "http://localhost:8000/api/v1";
-
 const ReportManagement = () => {
-  const [reportData, setReportData] = useState([
-    {
-      id: 101,
-      user: "Phan Mạnh Quỳnh",
-      date: "15/02/2025",
-      content: "Không tải file PDF được",
-      type: "Lỗi Website",
-      status: "Chưa xử lý",
-      color: "bg-red-600",
-    },
-    {
-      id: 110,
-      user: "Lâm Minh Phú",
-      date: "14/09/2025",
-      content: "Không nộp bài được",
-      type: "Lỗi Website",
-      status: "Đã xử lý",
-      color: "bg-green-500",
-    },
-    {
-      id: 220,
-      user: "Lý Thành Ân",
-      date: "09/02/2025",
-      content: "Không làm quiz được",
-      type: "Lỗi Website",
-      status: "Đã xử lý",
-      color: "bg-green-500",
-    },
-    {
-      id: 430,
-      user: "Đinh Bảo Toàn",
-      date: "23/07/2025",
-      content: "Chat AI không trả lời",
-      type: "Lỗi AI",
-      status: "Đang xử lý",
-      color: "bg-yellow-500",
-    },
-    {
-      id: 550,
-      user: "Nguyễn Việt Dũng",
-      date: "23/07/2025",
-      content: "Làm flashCard lỗi",
-      type: "Lỗi Website",
-      status: "Đã xử lý",
-      color: "bg-green-500",
-    },
-    {
-      id: 601,
-      user: "Bùi Phú Hùng",
-      date: "20/05/2025",
-      content: "Màn hình không hiển thị",
-      type: "Lỗi Website",
-      status: "Đã xử lý",
-      color: "bg-green-500",
-    },
-    {
-      id: 602,
-      user: "Nguyễn Tấn Hoàng",
-      date: "22/04/2025",
-      content: "Lỗi chức năng thêm",
-      type: "Lỗi Website",
-      status: "Đã xử lý",
-      color: "bg-green-500",
-    },
-  ]);
-
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [viewingReport, setViewingReport] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("Loại sự cố");
   const [filterStatus, setFilterStatus] = useState("Trạng thái");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalReports, setTotalReports] = useState(0);
+
+  const STATUS_LABELS = {
+    pending: "Chưa xử lý",
+    in_progress: "Đang xử lý",
+    resolved: "Đã xử lý",
+    rejected: "Từ chối",
+  };
+
+  const STATUS_FILTER_VALUES = {
+    "Chưa xử lý": "pending",
+    "Đang xử lý": "in_progress",
+    "Đã xử lý": "resolved",
+  };
+
+  const getReportCategory = (report) => {
+    const targetType = report.targetType?.toLowerCase() || "";
+    const issueType = report.issueType?.toLowerCase() || "";
+    const description = report.description?.toLowerCase() || "";
+
+    if (
+      targetType.includes("ai") ||
+      issueType.includes("ai") ||
+      description.includes("ai") ||
+      description.includes("chat ai") ||
+      description.includes("trí tuệ nhân tạo")
+    ) {
+      return "Lỗi AI";
+    }
+
+    return "Lỗi Website";
+  };
+
+  const fetchReports = async (page = 1, statusFilter = "") => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams({ page, limit: 10 });
+      if (statusFilter && statusFilter !== "Trạng thái") {
+        const statusValue = STATUS_FILTER_VALUES[statusFilter];
+        if (statusValue) {
+          params.append("status", statusValue);
+        }
+      }
+
+      const response = await api.get(`/reports?${params}`);
+      if (response.data.success) {
+        setReports(response.data.data);
+        setTotalReports(response.data.pagination.total);
+        setTotalPages(response.data.pagination.totalPages);
+        setCurrentPage(response.data.pagination.page);
+      }
+    } catch (err) {
+      setError("Không thể tải danh sách báo cáo");
+      console.error("Lỗi fetch reports:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
 
   // --- LOGIC XỬ LÝ DỮ LIỆU ---
   const filteredReports = useMemo(() => {
-    return reportData.filter((item) => {
+    return reports.filter((item) => {
       const matchSearch =
-        item.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.content.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchType = filterType === "Loại sự cố" || item.type === filterType;
+        item.reporterId?.fullName
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchType =
+        filterType === "Loại sự cố" || getReportCategory(item) === filterType;
+      const statusValue =
+        STATUS_FILTER_VALUES[filterStatus] || filterStatus.toLowerCase();
       const matchStatus =
-        filterStatus === "Trạng thái" || item.status === filterStatus;
+        filterStatus === "Trạng thái" || item.status === statusValue;
       return matchSearch && matchType && matchStatus;
     });
-  }, [reportData, searchQuery, filterType, filterStatus]);
+  }, [reports, searchQuery, filterType, filterStatus]);
 
   // --- CÁC HÀM THAO TÁC ---
   const handleDelete = (id) => {
@@ -114,28 +120,28 @@ const ReportManagement = () => {
       cancelButtonText: "Hủy",
     }).then((result) => {
       if (result.isConfirmed) {
-        setReportData(reportData.filter((r) => r.id !== id));
+        // Note: API không có endpoint DELETE, nên chỉ update status thành rejected
+        handleUpdateStatus(id, "rejected");
         Swal.fire("Đã xóa!", "Báo cáo đã được loại bỏ.", "success");
       }
     });
   };
 
-  const handleViewDetail = (item) => {
-    // Chuyển đổi format dữ liệu để khớp với ReportDetail.jsx
-    const formattedReport = {
-      id: item.id.toString(),
-      projectName: "HỆ THỐNG HỖ TRỢ HỌC TẬP LỊCH SỬ VIỆT NAM",
-      user: {
-        id: item.id,
-        name: item.user,
-        date: item.date,
-        role: "Người dùng hệ thống",
-      },
-      issues: [
-        { stt: 1, content: item.content, type: item.type, status: item.status },
-      ],
-    };
-    setViewingReport(formattedReport);
+  const handleUpdateStatus = async (reportId, newStatus) => {
+    try {
+      await api.patch(`/reports/${reportId}/status`, {
+        status: newStatus,
+        adminNotes: "Cập nhật từ ReportManagement",
+      });
+      // Refresh data với bộ lọc trạng thái hiện tại
+      fetchReports(currentPage, filterStatus);
+    } catch (error) {
+      Swal.fire("Lỗi!", "Không thể cập nhật trạng thái.", "error");
+    }
+  };
+
+  const handleViewDetail = (report) => {
+    setViewingReport(report);
   };
 
   // --- GIAO DIỆN ---
@@ -144,6 +150,7 @@ const ReportManagement = () => {
       <ReportDetail
         report={viewingReport}
         onBack={() => setViewingReport(null)}
+        onRefresh={() => fetchReports(currentPage)} // Đảm bảo truyền function này vào
       />
     );
   }
@@ -171,7 +178,10 @@ const ReportManagement = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="bg-[#F26739] text-white px-8 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm">
+          <button
+            onClick={() => fetchReports(1, filterStatus)}
+            className="bg-[#F26739] text-white px-8 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+          >
             Tìm
           </button>
 
@@ -187,13 +197,21 @@ const ReportManagement = () => {
           />
         </div>
 
-        {/* Thống kê (Giữ nguyên số liệu bạn yêu cầu) */}
+        {/* Thống kê từ dữ liệu thật */}
         <div className="grid grid-cols-4 gap-4">
-          <StatCard label="Tổng sự cố" value="175" icon={<Info size={16} />} />
-          <StatCard label="Đang xử lý" value="70" icon={<Wrench size={16} />} />
+          <StatCard
+            label="Tổng sự cố"
+            value={totalReports}
+            icon={<Info size={16} />}
+          />
+          <StatCard
+            label="Đang xử lý"
+            value={reports.filter((r) => r.status === "in_progress").length}
+            icon={<Wrench size={16} />}
+          />
           <StatCard
             label="Chưa xử lý"
-            value="100"
+            value={reports.filter((r) => r.status === "pending").length}
             icon={<ClipboardList size={16} />}
           />
           <StatCard
@@ -236,55 +254,92 @@ const ReportManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredReports.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="px-4 py-4 font-bold border-r border-gray-200 text-center">
-                    {item.id}
-                  </td>
-                  <td className="px-4 py-4 border-r border-gray-200 text-center font-medium">
-                    {item.user}
-                  </td>
-                  <td className="px-4 py-4 border-r border-gray-200 text-center text-slate-500">
-                    {item.date}
-                  </td>
-                  <td className="px-4 py-4 border-r border-gray-200 text-center italic text-slate-600">
-                    "{item.content}"
-                  </td>
-                  <td className="px-4 py-4 border-r border-gray-200 text-center">
-                    <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 border-r border-gray-200 text-center">
-                    <span
-                      className={`${item.color} text-white px-3 py-1 rounded-md text-[10px] font-bold inline-block w-24 uppercase shadow-sm`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => handleViewDetail(item)}
-                        className="p-1.5 border border-gray-300 rounded hover:bg-orange-50 hover:border-[#F26739] text-slate-600 hover:text-[#F26739] transition-all shadow-sm"
-                        title="Xem chi tiết"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1.5 border border-gray-300 rounded hover:bg-red-50 hover:border-red-500 text-slate-600 hover:text-red-500 transition-all shadow-sm"
-                        title="Xóa"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan="7"
+                    className="px-4 py-8 text-center text-slate-400"
+                  >
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
-              ))}
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan="7"
+                    className="px-4 py-8 text-center text-red-500"
+                  >
+                    {error}
+                  </td>
+                </tr>
+              ) : filteredReports.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="7"
+                    className="px-4 py-8 text-center text-slate-400"
+                  >
+                    Không tìm thấy báo cáo nào phù hợp.
+                  </td>
+                </tr>
+              ) : (
+                filteredReports.map((report) => (
+                  <tr
+                    key={report._id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="px-4 py-4 font-bold border-r border-gray-200 text-center">
+                      {report._id.slice(-6)}
+                    </td>
+                    <td className="px-4 py-4 border-r border-gray-200 text-center font-medium">
+                      {report.reporterId?.fullName || "Ẩn danh"}
+                    </td>
+                    <td className="px-4 py-4 border-r border-gray-200 text-center text-slate-500">
+                      {new Date(report.createdAt).toLocaleDateString("vi-VN")}
+                    </td>
+                    <td className="px-4 py-4 border-r border-gray-200 text-center italic text-slate-600">
+                      "{report.description}"
+                    </td>
+                    <td className="px-4 py-4 border-r border-gray-200 text-center">
+                      <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold uppercase">
+                        {getReportCategory(report)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 border-r border-gray-200 text-center">
+                      <span
+                        className={`px-3 py-1 rounded-md text-[10px] font-bold inline-block w-24 uppercase shadow-sm ${
+                          report.status === "pending"
+                            ? "bg-red-100 text-red-700"
+                            : report.status === "resolved"
+                              ? "bg-green-100 text-green-700"
+                              : report.status === "in_progress"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {STATUS_LABELS[report.status] || report.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => handleViewDetail(report)}
+                          className="p-1.5 border border-gray-300 rounded hover:bg-orange-50 hover:border-[#F26739] text-slate-600 hover:text-[#F26739] transition-all shadow-sm"
+                          title="Xem chi tiết"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(report._id)}
+                          className="p-1.5 border border-gray-300 rounded hover:bg-red-50 hover:border-red-500 text-slate-600 hover:text-red-500 transition-all shadow-sm"
+                          title="Xóa"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
           {filteredReports.length === 0 && (
@@ -294,23 +349,27 @@ const ReportManagement = () => {
           )}
         </div>
 
-        {/* Phân trang (Giữ nguyên UI của bạn) */}
+        {/* Phân trang */}
         <div className="flex justify-between items-center py-4 text-sm text-gray-500 font-medium">
           <span>
-            {filteredReports.length} / {reportData.length} kết quả
+            {filteredReports.length} / {totalReports} kết quả
           </span>
           <div className="flex items-center gap-2">
-            <button className="flex items-center hover:text-gray-900 transition-colors">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => fetchReports(currentPage - 1, filterStatus)}
+              className="flex items-center hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ChevronLeft size={16} /> Previous
             </button>
-            <button className="w-8 h-8 flex items-center justify-center border border-[#F26739] rounded-md text-[#F26739] font-bold bg-orange-50">
-              1
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center hover:text-gray-900">
-              2
-            </button>
-            <span className="px-1">...</span>
-            <button className="flex items-center hover:text-gray-900 transition-colors">
+            <span className="px-2">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => fetchReports(currentPage + 1, filterStatus)}
+              className="flex items-center hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Next <ChevronRight size={16} />
             </button>
           </div>

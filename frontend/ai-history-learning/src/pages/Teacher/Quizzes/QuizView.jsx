@@ -27,29 +27,49 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
     clearInterval(timerRef.current);
     const quizId = quiz._id ?? quiz.id;
     const answered = Object.keys(answers).length;
-    const score = Object.entries(answers).filter(([i, selectedIndex]) => {
-      const q = questions[Number(i)];
-      if (!q) return false;
-      return Number(selectedIndex) === Number(q.answer);
+    const timeSpent = timeLimitSec - timeLeft;
+
+    // 1. Tính điểm dự phòng (Local Score Fallback) trong trường hợp API lỗi
+    const localScore = Object.entries(answers).filter(([i, selectedIndex]) => {
+      const question = questions[Number(i)];
+      if (!question) return false;
+      return Number(selectedIndex) === Number(question.answer || question.correctAnswer);
     }).length;
 
-    const submittedAnswers = questions.map((q, i) =>
-      answers[i] !== undefined ? q.options[answers[i]] : null,
-    );
+    // 2. Format dữ liệu đáp án để gửi lên API Backend
+    const formattedAnswersForAPI = questions.map((q, i) => {
+      const selectedIdx = answers[i];
+      return {
+        questionId: q._id || q.id,
+        selectedAnswer: selectedIdx !== undefined ? q.options[selectedIdx] : null,
+      };
+    });
+
     try {
-      const res = await quizService.submit(quizId, submittedAnswers);
+      // 3. Gửi API chấm điểm
+      const res = await quizService.submit(quizId, formattedAnswersForAPI, timeSpent);
+      
       const result = res.data?.data ?? res.data;
-      const resultId =
-        typeof result === "string"
-          ? result
-          : (result?.resultId ?? result?._id ?? result?.id ?? null);
-      onFinish({ quiz, answers, score, total, questions, answered, resultId });
+      const resultId = typeof result === "string" ? result : (result?.resultId ?? result?._id ?? result?.id ?? null);
+      const serverScore = result?.score !== undefined ? result.score : localScore;
+
+      // 4. CHÚ Ý: Giữ nguyên cấu trúc trả về onFinish để trang quiz-result không bị trắng màn hình
+      onFinish({ 
+        quiz, 
+        answers, // Trả về đúng dạng Object {0: 1, 1: 3} cho Frontend xử lý
+        score: serverScore, 
+        total, 
+        questions, 
+        answered, 
+        resultId 
+      });
     } catch (err) {
       console.warn("Submit API lỗi, tính điểm local:", err.message);
+      // Fallback: Vẫn cho phép hoàn thành bài thi với dữ liệu tính toán ở local để không bị crash app
       onFinish({
         quiz,
         answers,
-        score,
+        score: localScore,
         total,
         questions,
         answered,
@@ -72,6 +92,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLimitSec]);
 
   const formatTime = (sec) => {
@@ -129,12 +150,14 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
   const pageNums = Array.from({ length: total }, (_, i) => i).filter(
     (i) => i === 0 || i === total - 1 || Math.abs(i - currentQ) <= 1,
   );
+  
   const slideClass =
     animDir === "left"
       ? "anim-slide-left"
       : animDir === "right"
         ? "anim-slide-right"
         : "";
+        
   const tabContentClass =
     tabAnim === "fade-out"
       ? "tab-fade-out"
@@ -203,14 +226,14 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                       Câu {currentQ + 1}/{total}
                     </span>
                     <p className="text-gray-800 text-sm font-medium leading-6 pt-0.5">
-                      {q.question}
+                      {q?.question}
                     </p>
                   </div>
                   <p className="text-xs text-gray-400 mb-3">
                     Chọn 1 đáp án đúng
                   </p>
                   <div className="space-y-2.5">
-                    {q.options.map((opt, i) => (
+                    {q?.options?.map((opt, i) => (
                       <button
                         key={i}
                         onClick={() => {
@@ -397,6 +420,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                       <button
                         onClick={handleSubmit}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white shrink-0 submit-btn"
+                        style={{ background: "#22c55e" }}
                       >
                         Nộp bài
                         <svg

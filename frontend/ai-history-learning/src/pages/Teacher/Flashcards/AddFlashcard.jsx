@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, BookOpen, Loader2 } from "lucide-react";
-import api from "../../../lib/api";
-import { documentService } from "../../../services/documentService";
+
+import { flashcardService } from "@/services/flashcardSevice"; 
+import { documentService } from "@/services/documentService";
 import CardTable from "./CardTable";
 import DocSelector from "./DocSelector";
 import ThumbnailUpload from "./ThumbnailUpload";
@@ -14,7 +15,7 @@ const AddFlashcard = () => {
   const location = useLocation();
 
   const [selectedDocId, setSelectedDocId] = useState(
-    location.state?.documentId ?? "",
+    location.state?.documentId ?? ""
   );
   const [documents, setDocuments] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
@@ -46,7 +47,7 @@ const AddFlashcard = () => {
   };
   const updateCard = (i, field, value) => {
     setCards((p) =>
-      p.map((c, idx) => (idx === i ? { ...c, [field]: value } : c)),
+      p.map((c, idx) => (idx === i ? { ...c, [field]: value } : c))
     );
     setErrors((p) => {
       const n = { ...p };
@@ -68,55 +69,68 @@ const AddFlashcard = () => {
   };
 
   const handleSave = async () => {
-  const errs = validate();
-  if (Object.keys(errs).length > 0) {
-    setErrors(errs);
-    return;
-  }
-  try {
-    setSaving(true);
-    setSaveErr("");
-    const formData = new FormData();
-    formData.append("title", title.trim());
-    formData.append(
-      "cards",
-      JSON.stringify(
-        cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
-      ),
-    );
-    if (imagePreview) {
-      const fetchRes = await fetch(imagePreview); // ← đổi tên từ res → fetchRes
-      const blob = await fetchRes.blob();
-      formData.append("thumbnail", blob, "thumbnail.jpg");
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
     }
+    try {
+      setSaving(true);
+      setSaveErr("");
+      
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      
+      // Bổ sung: Gửi documentId lên Backend (để BE biết mà lấy ảnh document nếu không upload ảnh mới)
+      if (selectedDocId) {
+        formData.append("documentId", selectedDocId);
+      }
 
-    const res = await api.post("/flashcards", formData);
-    console.log("full response:", JSON.stringify(res.data));
+      formData.append(
+        "cards",
+        JSON.stringify(
+          cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() }))
+        )
+      );
+      
+      // Xử lý ảnh: Chuyển URL preview thành Blob để gửi đi
+      if (imagePreview) {
+        const fetchRes = await fetch(imagePreview); 
+        const blob = await fetchRes.blob();
+        formData.append("thumbnail", blob, "thumbnail.jpg");
+      }
 
-    const saved = res.data?.data ?? res.data;
-    const newId = saved?._id;
+      // Đã thay api.post bằng flashcardService.create
+      const res = await flashcardService.create(formData);
+      console.log("full response:", res);
 
-    if (newId) {
-      const existing = JSON.parse(localStorage.getItem("flashcards") || "[]");
-      existing.push({
-        id: newId,
-        title: title.trim(),
-        cards: cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
-        thumbnail: saved?.thumbnail ?? null,
-      });
-      localStorage.setItem("flashcards", JSON.stringify(existing));
+      const saved = res?.data ?? res;
+      const newId = saved?._id;
+
+      // Cập nhật LocalStorage
+      if (newId) {
+        const existing = JSON.parse(localStorage.getItem("flashcards") || "[]");
+        existing.push({
+          id: newId,
+          title: title.trim(),
+          cards: cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
+          thumbnail: saved?.thumbnail ?? null,
+        });
+        localStorage.setItem("flashcards", JSON.stringify(existing));
+      }
+
+      navigate("/teacher/flashcards");
+    } catch (err) {
+      setSaveErr(
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Tạo bộ thẻ thất bại, vui lòng thử lại."
+      );
+    } finally {
+      setSaving(false);
     }
+  };
 
-    navigate("/teacher/flashcards");
-  } catch (err) {
-    setSaveErr(
-      err?.response?.data?.message ||
-        "Tạo bộ thẻ thất bại, vui lòng thử lại.",
-    );
-  } finally {
-    setSaving(false);
-  }
-};
   return (
     <div className="flex-1 bg-[#FAFAFA] min-h-screen flex flex-col items-center p-8 font-['Inter']">
       <div className="w-full max-w-[860px]">
@@ -139,6 +153,7 @@ const AddFlashcard = () => {
             Tạo bộ Flashcard mới
           </h1>
         </div>     
+        
         {/* Tên bộ thẻ */}
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
           <label className="block text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-2">
@@ -166,6 +181,14 @@ const AddFlashcard = () => {
             <p className="text-red-500 text-[12px] mt-1.5">{errors.title}</p>
           )}
         </div>
+
+        {/* Chọn Document (Giả sử bạn có DocSelector, mình thêm vào để selectedDocId có ý nghĩa) */}
+        <DocSelector 
+          documents={documents} 
+          selectedDocId={selectedDocId} 
+          setSelectedDocId={setSelectedDocId} 
+          loading={docsLoading} 
+        />
 
         <ThumbnailUpload
           imagePreview={imagePreview}

@@ -1,34 +1,51 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Home, BookOpen, Layers, HelpCircle, BarChart2,
-  Users, FileText, LayoutDashboard, AlertCircle, TrendingUp, ChevronRight,
+  BookOpen,
+  Layers,
+  HelpCircle,
+  Users,
+  FileText,
+  LayoutDashboard,
+  ChevronRight,
+  Home,
+  BarChart2,
+  AlertCircle,
+  TrendingUp,
 } from "lucide-react";
 
 const NAV_CONFIG = {
+  // Menu dành cho Admin: Đã thêm 3 mục nội dung và lược bỏ Thống kê/Báo cáo
   ADMIN: [
-    { label: "Trang chủ",         path: "/admin",          icon: LayoutDashboard },
+    { label: "Trang chủ", path: "/admin", icon: LayoutDashboard },
     { label: "Quản lý tài khoản", path: "/admin/accounts", icon: Users },
-    { label: "Quản lý nội dung",  path: "/admin/content",  icon: FileText },
+    { label: "Quản lý nội dung", path: "/admin/content", icon: FileText },
+    { label: "Tài liệu", path: "/admin/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/admin/flashcards", icon: Layers },
+    { label: "Quizzes", path: "/admin/quizzes", icon: HelpCircle },
   ],
   TEACHER: [
-    { label: "Trang chủ",        path: "/teacher",            icon: Home },
-    { label: "Tài liệu",         path: "/teacher/documents",  icon: BookOpen },
-    { label: "Flashcards",       path: "/teacher/flashcards", icon: Layers },
-    { label: "Tạo Quiz",         path: "/teacher/quizzes",    icon: HelpCircle },
-    { label: "Thống kê bài làm", path: "/teacher/stats",      icon: BarChart2 },
+    { label: "Trang chủ", path: "/teacher", icon: Home },
+    { label: "Tài liệu", path: "/teacher/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/teacher/flashcards", icon: Layers },
+    { label: "Tạo Quiz", path: "/teacher/quizzes", icon: HelpCircle },
+    { label: "Thống kê bài làm", path: "/teacher/stats", icon: BarChart2 },
   ],
   LEARNER: [
-    { label: "Trang chủ",        path: "/learner",            icon: Home },
-    { label: "Tài liệu",         path: "/learner/documents",  icon: BookOpen },
-    { label: "Flashcards",       path: "/learner/flashcards", icon: Layers },
-    { label: "Quizzes",          path: "/learner/quizzes",    icon: HelpCircle },
-    { label: "Sự cố",            path: "/learner/suco",       icon: AlertCircle },
-    { label: "Tiến độ học tập",  path: "/learner/tiendo",     icon: TrendingUp },
+    { label: "Trang chủ", path: "/learner", icon: Home },
+    { label: "Tài liệu", path: "/learner/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/learner/flashcards", icon: Layers },
+    { label: "Quizzes", path: "/learner/quizzes", icon: HelpCircle },
+    { label: "Sự cố", path: "/learner/suco", icon: AlertCircle },
+    { label: "Tiến độ học tập", path: "/learner/tiendo", icon: TrendingUp },
   ],
 };
 
-const ROOT_PATHS = { ADMIN: "/admin", TEACHER: "/teacher", LEARNER: "/learner" };
+const ROOT_PATHS = {
+  ADMIN: "/admin",
+  TEACHER: "/teacher",
+  LEARNER: "/learner",
+};
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&display=swap');
@@ -66,6 +83,7 @@ const STYLES = `
     border-radius: 10px;
     padding: 0;
     overflow: hidden;
+    outline: none;
   }
   .vsn-item:active { opacity: .85; }
 
@@ -99,7 +117,7 @@ const STYLES = `
     border-radius: 8px;
     color: #9ca3af;
     flex-shrink: 0;
-    transition: background .2s, color .2s, transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+    transition: all .2s cubic-bezier(.34,1.56,.64,1);
   }
   .vsn-item.active .vsn-icon {
     background: rgba(255,255,255,.22);
@@ -120,7 +138,7 @@ const STYLES = `
     margin-left: auto;
     opacity: 0;
     transform: translateX(-4px);
-    transition: opacity .2s, transform .2s;
+    transition: all .2s;
     color: rgba(255,255,255,.7);
     flex-shrink: 0;
   }
@@ -135,14 +153,16 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const user     = JSON.parse(localStorage.getItem("user") || "{}");
-  const role     = (user.role || "LEARNER").toUpperCase();
-  const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.LEARNER;
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = (user.role || "LEARNER").toUpperCase();
+  const navItems = NAV_CONFIG[role] || NAV_CONFIG.LEARNER;
 
-  const isActive = (path) =>
-    path === ROOT_PATHS[role]
-      ? location.pathname === path
-      : location.pathname.startsWith(path);
+  const isActive = (path) => {
+    if (path === ROOT_PATHS[role]) {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <>
@@ -150,7 +170,7 @@ const Sidebar = () => {
       <aside className="vsn-sidebar">
         <nav className="vsn-nav">
           {navItems.map((item) => {
-            const Icon   = item.icon;
+            const Icon = item.icon;
             const active = isActive(item.path);
             return (
               <button
@@ -164,7 +184,11 @@ const Sidebar = () => {
                     <Icon size={16} strokeWidth={2} />
                   </span>
                   <span className="vsn-label">{item.label}</span>
-                  <ChevronRight size={13} strokeWidth={2.5} className="vsn-chevron" />
+                  <ChevronRight
+                    size={13}
+                    strokeWidth={2.5}
+                    className="vsn-chevron"
+                  />
                 </span>
               </button>
             );
@@ -174,4 +198,5 @@ const Sidebar = () => {
     </>
   );
 };
+
 export default Sidebar;

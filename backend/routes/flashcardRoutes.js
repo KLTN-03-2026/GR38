@@ -17,7 +17,7 @@ import {
 } from '#controllers/Flashcard/flashcardProgressController.js';
 
 import protect, { authorize, USER_ROLES } from '../middleware/auth.js';
-import { uploadFlashcardImage } from '../config/uploadImage.js';
+import { uploadFlashcardImage } from '#config/uploadImage.js';
 
 const router = express.Router();
 

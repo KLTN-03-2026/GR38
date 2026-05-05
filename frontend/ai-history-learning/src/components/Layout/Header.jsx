@@ -44,18 +44,23 @@ const Header = () => {
   const safeUser = user || {};
   const displayName = safeUser.fullName ?? safeUser.name ?? "Người dùng";
 
+  // Chuẩn hóa role về chữ in hoa để so sánh chính xác
+  const userRole = (safeUser.role || "").toUpperCase();
+
   const avatarUrl =
     safeUser.profileImage || safeUser.avatarUrl || safeUser.avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=F26739&color=fff&rounded=true&size=128`;
 
+  // Cập nhật lại logic lấy Role Label
   const roleLabel =
-    safeUser.role === "admin" ? "Quản trị viên"
-    : (safeUser.role || "").toUpperCase() === "TEACHER" ? "Giáo viên"
+    userRole === "ADMIN" ? "Quản trị viên"
+    : userRole === "TEACHER" ? "Giáo viên"
     : "Người học";
 
+  // Cập nhật lại logic lấy Profile Path
   const profilePath =
-    safeUser.role === "admin" ? "/admin/profile"
-    : (safeUser.role || "").toUpperCase() === "TEACHER" ? "/teacher/profile"
+    userRole === "ADMIN" ? "/admin/profile"
+    : userRole === "TEACHER" ? "/teacher/profile"
     : "/learner/profile";
 
   const handleLogout = () => {
@@ -160,13 +165,18 @@ const Header = () => {
                   </div>
                 </div>
                 <div className="p-1.5">
-                  <button className="dropdown-item" onClick={() => { navigate(profilePath); setOpen(false); }}>
-                    <svg className="w-4 h-4 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                    Quản lý tài khoản
-                  </button>
+                  
+                  {/* Chỉ hiển thị nút Quản lý tài khoản nếu KHÔNG PHẢI là ADMIN */}
+                  {userRole !== "ADMIN" && (
+                    <button className="dropdown-item" onClick={() => { navigate(profilePath); setOpen(false); }}>
+                      <svg className="w-4 h-4 opacity-50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                          d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                      Quản lý tài khoản
+                    </button>
+                  )}
+
                   <button className="dropdown-item danger" onClick={() => { setShowLogoutModal(true); setOpen(false); }}>
                     <svg className="w-4 h-4 opacity-70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}

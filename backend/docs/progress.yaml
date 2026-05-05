@@ -191,18 +191,6 @@ paths:
                             title: Chiến tranh giải phóng miền Nam
                             score: 8.5
                             createdAt: '2026-04-16T10:15:00.000Z'
-        '201':
-          description: Dữ liệu dashboard được khởi tạo mới thành công
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProgressDashboardResponse'
-        '400':
-          description: Yêu cầu không hợp lệ
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProgressErrorResponse'
         '401':
           description: Không có token, token không hợp lệ hoặc token đã hết hạn
           content:
@@ -215,8 +203,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProgressErrorResponse'
-        '404':
-          description: Không tìm thấy dữ liệu dashboard
+        '500':
+          description: Lỗi máy chủ
           content:
             application/json:
               schema:

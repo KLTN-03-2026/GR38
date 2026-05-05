@@ -183,7 +183,7 @@ function ByDocumentTab({
   const [docsLoading, setDocsLoading] = useState(true);
   const [selectedDocId, setSelectedDocId] = useState("");
   const [selectedDocTitle, setSelectedDocTitle] = useState("");
-  const [selectedDocThumb, setSelectedDocThumb] = useState(""); // ✅ FIX: thêm state
+  const [selectedDocThumb, setSelectedDocThumb] = useState(""); 
   const [docSearch, setDocSearch] = useState("");
   const [quizzes, setQuizzes] = useState([]);
   const [quizLoading, setQuizLoading] = useState(false);

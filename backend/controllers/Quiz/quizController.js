@@ -3,6 +3,63 @@ import QuizResult from "#models/QuizResult.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
 
+
+//@desc Lấy danh sách tất cả các bài trắc nghiệm (Kèm thống kê số người làm)
+//@route GET /api/admin/quizzes
+//@access Private/Admin
+export const getAllQuizzesForAdmin = async (req, res, next) => {
+  try {
+    // 1. Nhận các tham số query để tìm kiếm và phân trang
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+    const skip = (page - 1) * limit;
+
+    // 2. Xây dựng điều kiện tìm kiếm (Tìm theo tiêu đề quiz)
+    const query = search ? { title: { $regex: search, $options: "i" } } : {};
+
+    const [totalQuizzes, quizzes] = await Promise.all([
+      Quiz.countDocuments(query),
+      Quiz.find(query)
+        .populate("userId", "name email") // Lấy thông tin người tạo 
+        .populate("documentId", "title") // Lấy thông tin tài liệu gốc 
+        .sort({ createdAt: -1 }) // Sắp xếp mới nhất lên đầu
+        .skip(skip)
+        .limit(limit)
+        .lean(), 
+    ]);
+
+    const quizIds = quizzes.map(q => q._id);
+    const participationStats = await QuizResult.aggregate([
+      { $match: { quizId: { $in: quizIds } } },
+      { $group: { _id: "$quizId", totalAttempts: { $sum: 1 }, avgScore: { $avg: "$score" } } }
+    ]);
+
+    // Map dữ liệu thống kê vào kết quả trả về
+    const quizzesWithStats = quizzes.map(quiz => {
+      const stat = participationStats.find(s => s._id.toString() === quiz._id.toString());
+      return {
+        ...quiz,
+        totalAttempts: stat ? stat.totalAttempts : 0,
+        averageScore: stat ? parseFloat(stat.avgScore.toFixed(1)) : 0,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: quizzesWithStats,
+      pagination: {
+        total: totalQuizzes,
+        page,
+        limit,
+        totalPages: Math.ceil(totalQuizzes / limit),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 //@desc Lấy danh sách quiz cho một tài liệu
 //@route GET /api/v1/quizzes/:documentId
 //@access Private

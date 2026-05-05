@@ -97,7 +97,7 @@ function AnimNum({ to }) {
   const [v, setV] = useState(0);
   useEffect(() => {
     let c = 0; const t = setInterval(() => {
-      c += Math.ceil(to / 30);
+      c += Math.ceil(to / 30) || 1;
       if (c >= to) { setV(to); clearInterval(t); } else setV(c);
     }, 20);
     return () => clearInterval(t);
@@ -212,12 +212,24 @@ function QuestionCard({ q, i, userAns, delay }) {
         <OptionRow key={j} opt={opt} isAnswer={j===ci} isChosen={j===Number(userAns)} />
       ))}
 
-      {!correct && answered && q.explanation && (
-        <div style={{ marginTop:12, display:"flex", gap:10, background:"linear-gradient(135deg,#FFFBEB,#FEF3C7)", border:"1.5px solid #FDE68A", borderRadius:12, padding:"12px 14px", animation:"fadeIn 0.3s ease both", alignItems:"flex-start" }}>
-          <span style={{ flexShrink:0, marginTop:2 }}><IconLightbulb size={16} stroke="#92400E"/></span>
-          <p style={{ fontSize:13, color:"#92400E", lineHeight:1.7, margin:0 }}>{q.explanation}</p>
+      {/* ĐÃ SỬA: Bỏ điều kiện !correct, luôn hiện giải thích nếu đã trả lời và có data giải thích */}
+      {answered && q.explanation && (
+        <div style={{ 
+          marginTop:12, display:"flex", gap:10, 
+          background: correct ? "linear-gradient(135deg,#ECFDF5,#D1FAE5)" : "linear-gradient(135deg,#FFFBEB,#FEF3C7)", 
+          border: `1.5px solid ${correct ? "#A7F3D0" : "#FDE68A"}`, 
+          borderRadius:12, padding:"12px 14px", animation:"fadeIn 0.3s ease both", alignItems:"flex-start" 
+        }}>
+          <span style={{ flexShrink:0, marginTop:2 }}>
+            <IconLightbulb size={16} stroke={correct ? "#065F46" : "#92400E"}/>
+          </span>
+          <div style={{ fontSize:13, color: correct ? "#065F46" : "#92400E", lineHeight:1.7, margin:0 }}>
+            <strong style={{ display: "block", marginBottom: 2 }}>Giải thích:</strong>
+            {q.explanation}
+          </div>
         </div>
       )}
+
       {!answered && (
         <div style={{ marginTop:12, background:"#F9FAFB", border:"1.5px solid #E5E7EB", borderRadius:12, padding:"10px 14px", fontSize:13, color:"#9CA3AF", display:"flex", alignItems:"center", gap:8 }}>
           <IconWarning size={15} stroke="#9CA3AF"/> Bạn chưa trả lời câu này.
@@ -242,28 +254,55 @@ export default function QuizResultPage() {
 
   useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
 
+  // 1. Sửa gọi API: Gọi đúng hàm getResultDetail
+  // 2. Map dữ liệu từ text sang dạng index mảng để Card hiển thị chuẩn
   useEffect(() => {
     if (!resultId) return;
     setLoadingDetail(true);
-    quizService.getResult(resultId)
+    quizService.getResultDetail(resultId) // <-- Đã đổi hàm đúng
       .then(res => {
         const raw = res.data?.data ?? res.data;
-        const qs  = (raw?.questions ?? raw?.answers ?? []).map(q => ({
-          _id: q._id ?? q.questionId, question: q.question ?? q.q,
-          options: q.options ?? [], answer: q.correctAnswer ?? q.answer,
-          explanation: q.explanation ?? q.explain ?? "",
-          userAnswer: q.userAnswer ?? q.selectedAnswer ?? null,
-        }));
+        
+        // Backend trả full câu hỏi bên trong quizId.questions
+        const fullQuestions = raw?.quizId?.questions || localQs || [];
+        
+        // Map data để tìm ra index của đáp án đúng và index của đáp án user đã chọn
+        const qs = fullQuestions.map(q => {
+          // Tìm index đáp án đúng (từ Text trong DB)
+          let correctIdx = q.options.findIndex(opt => opt === q.correctAnswer);
+          if (correctIdx === -1) correctIdx = Number(q.correctAnswer || q.answer); // Fallback
+          
+          // Tìm index đáp án user đã chọn
+          let userIdx = null;
+          if (raw?.answers) {
+            const ansInfo = raw.answers.find(a => String(a.questionId) === String(q._id));
+            if (ansInfo && ansInfo.selectedAnswer !== null) {
+              userIdx = q.options.findIndex(opt => opt === ansInfo.selectedAnswer);
+              if (userIdx === -1) userIdx = Number(ansInfo.selectedAnswer); // Fallback
+            }
+          }
+          
+          return {
+            _id: q._id,
+            question: q.question,
+            options: q.options || [],
+            answer: correctIdx, // Giờ là index số nguyên (vd: 0,1,2,3)
+            explanation: q.explanation || "",
+            userAnswer: userIdx // Giờ là index số nguyên
+          };
+        });
+
         setApiDetail({
-          score: raw?.score ?? raw?.correctAnswers ?? score,
-          total: raw?.total ?? raw?.totalQuestions ?? total,
-          answered: raw?.answered ?? answered,
-          percent: raw?.percent ?? raw?.percentage ?? null,
+          score: raw?.correctAnswersCount ?? raw?.score ?? score, // Đổi sang lấy số câu đúng
+          total: raw?.totalQuestions ?? total,
+          answered: raw?.answers?.length ?? answered,
+          percent: raw?.percent ?? null,
           questions: qs.length > 0 ? qs : null,
         });
       })
       .catch(err => console.warn("Detail error:", err.message))
       .finally(() => setLoadingDetail(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultId]);
 
   if (!quiz) { navigate(-1); return null; }
@@ -288,15 +327,16 @@ export default function QuizResultPage() {
         : "linear-gradient(140deg,#FEF2F2,#FECACA22)";
 
   const msg = !done
-    ? { h:"Chưa hoàn thành bài",             s:"Hãy thử lại nhé!" }
+    ? { h:"Chưa hoàn thành bài",            s:"Hãy thử lại nhé!" }
     : pct === 100
       ? { h:"Xuất sắc! Hoàn hảo tuyệt đối!", s:"Bạn đã trả lời đúng tất cả câu hỏi 🎉" }
       : pct >= 80
         ? { h:"Rất tốt! Gần hoàn hảo rồi!",  s:"Kiến thức của bạn rất vững chắc 💪" }
         : pct >= 50
           ? { h:"Khá tốt! Cố lên nhé!",       s:"Ôn lại một chút nữa là giỏi thôi 📚" }
-          : { h:"Cần cố gắng thêm!",           s:"Xem lại bài và thử lại bạn nhé 🔄" };
+          : { h:"Cần cố gắng thêm!",          s:"Xem lại bài và thử lại bạn nhé 🔄" };
 
+  // Generate Map câu trả lời dựa trên list index mới nhất
   const answersMap = (() => {
     if (apiDetail?.questions) return apiDetail.questions.reduce((a,q,i) => {
       if (q.userAnswer != null) a[i] = Number(q.userAnswer); return a;

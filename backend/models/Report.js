@@ -51,7 +51,7 @@ const reportSchema = new mongoose.Schema(
         },
         aiSuggestion: {
             type: String,
-            default: null // Nơi lưu trữ text phân tích từ Google Gemini API
+            default: null 
         },
         status: {
             type: String,

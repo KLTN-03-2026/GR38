@@ -323,7 +323,8 @@ export const getTeacherQuizzes = async (req, res, next) => {
     const quizzes = await Quiz.find({ teacherId: req.user._id })
       .select("-questions")
       .populate("documentId", "title fileName thumbnail")
-      .sort({ createdAt: -1 }); 
+      .sort({ createdAt: -1 })
+      .lean();
 
     const sanitizedQuizzes = quizzes.map((quiz) => ({
       ...quiz,

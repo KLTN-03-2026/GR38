@@ -1,7 +1,10 @@
 // FlashcardPageInline.jsx
 import { useState, useEffect, useRef } from "react";
+import api from "../../../lib/api";
+
 export default function FlashcardPageInline({ flash, onBack }) {
   const [cards, setCards] = useState(null);
+  const [setId, setSetId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [animDir, setAnimDir] = useState(null);
@@ -11,18 +14,29 @@ export default function FlashcardPageInline({ flash, onBack }) {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    const existingCards = flash.cards ?? [];
-    if (existingCards.length > 0) {
-      setCards(
-        existingCards.map((c) => ({
-          q: c.front ?? c.question ?? "",
-          a: c.back ?? c.answer ?? "",
-        })),
-      );
-      return;
-    }
-    alert("Bộ thẻ này chưa có nội dung!");
-    onBack();
+    (async () => {
+      try {
+        const res = await api.get(`/flashcards/${flash._id ?? flash.id}`);
+        const raw = res?.data?.data ?? res?.data ?? null;
+        if (!raw || !Array.isArray(raw.cards) || raw.cards.length === 0) {
+          alert("Bộ thẻ này chưa có nội dung!");
+          onBack();
+          return;
+        }
+        setSetId(raw._id);
+        setDeckName(raw.title ?? flash.title ?? "");
+        setCards(
+          raw.cards.map((c) => ({
+            _id: c._id ?? c.id ?? null,
+            q: c.front ?? c.question ?? "",
+            a: c.back ?? c.answer ?? "",
+          }))
+        );
+      } catch (err) {
+        alert("Không tải được flashcard. Vui lòng thử lại.");
+        onBack();
+      }
+    })();
   }, [flash._id]);
 
   if (!cards)
@@ -95,6 +109,27 @@ export default function FlashcardPageInline({ flash, onBack }) {
   const card = cards[currentIndex];
   const progress = ((currentIndex + 1) / total) * 100;
 
+  const handleFlip = async () => {
+    if (!cards?.length) return;
+    const current = cards[currentIndex];
+    if (!isFlipped && current && !current.a && setId) {
+      try {
+        const res = await api.get(`/flashcards/${setId}/cards/${current._id}/back`);
+        const backData = res?.data?.data || res?.data || null;
+        if (backData?.back !== undefined) {
+          setCards((prev) =>
+            prev.map((c, idx) =>
+              idx === currentIndex ? { ...c, a: backData.back } : c
+            )
+          );
+        }
+      } catch (err) {
+        // ignore back fetch error
+      }
+    }
+    setIsFlipped((prev) => !prev);
+  };
+
   const goTo = (next, dir) => {
     if (next < 0 || next >= total) return;
     setAnimDir(dir);
@@ -146,7 +181,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
             ? "bg-[#47ED70] border-[#36BA58]"
             : "bg-[#F4F4F5] border-[#E4E4E7]"
         }`}
-        onClick={() => setIsFlipped(!isFlipped)}
+        onClick={handleFlip}
       >
         <div className="flex justify-start mb-4">
           <span
@@ -166,7 +201,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
               isFlipped ? "text-[#064E3B]" : "text-[#18181B]"
             }`}
           >
-            {isFlipped ? card.a : card.q}
+            {isFlipped ? (card.a || "...") : card.q}
           </p>
         </div>
 

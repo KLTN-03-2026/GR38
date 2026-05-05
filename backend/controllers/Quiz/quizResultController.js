@@ -170,7 +170,7 @@ export const getAllQuizzesForLearner = async (req, res, next) => {
             isAiGenerated: 1,
             createdAt: 1,
             "documentInfo.title": 1,
-            questionCount: { $size: { $ifNull: ["$questions", []] } } 
+            questionCount: "$totalQuestions" 
           }
         }
       ])

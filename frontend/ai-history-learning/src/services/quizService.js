@@ -20,7 +20,7 @@ export const quizService = {
 
   // Lấy chi tiết đề thi để LÀM BÀI (Đã bị ẩn đáp án đúng từ Backend)
   getQuizForPlay: async (id) => {
-    const res = await api.get(`/quizzes/${id}/play`);
+    const res = await api.get(`/quizzes/play/${id}`);
     return res;
   },
 

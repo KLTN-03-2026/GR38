@@ -43,7 +43,9 @@ function getUserRole() {
 // ── Quiz Card ────────────────────────────────────────────────────────────────
 function QuizCard({ quiz, isTeacher, onStart, onEdit, onDelete, docThumbnail }) {
   const questionCount =
-    quiz.questionCount ?? (Array.isArray(quiz.questions) ? quiz.questions.length : 0);
+    quiz.questionCount ??
+    quiz.totalQuestions ??
+    0;
   const coverSrc = quiz.coverImage || docThumbnail || null;
 
   return (
@@ -161,6 +163,7 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
         questions:     q.questions ?? [],
         coverImage:    q.thumbnail ?? q.coverImage ?? null,
       })));
+
     } catch {
       setQuizError("Không thể tải danh sách quiz. Vui lòng thử lại.");
     } finally {
@@ -468,15 +471,17 @@ export default function QuizPage() {
         return;
       }
 
-      const res    = await quizService.getById(id);
+
+      const res = await quizService.getQuizForPlay(id);
       const detail = res.data?.data ?? res.data ?? res;
       const rawQs  = detail.questions ?? [];
       if (rawQs.length === 0) { alert("Quiz này chưa có câu hỏi!"); return; }
       const normalized = rawQs.map((q) => ({
         _id:      q._id ?? q.id,
         question: q.question ?? q.q,
-        options:  q.options,
-        answer:   q.correctAnswerIndex ?? q.correctAnswer ?? q.answer,
+
+        options: q.options,
+        answer: q.correctAnswerIndex ?? q.answer ?? null,
       }));
       setQuizView({ quiz: detail, questions: shuffleArray(normalized).map(shuffleOptions) });
     } catch (err) {

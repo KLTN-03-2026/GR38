@@ -216,3 +216,84 @@ export const getQuizForPlay = async (req, res, next) => {
     next(error);
   }
 };
+//@desc Lấy TẤT CẢ thống kê bài làm của học viên (Client-side pagination)
+//@route GET /api/v1/quizzes/statistics
+//@access Private (Teacher/Admin)
+export const getTeacherStatistics = async (req, res, next) => {
+  try {
+    const { scoreFilter } = req.query;
+
+    // 1. Điều kiện cơ bản ở bảng QuizResult
+    let matchStage = {
+      isTeacherPreview: { $ne: true }
+    };
+
+    // Lọc theo điểm số ngay từ DB cho nhẹ 
+    if (scoreFilter && scoreFilter !== "all") {
+      if (scoreFilter === "excellent") matchStage.score = { $gte: 8 };
+      else if (scoreFilter === "average") matchStage.score = { $gte: 5, $lt: 8 };
+      else if (scoreFilter === "poor") matchStage.score = { $lt: 5 };
+    }
+
+    const pipeline = [
+      { $match: matchStage },
+      
+      // 2. Join với bảng Quizzes để lấy thông tin đề thi
+      {
+        $lookup: {
+          from: "quizzes", 
+          localField: "quizId",
+          foreignField: "_id",
+          as: "quizInfo"
+        }
+      },
+      { $unwind: { path: "$quizInfo", preserveNullAndEmptyArrays: false } },
+
+      // 3. Phân quyền: Chỉ lấy kết quả của các Quiz do giáo viên đang đăng nhập tạo ra
+      ...(req.user.role !== USER_ROLES.ADMIN ? [{
+        $match: {
+          "quizInfo.teacherId": new mongoose.Types.ObjectId(req.user._id)
+        }
+      }] : []),
+
+      // 4. Join với bảng Users để lấy thông tin học viên
+      {
+        $lookup: {
+          from: "users", 
+          localField: "userId",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+
+      { $sort: { createdAt: -1 } },
+
+      // 6. Định hình lại dữ liệu trả về cho Frontend 
+      {
+        $project: {
+          _id: 1,
+          score: 1,
+          correctAnswersCount: 1,
+          totalQuestions: 1,
+          timeSpent: 1,
+          createdAt: 1,
+          quizTitle: "$quizInfo.title",
+          learnerName: "$userInfo.fullName",
+          learnerEmail: "$userInfo.email"
+        }
+      }
+    ];
+
+    const data = await QuizResult.aggregate(pipeline);
+
+    // Trả về trực tiếp mảng data
+    res.status(200).json({
+      success: true,
+      totalCount: data.length, 
+      data: data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

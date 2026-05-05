@@ -56,8 +56,8 @@ export const quizService = {
   },
 
   // Lấy chi tiết đề thi (Full thông tin bao gồm đáp án đúng để sửa)
-  getById: async (id) => {
-    const res = await api.get(`/quizzes/quiz/${id}`);
+  getById: async (id, params = {}) => {
+    const res = await api.get(`/quizzes/quiz/${id}`, { params });
     return res;
   },
 
@@ -70,8 +70,8 @@ create: async (data, thumbnailFile) => {
   formData.append("questions",   JSON.stringify(data.questions));
   if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
 
-  const res = await api.post("/quizzes", formData);
-  // Không set Content-Type — để axios tự set boundary
+  // Thêm chữ /manual vào endpoint
+  const res = await api.post("/quizzes/manual", formData); 
   return res;
 },
 

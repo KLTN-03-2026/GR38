@@ -1,12 +1,9 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "/api/v1",
-});
+const baseURL = import.meta.env.VITE_API_URL;
 
-const refreshClient = axios.create({
-  baseURL: "/api/v1",
-});
+const api = axios.create({ baseURL });
+const refreshClient = axios.create({ baseURL }); 
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -19,27 +16,19 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-const getAccessToken = () => {
-  const raw = localStorage.getItem("token");
-  if (!raw) return null;
+// 3. Tối ưu hàm lấy và parse token an toàn
+const getAuthData = () => {
   try {
-    const parsed = JSON.parse(raw);
-    return parsed?.access_token || raw;
-  } catch {
-    return raw;
-  }
-};
-
-const getRefreshToken = () => {
-  const raw = localStorage.getItem("token");
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed?.refresh_token;
-  } catch {
+    const raw = localStorage.getItem("token");
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.error("Lỗi parse token từ localStorage", error);
     return null;
   }
 };
+
+const getAccessToken = () => getAuthData()?.access_token || null;
+const getRefreshToken = () => getAuthData()?.refresh_token || null;
 
 // Request Interceptor
 api.interceptors.request.use(
@@ -50,7 +39,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error),
+  (error) => Promise.reject(error)
 );
 
 // Response Interceptor
@@ -59,13 +48,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Không có response hoặc không phải 401 → trả lỗi thẳng
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // ✅ FIX: Các route public (login, register) không cần refresh token
-    // Nếu chính request login/register bị 401 thì trả lỗi luôn, không refresh
     const isAuthRoute =
       originalRequest.url?.includes("/auth/login") ||
       originalRequest.url?.includes("/auth/register") ||
@@ -75,12 +61,10 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Tránh loop vô hạn
     if (originalRequest._retry) {
       return Promise.reject(error);
     }
 
-    // Nếu đang refresh → đưa vào queue
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -107,41 +91,44 @@ api.interceptors.response.use(
       });
 
       const newAccessToken = data.access_token;
-
+      
+      // Lưu token mới vào localStorage
       localStorage.setItem(
         "token",
         JSON.stringify({
           access_token: newAccessToken,
           refresh_token: data.refresh_token ?? refreshToken,
-        }),
+        })
       );
 
+      // Cập nhật lại header cho request bị lỗi và gọi lại
       api.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
-      processQueue(null, newAccessToken);
-
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      
+      processQueue(null, newAccessToken);
+      
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      // Không redirect nếu đang ở trang login/register
-      const isOnAuthPage =
-        window.location.pathname === "/login" ||
-        window.location.pathname === "/register" ||
-        window.location.pathname === "/";
+      // 2. Chỉnh sửa logic điều hướng: 
+      // Do hệ thống không có khách vãng lai, trang chủ "/" cũng cần xác thực
+      const isOnAuthPage = 
+        window.location.pathname === "/login" || 
+        window.location.pathname === "/register";
 
       if (!isOnAuthPage) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         localStorage.removeItem("role");
-        window.location.href = "/login";
+        window.location.href = "/login"; 
       }
 
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
-  },
+  }
 );
 
 export default api;

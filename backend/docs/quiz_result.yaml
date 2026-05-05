@@ -1,0 +1,113 @@
+paths:
+  /api/v1/quizzes/statistics:
+    get:
+      summary: Lấy thống kê toàn bộ bài làm của học viên
+      description: Dành cho TEACHER/ADMIN. Trả về mảng dữ liệu phẳng (flat array) lịch sử làm bài của học sinh để hiển thị lên Data Table và gửi cho AI (Gemini) phân tích đánh giá. Không phân trang ở server.
+      tags: [Quiz Result]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoreFilter
+          schema:
+            type: string
+            enum: [all, excellent, average, poor]
+            default: all
+          description: Lọc theo điểm số (excellent >= 8, 5 <= average < 8, poor < 5)
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  totalCount:
+                    type: integer
+                    example: 25
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: 66a1f2c9b8d4e01f1234abcd
+                        score:
+                          type: number
+                          example: 8.5
+                        correctAnswersCount:
+                          type: integer
+                          example: 17
+                        totalQuestions:
+                          type: integer
+                          example: 20
+                        timeSpent:
+                          type: integer
+                          example: 1200
+                          description: Thời gian làm bài (giây)
+                        createdAt:
+                          type: string
+                          format: date-time
+                        quizTitle:
+                          type: string
+                          example: "Đề kiểm tra Lịch sử 12 - Chống Pháp"
+                        learnerName:
+                          type: string
+                          example: "Nguyễn Văn A"
+                        learnerEmail:
+                          type: string
+                          example: "nguyenvana@gmail.com"
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền truy cập (Chỉ TEACHER hoặc ADMIN)
+  /api/v1/quizzes/my-history:
+    get:
+      summary: Xem lịch sử các bài quiz đã làm
+      description: Lấy danh sách kết quả bài làm của Học sinh (LEARNER).
+      tags: [Quiz Result]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Thành công
+        '401':
+          description: Chưa đăng nhập
+
+  /api/v1/quizzes/detail/{resultId}:
+    get:
+      summary: Xem chi tiết lại 1 bài thi đã nộp
+      description: Trả về chi tiết câu đúng/sai dựa trên ID kết quả làm bài.
+      tags: [Quiz Result]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: resultId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Thành công
+
+  /api/v1/quizzes/{quizId}/submit:
+    post:
+      summary: Nộp bài quiz
+      description: Chấm điểm tự động và lưu kết quả.
+      tags: [Quiz Result]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: quizId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Nộp bài thành công

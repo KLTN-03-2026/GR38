@@ -34,9 +34,6 @@ import FlashcardDetail from "./pages/Teacher/Flashcards/FlashcardDetail.jsx";
 import Dashboard from "./pages/Learner/Dashboard";
 import BaiGiang from "./pages/Learner/BaiGiang/BaiGiang";
 import ChatAI from "./pages/Learner/BaiGiang/ChatAI";
-import FlashCard from "./pages/Learner/BaiGiang/FlashCard";
-import Quiz from "./pages/Learner/BaiGiang/Quizz.jsx";
-import BaiKiemTra from "./pages/Learner/Baikiemtra/Baikiemtra";
 import FlashcardDetailLearner from "./pages/Learner/HocFlashCard/FlashcardDetail";
 import HocQuiz from "./pages/Learner/HocQuizz/HocQuizz.jsx";
 import DocumentsLearner from "./pages/Learner/Documents";
@@ -121,6 +118,7 @@ export default function AppRouter() {
         <Route path="/teacher" element={<AppLayout />}>
           <Route index element={<Teacher />} />
           <Route path="quizzes" element={<QuizPage />} />
+          <Route path="quiz-result" element={<QuizResultPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="documents/:id" element={<DocumentsDetailPage />} />
           <Route path="baigiang/:id" element={<Baigiangpage />} />

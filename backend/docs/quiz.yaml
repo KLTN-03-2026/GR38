@@ -76,6 +76,8 @@ paths:
                         example: 5
         '401':
           description: Chưa đăng nhập
+
+  /api/v1/quizzes/manual:
     post:
       summary: Tạo đề quiz thủ công
       description: Dành cho TEACHER hoặc ADMIN để tự soạn câu hỏi. Hỗ trợ upload ảnh bìa (thumbnail) hoặc tự động lấy ảnh từ Document.
@@ -113,34 +115,6 @@ paths:
         '400':
           description: Lỗi dữ liệu đầu vào (cần ít nhất 5 câu hoặc JSON không hợp lệ)
 
-  /api/v1/quizzes/my-history:
-    get:
-      summary: Xem lịch sử các bài quiz đã làm
-      description: Lấy danh sách kết quả bài làm của Học sinh (LEARNER).
-      tags: [Quiz]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  count:
-                    type: integer
-                    example: 8
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/QuizHistoryResponse'
-        '401':
-          description: Chưa đăng nhập
-
   /api/v1/quizzes/my-quizzes:
     get:
       summary: Lấy danh sách toàn bộ bài quiz do giáo viên tạo
@@ -168,27 +142,6 @@ paths:
                       $ref: '#/components/schemas/QuizListResponse'
         '401':
           description: Chưa đăng nhập hoặc không có quyền
-
-  /api/v1/quizzes/detail/{resultId}:
-    get:
-      summary: Xem chi tiết lại 1 bài thi đã nộp
-      description: Trả về chi tiết câu đúng/sai dựa trên ID kết quả làm bài.
-      tags: [Quiz]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: resultId
-          required: true
-          schema:
-            type: string
-          example: 66a1f2c9b8d4e01f1234abcd
-          description: ID của bài kết quả (QuizResult ID)
-      responses:
-        '200':
-          description: Thành công
-        '404':
-          description: Không tìm thấy kết quả
 
   /api/v1/quizzes/document/{documentId}:
     get:
@@ -224,30 +177,73 @@ paths:
                     items:
                       $ref: '#/components/schemas/QuizListResponse'
 
-  /api/v1/quizzes/{quizId}/submit:
-    post:
-      summary: Nộp bài quiz
-      description: Chấm điểm tự động và lưu kết quả. Hệ thống tự động phân biệt bài nộp của TEACHER (test) và LEARNER. Cần truyền thêm `timeSpent` (thời gian làm bài bằng giây) trong request body.
+  /api/v1/quizzes/{id}:
+    get:
+      summary: Lấy chi tiết một quiz (Để xem trước hoặc chỉnh sửa)
+      description: Dành cho LEARNER, TEACHER, ADMIN lấy đề bài.
       tags: [Quiz]
       security:
         - bearerAuth: []
       parameters:
         - in: path
-          name: quizId
+          name: id
           required: true
           schema:
             type: string
           example: 66a1f2c9b8d4e01f12349999
-          description: ID của đề quiz cần nộp
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QuizSubmitRequest'
+          description: ID của quiz cần xem
       responses:
-        '201':
-          description: Nộp bài thành công
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/QuizDetailResponse'
+        '404':
+          description: Không tìm thấy quiz
+
+    put:
+      summary: Cập nhật thông cấu hình chung của bộ Quiz
+      description: Dành cho TEACHER (người tạo) hoặc ADMIN để sửa tiêu đề, mô tả, tags hoặc ảnh bìa (thumbnail).
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của đề quiz cần sửa
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Đề kiểm tra Lịch sử 12 (Cập nhật)
+                description:
+                  type: string
+                  example: Gồm 10 câu hỏi nâng cao
+                tags:
+                  type: string
+                  description: Mảng tags dạng JSON string (VD '["lich-su", "lop-12"]')
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: File ảnh bìa mới (nếu có)
+      responses:
+        '200':
+          description: Cập nhật thành công
           content:
             application/json:
               schema:
@@ -258,12 +254,34 @@ paths:
                     example: true
                   message:
                     type: string
-                    example: Nộp bài thành công
+                    example: Đã cập nhật thông tin bộ Quiz thành công
                   data:
-                    $ref: '#/components/schemas/QuizSubmitResponse'
-        '400':
-          description: Dữ liệu nộp bài không hợp lệ
+                    $ref: '#/components/schemas/QuizBase'
+        '403':
+          description: Không có quyền chỉnh sửa
+        '404':
+          description: Không tìm thấy bộ Quiz
 
+    delete:
+      summary: Xóa quiz
+      description: Chỉ TEACHER (người tạo) hoặc ADMIN được phép xóa.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          example: 66a1f2c9b8d4e01f12349999
+          description: ID của quiz cần xóa
+      responses:
+        '200':
+          description: Xóa thành công
+        '403':
+          description: Không có quyền
+          
   /api/v1/quizzes/{quizId}/questions/{questionId}:
     put:
       summary: Cập nhật nội dung một câu hỏi cụ thể trong Quiz
@@ -332,109 +350,7 @@ paths:
         '404':
           description: Không tìm thấy bộ Quiz hoặc câu hỏi
 
-  /api/v1/quizzes/{id}:
-    get:
-      summary: Lấy chi tiết một quiz (Để làm bài)
-      description: Dành cho LEARNER, TEACHER, ADMIN lấy đề bài.
-      tags: [Quiz]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          example: 66a1f2c9b8d4e01f12349999
-          description: ID của quiz cần xem
-      responses:
-        '200':
-          description: Thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/QuizDetailResponse'
-        '404':
-          description: Không tìm thấy quiz
-    put:
-      summary: Cập nhật thông tin chung của bộ Quiz
-      description: Dành cho TEACHER (người tạo) hoặc ADMIN để sửa tiêu đề, mô tả, tags hoặc ảnh bìa (thumbnail).
-      tags: [Quiz]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          example: 66a1f2c9b8d4e01f12349999
-          description: ID của đề quiz cần sửa
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                  example: Đề kiểm tra Lịch sử 12 (Cập nhật)
-                description:
-                  type: string
-                  example: Gồm 10 câu hỏi nâng cao
-                tags:
-                  type: string
-                  description: Mảng tags dạng JSON string (VD '["lich-su", "lop-12"]')
-                thumbnail:
-                  type: string
-                  format: binary
-                  description: File ảnh bìa mới (nếu có)
-      responses:
-        '200':
-          description: Cập nhật thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: Đã cập nhật thông tin bộ Quiz thành công
-                  data:
-                    $ref: '#/components/schemas/QuizBase'
-        '403':
-          description: Không có quyền chỉnh sửa
-        '404':
-          description: Không tìm thấy bộ Quiz
-    delete:
-      summary: Xóa quiz
-      description: Chỉ TEACHER (người tạo) hoặc ADMIN được phép xóa.
-      tags: [Quiz]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          example: 66a1f2c9b8d4e01f12349999
-          description: ID của quiz cần xóa
-      responses:
-        '200':
-          description: Xóa thành công
-        '403':
-          description: Không có quyền
-/api/v1/quizzes/{id}/play:
+  /api/v1/quizzes/{id}/play:
     get:
       summary: Lấy nội dung Quiz để làm bài (Chống gian lận)
       description: API dành cho LEARNER khi bắt đầu nhấn vào làm bài. Hệ thống trả về thông tin Quiz và danh sách câu hỏi nhưng **ĐÃ ẨN** trường `correctAnswer` và `explanation` để học sinh không thể dùng công cụ F12 (DevTools) xem trước đáp án.

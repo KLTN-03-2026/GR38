@@ -25,13 +25,13 @@ const questionSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  // Có thể giữ lại hoặc bỏ difficulty ở từng câu hỏi tùy logic của bạn
   difficulty: {
     type: String,
     enum: ["Dễ", "Trung bình", "Khó"],
     default: "Trung bình",
   },
 });
-
 
 // 2. SCHEMA CHÍNH CHO QUIZ
 const quizSchema = new mongoose.Schema(
@@ -55,6 +55,15 @@ const quizSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    thumbnail: {
+      type: String,
+      default: null, 
+    },
+    timeLimit: {
+      type: Number,
+      default: 30, 
+    },
+
     isAiGenerated: {
       type: Boolean,
       default: false, 
@@ -96,12 +105,9 @@ const quizSchema = new mongoose.Schema(
   }
 );
 
-// Tự động đếm số lượng câu hỏi trước khi lưu vào DB
 quizSchema.pre("save", function (next) {
   this.totalQuestions = Array.isArray(this.questions) ? this.questions.length : 0;
 });
-
-// Index để tăng tốc độ truy vấn
 quizSchema.index({ teacherId: 1, createdAt: -1 });
 quizSchema.index({ teacherId: 1, isPublished: 1 });
 

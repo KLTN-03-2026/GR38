@@ -280,7 +280,7 @@ export default function QuizPageInline({ quiz, onBack, documentId }) {
             if (questions.some((q) => q.correctAnswer)) return;
             try {
               const qid = quiz._id ?? quiz.id;
-              const res = await quizService.getById(qid);
+              const res = await quizService.getById(qid, { includeAnswers: true });
               const detailData = res.data?.data ?? res.data ?? res;
               const answerMap = new Map(
                 (detailData.questions ?? []).map((q) => [String(q._id), q])

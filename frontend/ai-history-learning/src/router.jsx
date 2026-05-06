@@ -132,7 +132,7 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* LEARNER ROUTES */}
+
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<AppLayout />}>
           <Route index element={<Dashboard />} />

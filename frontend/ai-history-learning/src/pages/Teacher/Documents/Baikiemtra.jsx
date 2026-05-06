@@ -34,7 +34,7 @@ const Baikiemtra = () => {
         }
 
         // Fetch quizzes
-        const { data: response } = await api.get(`/quizzes/by-document/${id}`);
+        const { data: response } = await api.get(`/quizzes/document/${id}`);
         const data = response.data ?? response ?? [];
 
         const normalized = data.map((q, i) => ({

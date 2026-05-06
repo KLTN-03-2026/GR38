@@ -9,8 +9,8 @@ export const REPORT_STATUS = Object.freeze({
 export const REPORT_ISSUE_TYPE = Object.freeze({
     HISTORICAL_FACT: 'historical_fact', 
     TIMELINE: 'timeline',
-    INAPPROPRIATE_BEHAVIOR: 'inappropriate_behavior', // THÊM MỚI: Hành vi không chuẩn mực
-    SPAM: 'spam',                                     // THÊM MỚI: Spam/Quảng cáo               
+    INAPPROPRIATE_BEHAVIOR: 'inappropriate_behavior',
+    SPAM: 'spam',                                                   
     TYPO: 'typo',                       
     OTHER: 'other'                      
 });
@@ -37,7 +37,7 @@ const reportSchema = new mongoose.Schema(
         targetId: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            refPath: 'targetType' // Kế thừa logic thông minh từ model Course của bạn
+            refPath: 'targetType' 
         },
         issueType: {
             type: String,

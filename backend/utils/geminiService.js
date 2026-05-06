@@ -3,14 +3,60 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// --- 1. HỆ THỐNG QUẢN LÝ VÀ XOAY VÒNG API KEY ---
+const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
 
-if (!process.env.GEMINI_API_KEY) {
+if (!apiKeysString) {
   console.error(
-    "LỖI NGHIÊM TRỌNG: GEMINI_API_KEY chưa được thiết lập trong biến môi trường.",
+    "LỖI NGHIÊM TRỌNG: GEMINI_API_KEYS chưa được thiết lập trong biến môi trường.",
   );
   process.exit(1);
 }
+
+// Lấy danh sách các key từ .env
+const apiKeys = apiKeysString.split(',').map(k => k.trim()).filter(k => k);
+let currentKeyIndex = 0;
+
+// --- 2. HÀM WRAPPER: TỰ ĐỘNG ĐỔI KEY KHI LỖI 429 ---
+const executeWithKeyRotation = async (apiAction) => {
+  let attempts = 0;
+  const maxAttempts = apiKeys.length;
+
+  while (attempts < maxAttempts) {
+    try {
+      // Khởi tạo client Gemini với key hiện tại
+      const aiClient = new GoogleGenAI({ apiKey: apiKeys[currentKeyIndex] });
+      
+      // Thực thi gọi API
+      return await apiAction(aiClient);
+
+    } catch (error) {
+      // Nếu là lỗi quá tải (429)
+      if (error.status === 429 || error?.message?.includes("429") || error?.message?.includes("RESOURCE_EXHAUSTED")) {
+        console.warn(`⚠️ [Cảnh báo] Key thứ ${currentKeyIndex + 1} đã hết hạn mức. Đang chuyển key...`);
+        
+        // Đổi sang key tiếp theo
+        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+        attempts++;
+
+        // Nếu đã thử hết sạch các key
+        if (attempts >= maxAttempts) {
+          const finalError = new Error("Hệ thống AI đang quá tải do vượt giới hạn sử dụng. Bạn vui lòng đợi khoảng 1 phút rồi thử lại nhé!");
+          finalError.status = 429;
+          throw finalError;
+        }
+        
+        // Nghỉ 1 giây trước khi thử key mới
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      
+      // Nếu là các lỗi khác (không phải 429), ném lỗi ra ngay
+      throw error;
+    }
+  }
+};
+
 
 /**
  * Tạo danh sách flashcard từ văn bản
@@ -37,9 +83,12 @@ Văn bản:
 ${text.substring(0, 15000)}`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
+    // SỬ DỤNG HÀM BỌC ĐỂ GỌI API
+    const response = await executeWithKeyRotation(async (aiClient) => {
+      return await aiClient.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
     });
 
     const generatedText = response.text;
@@ -78,7 +127,7 @@ ${text.substring(0, 15000)}`;
     return flashcards.slice(0, count);
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
-    throw new Error("Hệ thống tạm thời không thể tạo flashcard.");
+    throw error.status === 429 ? error : new Error("Hệ thống tạm thời không thể tạo flashcard.");
   }
 };
 
@@ -114,9 +163,12 @@ Văn bản:
 ${text.substring(0, 15000)}`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
+    // SỬ DỤNG HÀM BỌC ĐỂ GỌI API
+    const response = await executeWithKeyRotation(async (aiClient) => {
+      return await aiClient.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
     });
 
     const generatedText = response.text;
@@ -166,7 +218,7 @@ ${text.substring(0, 15000)}`;
     return questions;
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
-    throw new Error("Hệ thống tạm thời không thể tạo câu hỏi trắc nghiệm.");
+    throw error.status === 429 ? error : new Error("Hệ thống tạm thời không thể tạo câu hỏi trắc nghiệm.");
   }
 };
 
@@ -184,16 +236,19 @@ Văn bản:
 ${text.substring(0, 20000)}`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
+    // SỬ DỤNG HÀM BỌC ĐỂ GỌI API
+    const response = await executeWithKeyRotation(async (aiClient) => {
+      return await aiClient.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
     });
 
     const generatedText = response.text;
     return generatedText;
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
-    throw new Error("Hệ thống tạm thời không thể tạo tóm tắt.");
+    throw error.status === 429 ? error : new Error("Hệ thống tạm thời không thể tạo tóm tắt.");
   }
 };
 
@@ -208,8 +263,6 @@ export const chatWithContext = async (question, chunks) => {
     .map((c, i) => `[Đoạn ${i + 1}]\n${c.content}`)
     .join("\n\n");
 
-  // console.log("context_____", context);
-
   const prompt = `Dựa trên ngữ cảnh tài liệu Lịch sử Việt Nam dưới đây, hãy phân tích và trả lời câu hỏi của học sinh.
 Nếu câu trả lời không có trong ngữ cảnh, hãy nói rõ là: "Tài liệu hiện tại không có thông tin để trả lời câu hỏi này." Tuyệt đối không tự bịa đặt thêm dữ kiện lịch sử ngoài tài liệu.
 
@@ -221,16 +274,19 @@ Câu hỏi: ${question}
 Câu trả lời:`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
+    // SỬ DỤNG HÀM BỌC ĐỂ GỌI API
+    const response = await executeWithKeyRotation(async (aiClient) => {
+      return await aiClient.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
     });
 
     const generatedText = response.text;
     return generatedText;
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
-    throw new Error("Hệ thống tạm thời không thể xử lý câu hỏi này.");
+    throw error.status === 429 ? error : new Error("Hệ thống tạm thời không thể xử lý câu hỏi này.");
   }
 };
 
@@ -256,16 +312,17 @@ YÊU CẦU BẮT BUỘC (CẦN TUÂN THỦ NGHIÊM NGẶT):
 Ngữ cảnh (Context):
 ${context.substring(0, 10000)}`;
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
+    // SỬ DỤNG HÀM BỌC ĐỂ GỌI API
+    const response = await executeWithKeyRotation(async (aiClient) => {
+      return await aiClient.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
     });
     const generatedText = response.text;
     return generatedText;
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
-    throw new Error(
-      "Hệ thống tạm thời không thể giải thích khái niệm này. Vui lòng thử lại sau.",
-    );
+    throw error.status === 429 ? error : new Error("Hệ thống tạm thời không thể giải thích khái niệm này. Vui lòng thử lại sau.");
   }
 };

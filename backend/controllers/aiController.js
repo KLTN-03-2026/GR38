@@ -5,6 +5,26 @@ import ChatHistory from "../models/ChatHistory.js";
 import * as geminiService from "../utils/geminiService.js";
 import { findRelevantChunks } from "../utils/textChunker.js";
 
+// --- HÀM TRỢ GIÚP XỬ LÝ LỖI GEMINI ---
+const handleGeminiError = (error, res, next) => {
+  // Bắt các trường hợp lỗi 429 từ Google Gemini API
+  if (
+    error.status === 429 || 
+    error?.error?.code === 429 || 
+    error?.message?.includes('429') || 
+    error?.message?.includes('RESOURCE_EXHAUSTED')
+  ) {
+    return res.status(429).json({
+      success: false,
+      error: 'Hệ thống AI đang tạm thời quá tải do vượt giới hạn sử dụng. Bạn vui lòng đợi khoảng 1 phút rồi thử lại nhé!',
+      statusCode: 429
+    });
+  }
+  // Nếu không phải lỗi 429 thì đẩy cho middleware xử lý lỗi chung (error handler)
+  next(error);
+};
+// ------------------------------------
+
 //@desc Tạo flashcard từ tài liệu
 //@router POST/api/v1/ai/generate-flashcards
 //@access Private
@@ -34,13 +54,13 @@ export const generateFlashcards = async (req, res, next) => {
       });
     }
 
-    //Tạo flashcard bằng Gemini
+    // Tạo flashcard bằng Gemini
     const cards = await geminiService.generateFlashcards(
       document.extractedText, 
       parseInt(count)
     );
 
-    //Lưu flashcard vào database
+    // Lưu flashcard vào database
     const flashcardSet = await Flashcard.create({
       teacherId: req.user._id,
       documentId: document._id,
@@ -64,7 +84,8 @@ export const generateFlashcards = async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error);
+    // SỬ DỤNG HÀM XỬ LÝ LỖI MỚI
+    handleGeminiError(error, res, next);
   }
 };
 
@@ -73,7 +94,8 @@ export const generateFlashcards = async (req, res, next) => {
 //@access Private
 export const generateQuiz = async (req, res, next) => {
   try {
-const { documentId, numQuestions = 5, title, timeLimit = 30 } = req.body; // ✅ thêm timeLimit
+    const { documentId, numQuestions = 5, title, timeLimit = 30 } = req.body;
+    
     if (!documentId) {
       return res.status(400).json({
         success: false,
@@ -96,37 +118,38 @@ const { documentId, numQuestions = 5, title, timeLimit = 30 } = req.body; // ✅
       });
     }
 
-    //Tạo quiz bằng Gemini
+    // Tạo quiz bằng Gemini
     const questions = await geminiService.generateQuiz(
       document.extractedText, 
       parseInt(numQuestions)
     );
+    
     if (!questions || questions.length < 5) {
-  return res.status(400).json({
-    success: false,
-    error: `AI chỉ tạo được ${questions?.length ?? 0} câu hỏi hợp lệ. Vui lòng thử lại.`,
-  });
-}
+      return res.status(400).json({
+        success: false,
+        error: `AI chỉ tạo được ${questions?.length ?? 0} câu hỏi hợp lệ. Vui lòng thử lại.`,
+      });
+    }
     
     questions.forEach(q => {
-        // Xóa khoảng trắng thừa ở đầu và cuối của đáp án đúng
+        // Xóa khoảng trắng thừa
         q.correctAnswer = q.correctAnswer.trim();
-        // Xóa khoảng trắng thừa ở tất cả các lựa chọn
         q.options = q.options.map(opt => opt.trim());
+        
         // Nếu AI lỡ trả về "A", "B", "C", "D"
         if (["A", "B", "C", "D"].includes(q.correctAnswer) && q.options.length === 4) {
              const indexMap = { "A": 0, "B": 1, "C": 2, "D": 3 };
              q.correctAnswer = q.options[indexMap[q.correctAnswer]];
         }
 
-        // Bảo hiểm không crash Server nếu đáp án đúng không nằm trong lựa chọn 
+        // Bảo hiểm không crash Server
         if (!q.options.includes(q.correctAnswer)) {
             const fallbackOption = q.options.find(opt => opt.includes(q.correctAnswer) || q.correctAnswer.includes(opt));
             q.correctAnswer = fallbackOption || q.options[0]; 
         }
     });
 
-    //Lưu quiz vào database
+    // Lưu quiz vào database
     const quizSet = await Quiz.create({
       teacherId: req.user._id,
       documentId: document._id,
@@ -145,7 +168,8 @@ const { documentId, numQuestions = 5, title, timeLimit = 30 } = req.body; // ✅
     });
 
   } catch (error) {
-    next(error);
+    // SỬ DỤNG HÀM XỬ LÝ LỖI MỚI
+    handleGeminiError(error, res, next);
   }
 };
 
@@ -177,7 +201,7 @@ export const generateSummary = async (req, res, next) => {
       });
     }
 
-    //Tạo tóm tắt bằng Gemini
+    // Tạo tóm tắt bằng Gemini
     const summary = await geminiService.generateSummary(document.extractedText);
 
     res.status(200).json({
@@ -190,7 +214,8 @@ export const generateSummary = async (req, res, next) => {
       message: 'Tóm tắt đã được tạo thành công',
     });
   } catch (error) {
-    next(error);
+    // SỬ DỤNG HÀM XỬ LÝ LỖI MỚI
+    handleGeminiError(error, res, next);
   }
 };
 
@@ -222,11 +247,11 @@ export const chat = async (req, res, next) => {
       });
     }
 
-    //Tìm các đoạn văn liên quan
-    const relevantChunks = findRelevantChunks(document.chunks, question, 3);//3 là số đoạn văn liên quan tối đa
+    // Tìm các đoạn văn liên quan
+    const relevantChunks = findRelevantChunks(document.chunks, question, 3);
     const chunkIndices = relevantChunks.map(c => c.chunkIndex);
 
-    //Lấy hoặc tạo lịch sử chat
+    // Lấy hoặc tạo lịch sử chat
     let chatHistory = await ChatHistory.findOne({
       userId: req.user._id,
       documentId: document._id
@@ -240,10 +265,10 @@ export const chat = async (req, res, next) => {
       });
     }
 
-    //Tạo câu trả lời bằng Gemini
+    // Tạo câu trả lời bằng Gemini
     const answer = await geminiService.chatWithContext(question, relevantChunks);
 
-    //Lưu tin nhắn vào lịch sử chat
+    // Lưu tin nhắn vào lịch sử chat
     chatHistory.messages.push(
       {
         role: 'user',
@@ -272,7 +297,8 @@ export const chat = async (req, res, next) => {
       message: 'Câu trả lời đã được tạo thành công',
     });
   } catch (error) {
-    next(error);
+    // SỬ DỤNG HÀM XỬ LÝ LỖI MỚI
+    handleGeminiError(error, res, next);
   }
 };
 
@@ -304,11 +330,11 @@ export const explainConcept = async (req, res, next) => {
       });
     }
 
-    //Tìm các đoạn văn liên quan
-    const relevantChunks = findRelevantChunks(document.chunks, concept, 3);//3 là số đoạn văn liên quan tối đa
+    // Tìm các đoạn văn liên quan
+    const relevantChunks = findRelevantChunks(document.chunks, concept, 3);
     const context = relevantChunks.map(c => c.content).join('\n\n');
 
-    //Tạo giải thích bằng Gemini
+    // Tạo giải thích bằng Gemini
     const explanation = await geminiService.explainConcept(concept, context);
 
     res.status(200).json({
@@ -321,7 +347,8 @@ export const explainConcept = async (req, res, next) => {
       message: 'Giải thích đã được tạo thành công',
     });
   } catch (error) {
-    next(error);
+    // SỬ DỤNG HÀM XỬ LÝ LỖI MỚI
+    handleGeminiError(error, res, next);
   }
 };
 
@@ -343,7 +370,7 @@ export const getChatHistory = async (req, res, next) => {
     const chatHistory = await ChatHistory.findOne({
       userId: req.user._id,
       documentId: documentId
-    }).select('messages'); // Chỉ trả về tin nhắn
+    }).select('messages'); 
 
     if (!chatHistory) {
       return res.status(200).json({
@@ -359,6 +386,7 @@ export const getChatHistory = async (req, res, next) => {
       message: 'Lịch sử chat đã được lấy thành công'
     });
   } catch (error) {
+    // Hàm này chỉ query database, không gọi Gemini nên giữ nguyên next(error)
     next(error);
   }
 };

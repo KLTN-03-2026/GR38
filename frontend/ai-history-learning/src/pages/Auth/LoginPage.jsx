@@ -26,59 +26,79 @@ export default function LoginPage() {
   const inputClass = (field) =>
     `w-full px-3 py-2 text-sm rounded-md border outline-none transition
     ${errors[field]
-      ? "border-red-400 bg-red-50"
-      : "border-gray-200 bg-gray-50 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"}`;
+        ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100"
+        : "border-gray-200 bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+    }`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative"
-      style={{ backgroundImage: "url('/thumnail.jpg')", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <div className="min-h-screen flex items-center justify-center relative py-6"
+      style={{
+        backgroundImage: `url('/thumnail.jpg')`, backgroundSize: "cover",
+        backgroundPosition: "center", backgroundRepeat: "no-repeat",
+      }}
+    >
       <div className="absolute inset-0 bg-black/40" />
 
-      <div className="relative z-10 w-full max-w-[360px] bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-7 mx-4 shadow-xl">
-        {/* Logo */}
+      {/* Đồng bộ kích thước width, padding và thanh cuộn ẩn giống trang đăng ký */}
+      <div 
+        className="relative z-10 w-full max-w-[420px] max-h-[95vh] overflow-y-auto bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-6 shadow-xl mx-4 [&::-webkit-scrollbar]:hidden"
+        style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+      >
+        {/* Logo & Tiêu đề */}
         <div className="flex flex-col items-center mb-5">
           <img src="/Logo.jpg" alt="logo" className="w-12 h-12 rounded-full object-cover mb-2 shadow" />
-          <h1 className="text-base font-semibold text-gray-800">Lịch sử Việt Nam</h1>
-          <p className="text-xs text-gray-400 mt-1">Nhập thông tin Email và Mật khẩu</p>
+          <h1 className="text-lg font-semibold text-gray-800 mb-1">ĐĂNG NHẬP</h1>
+          <p className="text-sm text-gray-400 text-center">Nhập thông tin Email và Mật khẩu</p>
         </div>
 
-        {/* Form Đăng nhập truyền thống */}
+        {/* Form Đăng nhập */}
         <form onSubmit={handleLogin} noValidate>
-          <label className="block text-sm text-gray-500 mb-1.5">Email</label>
-          <input
-            type="email" name="email" placeholder="m@example.com"
-            value={input.email} onChange={handleChange} autoComplete="off"
-            className={`${inputClass("email")} mb-1`}
-          />
-          {errors.email && <p className="text-xs text-red-500 mb-3">{errors.email}</p>}
-
-          <label className="block text-sm text-gray-500 mb-1.5">Mật khẩu</label>
-          <div className="relative mb-1">
+          <div className="mb-3">
+            <label className="block text-sm text-gray-600 mb-1">Email <span className="text-red-400">*</span></label>
             <input
-              type={showPass ? "text" : "password"} name="pass" placeholder="••••••••"
-              value={input.pass} onChange={handleChange} autoComplete="new-password"
-              className={`${inputClass("pass")} pr-10`}
+              type="email" name="email" placeholder="m@example.com"
+              value={input.email} onChange={handleChange} autoComplete="off"
+              className={inputClass("email")}
             />
-            <button type="button" onClick={() => setShowPass(p => !p)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-              {showPass ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
-          {errors.pass && <p className="text-xs text-red-500 mb-3">{errors.pass}</p>}
+
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 mb-1">
+              Mật khẩu <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showPass ? "text" : "password"} name="pass" placeholder="••••••••"
+                value={input.pass} onChange={handleChange} autoComplete="new-password"
+                className={`${inputClass("pass")} pr-10`}
+              />
+              <button type="button" onClick={() => setShowPass(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                {showPass ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+            <div className="flex justify-end mt-1.5 mb-1">
+              <Link to="/forgot-password" className="text-xs text-orange-500 hover:text-orange-600 transition">
+                Quên mật khẩu?
+              </Link>
+            </div>
+            {errors.pass && <p className="text-xs text-red-500 mt-1">{errors.pass}</p>}
+          </div>
 
           <button type="submit" disabled={loading}
-            className="w-full mt-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-3">
-            {loading ? "Đang xử lý..." : "Đăng nhập"}
+            className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mb-2">
+            {loading ? "Đang xử lý..." : "ĐĂNG NHẬP"}
           </button>
         </form>
 
-        <div className="flex items-center my-4">
+        <div className="flex items-center my-3">
           <div className="flex-1 border-t border-gray-300"></div>
-          <span className="px-3 text-sm text-gray-400 bg-transparent">Hoặc</span>
+          <span className="px-3 text-xs text-gray-400 bg-transparent">Hoặc</span>
           <div className="flex-1 border-t border-gray-300"></div>
         </div>
 
-        {/* NÚT ĐĂNG NHẬP GOOGLE */}
+        {/* NÚT ĐĂNG NHẬP BẰNG GOOGLE */}
         <div className="flex justify-center w-full">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
@@ -87,20 +107,15 @@ export default function LoginPage() {
                 icon: "error", title: "Lỗi", text: "Đăng nhập Google thất bại!", confirmButtonColor: "#f97316",
               });
             }}
-            width="300"
+            width="350"
             useOneTap={false} 
             shape="rectangular"
           />
         </div>
 
-        <p className="text-center text-sm text-gray-500 mb-2 mt-4">
+        <p className="text-center text-sm text-gray-500 mt-4">
           Bạn chưa có tài khoản?{" "}
-          <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition">Đăng ký</Link>
-        </p>
-        <p className="text-center">
-          <Link to="/forgot-password" className="text-xs text-orange-500 hover:text-orange-600 transition">
-            Bạn quên mật khẩu?
-          </Link>
+          <Link to="/register" className="text-orange-500 font-medium hover:text-orange-600 transition underline">Đăng ký</Link>
         </p>
       </div>
     </div>

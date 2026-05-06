@@ -167,7 +167,7 @@ export default function ForgotPasswordPage() {
         {/* Link Quay lại */}
         <p className="text-center">
           <Link
-            to="/login"
+            to="/"
             className="text-sm text-gray-500 hover:text-orange-500 transition flex items-center justify-center gap-1"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

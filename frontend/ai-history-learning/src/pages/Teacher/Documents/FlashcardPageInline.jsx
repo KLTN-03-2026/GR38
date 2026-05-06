@@ -67,7 +67,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
   if (error) {
     return (
       <div className="space-y-4">
-        <button onClick={onBack} className="text-sm font-semibold text-gray-500 hover:text-gray-700">Quay lai danh sách</button>
+        <button onClick={onBack} className="text-sm font-semibold text-gray-500 hover:text-gray-700">Quay lại danh sách</button>
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
       </div>
     );
@@ -75,7 +75,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="text-sm font-semibold text-gray-500 hover:text-gray-700">Quay lai danh sách</button>
+      <button onClick={onBack} className="text-sm font-semibold text-gray-500 hover:text-gray-700">Quay lại danh sách</button>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-900">{deckName || flash?.title || "Flashcard"}</h3>
       </div>

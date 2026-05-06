@@ -58,7 +58,6 @@ export default function LearnerDashboard() {
         if (docRes.status === "fulfilled") {
           const all = docRes.value.data?.data ?? docRes.value.data ?? [];
           if (Array.isArray(all)) {
-            // SẮP XẾP: Mới nhất lên đầu và lấy tối đa 4
             const sortedDocs = [...all]
               .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
               .slice(0, 4);
@@ -84,9 +83,9 @@ export default function LearnerDashboard() {
   }, []);
 
   const stats = [
-    { label: "Tài liệu có sẵn",     value: docs.length,    Icon: BookOpen,      color: "#1473E6", bg: "#EEF4FF" },
+    { label: "Tài liệu có sẵn",     value: docs.length,     Icon: BookOpen,      color: "#1473E6", bg: "#EEF4FF" },
     { label: "Bài kiểm tra đã làm", value: history.length, Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
-    { label: "Bộ Flashcard",         value: flashCount,      Icon: LayoutGrid,    color: "#8B5CF6", bg: "#F3F0FF" },
+    { label: "Bộ Flashcard",          value: flashCount,       Icon: LayoutGrid,    color: "#8B5CF6", bg: "#F3F0FF" },
   ];
 
   if (loading) return (
@@ -159,7 +158,7 @@ export default function LearnerDashboard() {
                 {docs.map((doc, idx) => (
                   <div key={doc._id ?? idx}
                     className="doc-card p-4 border border-gray-100 rounded-xl flex flex-col justify-between transition-all cursor-pointer"
-                    onClick={() => navigate(`/learner/bai-giang/${doc._id}`)}>
+                    onClick={() => navigate(`/learner/documents/${doc._id}`)}>
                     <div className="flex justify-between items-start mb-3">
                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                         <FileText size={15} className="text-blue-400"/>
@@ -170,7 +169,7 @@ export default function LearnerDashboard() {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/learner/bai-giang/${doc._id}`);
+                        navigate(`/learner/documents/${doc._id}`);
                       }}
                       className="w-fit px-4 py-1 bg-[#4ADE80] text-white text-xs font-bold rounded-lg hover:opacity-90 transition"
                     >
@@ -225,10 +224,16 @@ export default function LearnerDashboard() {
                   const maxScore = item.maxScore ?? item.result?.maxScore ?? item.totalQuestions ?? 10;
                   const title = item.quizTitle ?? item.quiz?.title ?? `Bài kiểm tra ${idx + 1}`;
                   const date = item.submittedAt ?? item.createdAt;
+                  
+                  // resultId để xem chi tiết
+                  const resultId = item._id;
+
                   return (
-                    <div key={item._id ?? idx}
+                    <div key={resultId ?? idx}
                       className="quiz-row flex items-center gap-3 p-3 rounded-xl transition-colors cursor-pointer"
-                      onClick={() => item._id && navigate(`/learner/quizzes/result/${item._id}`)}>
+                      // SỬA LẠI ĐƯỜNG DẪN: Theo Router của bạn, route hợp lệ duy nhất cho quizzes là /learner/quizzes/:id
+                      // Route này sẽ gọi trang HocQuiz, trang này phải có logic kiểm tra nếu đã có kết quả thì hiện chi tiết.
+                      onClick={() => resultId && navigate(`/learner/quizzes/${resultId}`)}>
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{ background: (SCORE_COLORS[idx] ?? "#6B7280") + "22" }}>
                         <Medal size={16} color={SCORE_COLORS[idx] ?? "#6B7280"} strokeWidth={2}/>

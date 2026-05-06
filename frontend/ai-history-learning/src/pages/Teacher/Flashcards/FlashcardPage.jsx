@@ -110,11 +110,6 @@ const Flashcards = () => {
     setDeleteTarget(null);
     return;
   }
-  const local = JSON.parse(localStorage.getItem("flashcards") || "[]");
-  localStorage.setItem("flashcards", JSON.stringify(local.filter((i) => String(i.id) !== String(item.id))));
-  setAllData((prev) => prev.filter((i) => String(i.id) !== String(item.id)));
-  setDeleteTarget(null);
-};
 
   const tabPool = React.useMemo(() => {
     if (activeTab === "tai-lieu") return allData.filter((i) => i.source === "ai");

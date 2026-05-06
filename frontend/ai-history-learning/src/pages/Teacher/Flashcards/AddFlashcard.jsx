@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { ChevronLeft, BookOpen, Loader2 } from "lucide-react";
 
 import { flashcardService } from "@/services/flashcardSevice"; 
@@ -13,6 +13,8 @@ const MIN_CARDS = 5;
 const AddFlashcard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
 
   const [selectedDocId, setSelectedDocId] = useState(
     location.state?.documentId ?? ""
@@ -25,6 +27,56 @@ const AddFlashcard = () => {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
+
+  useEffect(() => {
+    const loadFlashcard = async () => {
+      if (!isEdit) return;
+
+      const fallbackItem = location.state?.item;
+      try {
+        const res = await flashcardService.getByIdForEdit(id);
+        const raw = res?.data ?? res ?? {};
+        const source = raw?.data ?? raw ?? fallbackItem ?? null;
+        if (!source) return;
+
+        setTitle(source.title ?? "");
+        setSelectedDocId(
+          (typeof source.documentId === "object" && source.documentId !== null
+            ? source.documentId?._id
+            : source.documentId) ?? "",
+        );
+        setImagePreview(source.thumbnail ?? "");
+
+        const nextCards = Array.isArray(source.cards) && source.cards.length > 0
+          ? source.cards.map((card) => ({
+              front: card.front ?? "",
+              back: card.back ?? "",
+            }))
+          : [{ front: "", back: "" }];
+        setCards(nextCards);
+      } catch {
+        if (!fallbackItem) return;
+
+        setTitle(fallbackItem.title ?? "");
+        setSelectedDocId(
+          (typeof fallbackItem.documentId === "object" && fallbackItem.documentId !== null
+            ? fallbackItem.documentId?._id
+            : fallbackItem.documentId) ?? "",
+        );
+        setImagePreview(fallbackItem.thumbnail ?? "");
+        setCards(
+          Array.isArray(fallbackItem.cards) && fallbackItem.cards.length > 0
+            ? fallbackItem.cards.map((card) => ({
+                front: card.front ?? "",
+                back: card.back ?? "",
+              }))
+            : [{ front: "", back: "" }],
+        );
+      }
+    };
+
+    loadFlashcard();
+  }, [id, isEdit, location.state]);
 
   useEffect(() => {
     (async () => {
@@ -100,24 +152,16 @@ const AddFlashcard = () => {
         formData.append("thumbnail", blob, "thumbnail.jpg");
       }
 
-      // Đã thay api.post bằng flashcardService.create
-      const res = await flashcardService.create(formData);
+      let res;
+      if (isEdit) {
+        res = await flashcardService.update(id, formData);
+      } else {
+        res = await flashcardService.create(formData);
+      }
       console.log("full response:", res);
 
       const saved = res?.data ?? res;
       const newId = saved?._id;
-
-      // Cập nhật LocalStorage
-      if (newId) {
-        const existing = JSON.parse(localStorage.getItem("flashcards") || "[]");
-        existing.push({
-          id: newId,
-          title: title.trim(),
-          cards: cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() })),
-          thumbnail: saved?.thumbnail ?? null,
-        });
-        localStorage.setItem("flashcards", JSON.stringify(existing));
-      }
 
       navigate("/teacher/flashcards");
     } catch (err) {
@@ -150,7 +194,7 @@ const AddFlashcard = () => {
             <BookOpen size={20} className="text-[#F26739]" />
           </div>
           <h1 className="text-[24px] font-black text-[#18181B] uppercase tracking-tight">
-            Tạo bộ Flashcard mới
+            {isEdit ? "Chỉnh sửa bộ Flashcard" : "Tạo bộ Flashcard mới"}
           </h1>
         </div>     
         
@@ -262,7 +306,7 @@ const AddFlashcard = () => {
                 <Loader2 size={16} className="animate-spin" /> Đang lưu...
               </>
             ) : (
-              "Lưu bộ thẻ"
+              isEdit ? "Lưu thay đổi" : "Lưu bộ thẻ"
             )}
           </button>
         </div>

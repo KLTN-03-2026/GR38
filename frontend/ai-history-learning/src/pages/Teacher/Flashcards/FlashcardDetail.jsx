@@ -45,26 +45,6 @@ const FlashcardDetail = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const local = JSON.parse(localStorage.getItem("flashcards") || "[]");
-        const found = local.find((item) => String(item.id) === String(id));
-
-        if (found) {
-          const questions = (Array.isArray(found.cards) ? found.cards : [])
-            .map((c) => ({
-              _id: c._id ?? c.id ?? null,
-              q: c.front ?? c.question ?? c.term ?? "",
-              a: c.back ?? c.answer ?? c.definition ?? "",
-              difficulty: c.difficulty ?? null,
-              isStarred: c.isStarred ?? false,
-            }))
-            .filter((c) => c.q || c.a);
-          const hasMissingIds = questions.some((q) => !q._id);
-          if (questions.length > 0 && !hasMissingIds) {
-            setFlashcardSet({ title: found.title, questions });
-            return;
-          }
-        }
-
         // Gọi đúng route GET /flashcards/:id — backend sẽ merge FlashcardProgress vào cards
         const res = await api.get(`/flashcards/${id}`);
         const raw = res.data.data ?? res.data ?? null;

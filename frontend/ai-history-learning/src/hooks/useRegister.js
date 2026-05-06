@@ -76,7 +76,7 @@ export const useRegister = () => {
           text: resData.message,
           confirmButtonColor: "#f97316"
         });
-        navigate("/"); 
+        navigate("/login"); 
         return; 
       }
 
@@ -99,7 +99,7 @@ export const useRegister = () => {
       });
       
       setAuthUser(user);
-      navigate("/");
+      navigate("/login");
 
     } catch (error) {
       const errorMsg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi xác thực Google";
@@ -145,7 +145,7 @@ export const useRegister = () => {
           text: resData.message,
           confirmButtonColor: "#f97316"
         });
-        navigate("/"); 
+        navigate("/login"); 
         return; 
       }
 
@@ -162,7 +162,7 @@ export const useRegister = () => {
       });
       
       setAuthUser(user);
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || "Lỗi server";
       Swal.fire({ icon: "error", title: "Đăng ký thất bại", text: msg, confirmButtonColor: "#f97316" });

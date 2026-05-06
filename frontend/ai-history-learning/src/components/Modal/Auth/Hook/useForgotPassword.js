@@ -74,7 +74,7 @@ export const useForgotPassword = () => {
         text: data.message || "Đặt lại mật khẩu thành công!",
         confirmButtonColor: "#f97316",
       }).then(() => {
-        navigate("/login"); // Đổi pass thành công thì điều hướng về trang đăng nhập
+        navigate("/login"); 
       });
 
     } catch (err) {

@@ -4,6 +4,7 @@ import {
     getAllFlashcardSets,
     getTeacherFlashcardSets,
     createManualFlashcardSet,
+    getFlashcardSetForEdit,
     updateFlashcardSet,
     updateFlashcard,
     deleteFlashcardSet
@@ -47,6 +48,9 @@ router.get('/:setId/cards/:cardId/back', authorize(USER_ROLES.LEARNER, USER_ROLE
 
 // Lấy chi tiết 1 bộ flashcard và tiến độ học tập của User
 router.get('/:id', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), getFlashcardSetWithProgress);
+
+// Lấy chi tiết 1 bộ flashcard để giáo viên chỉnh sửa
+router.get('/:id/edit', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), getFlashcardSetForEdit);
 
 // Cập nhật thông tin chung của bộ flashcard (Tiêu đề, ảnh, mô tả)
 router.put('/:id', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), uploadFlashcardImage.single('thumbnail'), updateFlashcardSet);

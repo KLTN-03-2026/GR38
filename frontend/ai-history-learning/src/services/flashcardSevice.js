@@ -45,6 +45,16 @@ export const flashcardService = {
   },
 
   /**
+   * Lấy chi tiết bộ flashcard để chỉnh sửa (có đủ front/back)
+   * @param {string|number} id - ID bộ flashcard
+   * @returns {Promise<Object>} Thông tin bộ flashcard đầy đủ
+   */
+  getByIdForEdit: async (id) => {
+    const res = await api.get(`/flashcards/${id}/edit`);
+    return res.data;
+  },
+
+  /**
    * Lấy danh sách flashcard theo tài liệu/bai hoc
    * @param {string|number} documentId - ID tài liệu
    * @returns {Promise<Object>} Danh sách bộ flashcard

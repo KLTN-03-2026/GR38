@@ -103,7 +103,7 @@ function RegisterPage() {
 
         <p className="text-center text-sm text-gray-500 mt-4">
           Bạn đã có tài khoản?{" "}
-          <Link to="/" className="text-orange-500 font-medium hover:text-orange-600 transition underline">Đăng nhập</Link>
+          <Link to="/login" className="text-orange-500 font-medium hover:text-orange-600 transition underline">Đăng nhập</Link>
         </p>
       </div>
     </div>

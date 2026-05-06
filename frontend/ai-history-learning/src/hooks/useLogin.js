@@ -52,7 +52,7 @@ export const useLogin = () => {
 
       // 2. Chờ xong mới set user và chuyển trang
       setAuthUser(user);
-      const path = ROLE_CONFIG[user.role]?.path || "/";
+      const path = ROLE_CONFIG[user.role]?.path || "/login";
       navigate(path);
     } catch (error) {
       const status = error.response?.status;
@@ -95,7 +95,7 @@ export const useLogin = () => {
 
       // 2. Chờ xong mới set user và chuyển trang
       setAuthUser(user);
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || "Đăng nhập Google thất bại";
       Swal.fire({ icon: "error", title: "Lỗi đăng nhập", text: msg, confirmButtonColor: "#f97316" });

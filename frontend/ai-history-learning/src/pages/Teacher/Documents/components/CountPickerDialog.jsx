@@ -203,7 +203,7 @@ export default function CountPickerDialog({ action, onConfirm, onCancel, dark, T
                 transition: "opacity 0.15s",
               }}
             >
-              ✨ Tạo ngay
+               Tạo ngay
             </button>
           </div>
         </div>

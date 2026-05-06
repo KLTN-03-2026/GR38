@@ -20,7 +20,7 @@ export const quizService = {
 
   // Lấy chi tiết đề thi để LÀM BÀI (Đã bị ẩn đáp án đúng từ Backend)
   getQuizForPlay: async (id) => {
-    const res = await api.get(`/quizzes/play/${id}`);
+    const res = await api.get(`/quizzes/quiz/${id}`);
     return res;
   },
 
@@ -69,6 +69,7 @@ create: async (data, thumbnailFile) => {
   if (data.documentId) formData.append("documentId", data.documentId);
   formData.append("questions",   JSON.stringify(data.questions));
   if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
+  formData.append("timeLimit", data.timeLimit || 30);
 
   // Thêm chữ /manual vào endpoint
   const res = await api.post("/quizzes/manual", formData); 

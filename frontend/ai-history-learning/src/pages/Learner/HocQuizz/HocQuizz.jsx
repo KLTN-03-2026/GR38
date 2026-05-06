@@ -27,7 +27,7 @@ const HocQuizz = () => {
       if (!id) return;
       try {
         setLoading(true);
-        const res = await api.get(`/quizzes/quiz/${id}`); 
+        const res = await api.get(`/quizzes/${id}/play`);
         const quizData = res?.data?.data || res?.data || res;
         
         if (quizData && quizData.questions) {

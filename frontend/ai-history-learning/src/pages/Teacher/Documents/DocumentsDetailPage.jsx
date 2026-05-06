@@ -60,39 +60,42 @@ export default function DocumentsDetailPage() {
   }, [id]);
 
   // CẬP NHẬT HÀM NÀY SỬ DỤNG FLASHCARD SERVICE
-  const loadFlashList = useCallback(async () => {
-    try {
-      setFlashLoading(true);
-      // Gọi qua service, truyền documentId (id của params)
-      const res = await flashcardService.getByDocument(id);
-      
-      // Xử lý dữ liệu trả về an toàn (vì service đã return res.data)
-      const dataList = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-      setFlashList(dataList);
-    } catch (err) {
-      console.error("Lỗi tải Flashcard:", err);
-      setFlashList([]);
-    } finally {
-      setFlashLoading(false);
-    }
-  }, [id]);
+const loadFlashList = useCallback(async () => {
+  try {
+    setFlashLoading(true);
+    const res = await flashcardService.getMyFlashcards();
+    const all = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+    const dataList = all.filter(f => (f.documentId?._id ?? f.documentId) === id);
+    setFlashList(dataList);
+  } catch (err) {
+    console.error("Lỗi tải Flashcard:", err);
+    setFlashList([]);
+  } finally {
+    setFlashLoading(false);
+  }
+}, [id]);
 
-  const handleGenerateQuiz = async (n) => {
-    try {
-      setGeneratingQuiz(true);
-      const existingCount = quizList.length;
-      const baseName = `${doc.title} - Quiz`;
-      const title = existingCount === 0 ? baseName : `${baseName} v${existingCount + 1}.0`;
+  const handleGenerateQuiz = async ({ count, title: inputTitle, timeLimit }) => {
+  try {
+    setGeneratingQuiz(true);
+    const existingCount = quizList.length;
+    const baseName = `${doc.title} - Quiz`;
+    const title = inputTitle || (existingCount === 0 ? baseName : `${baseName} v${existingCount + 1}.0`);
 
-      await api.post("/ai/generate-quiz", { documentId: id, numQuestions: n, title });
-      setShowQuizModal(false);
-      await loadQuizList(); 
-    } catch (err) {
-      alert(err.response?.data?.error ?? "Lỗi tạo quiz"); 
-    } finally {
-      setGeneratingQuiz(false);
-    }
-  };
+    await api.post("/ai/generate-quiz", { 
+      documentId: id, 
+      numQuestions: count, 
+      title,
+      timeLimit, 
+    });
+    setShowQuizModal(false);
+    await loadQuizList();
+  } catch (err) {
+    alert(err.response?.data?.error ?? "Lỗi tạo quiz");
+  } finally {
+    setGeneratingQuiz(false);
+  }
+};
 
   const handleGenerateFlash = async (n) => {
     try {
@@ -177,7 +180,7 @@ export default function DocumentsDetailPage() {
 
         {/* ── TAB CHAT ─────────────────────────────────────────── */}
         {activeTab === "Chat" && (
-          <ChatAI documentId={id} />
+        <ChatAI documentId={id} documentTitle={doc?.title} />
         )}
 
         {activeTab === "Quizz" && (selectedQuiz ? (

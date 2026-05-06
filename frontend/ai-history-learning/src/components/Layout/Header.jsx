@@ -66,7 +66,7 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     setShowLogoutModal(false);
-    navigate("/");
+    navigate("/login");
   };
 
   useEffect(() => {

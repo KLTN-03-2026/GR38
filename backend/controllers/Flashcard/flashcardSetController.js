@@ -160,6 +160,19 @@ export const updateFlashcardSet = async (req, res, next) => {
   try {
     const { title, description, tags } = req.body;
 
+    let parsedCards = req.body.cards;
+    if (typeof parsedCards === "string") {
+      try {
+        parsedCards = JSON.parse(parsedCards);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: "Dữ liệu cards không đúng định dạng JSON",
+          statusCode: 400,
+        });
+      }
+    }
+
     const flashcardSet = await Flashcard.findOne({
       _id: req.params.id,
       teacherId: req.user._id,
@@ -176,6 +189,14 @@ export const updateFlashcardSet = async (req, res, next) => {
     if (title !== undefined) flashcardSet.title = title;
     if (description !== undefined) flashcardSet.description = description;
     if (tags !== undefined) flashcardSet.tags = tags;
+
+    if (Array.isArray(parsedCards) && parsedCards.length > 0) {
+      flashcardSet.cards = parsedCards.map((card) => ({
+        front: card.front,
+        back: card.back,
+        difficulty: card.difficulty || "Trung bình",
+      }));
+    }
 
     // Chỉ cập nhật thumbnail nếu có upload file mới
     if (req.file) {
@@ -271,6 +292,52 @@ export const deleteFlashcardSet = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Đã xóa bộ flashcard thành công",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc Lấy thông tin bộ flashcard đầy đủ để chỉnh sửa
+// @route GET /api/v1/flashcards/:id/edit
+// @access Private (Teacher)
+export const getFlashcardSetForEdit = async (req, res, next) => {
+  try {
+    const flashcardSet = await Flashcard.findOne({
+      _id: req.params.id,
+      teacherId: req.user._id,
+    }).populate("documentId", "title thumbnail");
+
+    if (!flashcardSet) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy bộ flashcard hoặc bạn không có quyền chỉnh sửa",
+        statusCode: 404,
+      });
+    }
+
+    const displayThumbnail =
+      flashcardSet.thumbnail || flashcardSet.documentId?.thumbnail || null;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: flashcardSet._id,
+        documentId: flashcardSet.documentId?._id || null,
+        documentTitle: flashcardSet.documentId?.title || null,
+        thumbnail: displayThumbnail,
+        teacherId: flashcardSet.teacherId,
+        title: flashcardSet.title,
+        description: flashcardSet.description,
+        tags: flashcardSet.tags,
+        totalCards: flashcardSet.cards.length,
+        cards: flashcardSet.cards.map((card) => ({
+          _id: card._id,
+          front: card.front,
+          back: card.back,
+          difficulty: card.difficulty,
+        })),
+      },
     });
   } catch (error) {
     next(error);

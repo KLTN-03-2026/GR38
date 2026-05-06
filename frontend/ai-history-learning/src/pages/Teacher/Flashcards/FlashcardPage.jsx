@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Trash2, BookOpen, Sparkles, PenLine, Library, Plus, RefreshCw, AlertTriangle, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../../../lib/api";
+import { flashcardService } from "@/services/flashcardSevice";
 import imagesList from "../../../images";
 
 function ConfirmDeleteModal({ title, onConfirm, onCancel }) {
@@ -39,20 +39,35 @@ const Flashcards = () => {
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { setSelectedDoc(null); }, [activeTab]);
 
+  const getCurrentUserId = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user?._id || user?.id || null;
+    } catch {
+      return null;
+    }
+  };
+
   const loadAll = async () => {
     try {
       setLoading(true);
-      const local = JSON.parse(localStorage.getItem("flashcards") || "[]");
-      let aiSets = [];
-      const apiIds = new Set();
       try {
-        const res = await api.get("/flashcards");
-        const raw = res.data.data ?? res.data ?? [];
-        aiSets = raw.map((item) => {
+        const res = await flashcardService.getMyFlashcards();
+        const raw = res?.data ?? res ?? [];
+        const list = Array.isArray(raw) ? raw : [];
+
+        const currentUserId = getCurrentUserId();
+        const ownedSets = list.filter((item) => {
+          const teacherId = typeof item.teacherId === "object" && item.teacherId !== null
+            ? item.teacherId?._id
+            : item.teacherId;
+          return !currentUserId || String(teacherId) === String(currentUserId);
+        });
+
+        const mappedSets = ownedSets.map((item) => {
           const docId = typeof item.documentId === "object" && item.documentId !== null
             ? item.documentId?._id : item.documentId;
           const cardArr = Array.isArray(item.cards) ? item.cards : [];
-          apiIds.add(String(item._id ?? item.id));
           return {
             id: item._id ?? item.id,
             title: item.title ?? item.documentTitle ?? "Flashcard AI",
@@ -60,25 +75,15 @@ const Flashcards = () => {
             cardCount: cardArr.length || item.cardCount || item.totalCards || item.count || 0,
             progress: item.progress ?? 0,
             image: item.thumbnail ?? imagesList[item._id?.charCodeAt(0) % imagesList.length]?.image ?? null,
-            source: docId ? "ai" : "custom",
+            source: item.isAiGenerated ? "ai" : "custom",
             documentId: docId ?? null,
             documentTitle: item.documentTitle ?? item.title ?? "Tài liệu AI",
             createdAt: item.createdAt,
           };
         });
+
+        setAllData(mappedSets);
       } catch { /* API unavailable */ }
-
-      const customSets = local
-        .filter((item) => !apiIds.has(String(item.id)))
-        .map((item) => ({
-          ...item,
-          cardCount: Array.isArray(item.cards) ? item.cards.length : 0,
-          source: "custom",
-          documentTitle: "Tự tạo",
-          image: item.thumbnail ?? null,
-        }));
-
-      setAllData([...aiSets, ...customSets]);
     } finally {
       setLoading(false);
     }
@@ -92,7 +97,7 @@ const Flashcards = () => {
   const handleDeleteConfirm = async () => {
     const item = deleteTarget;
     try {
-      await api.delete(`/flashcards/${item.id}`);
+      await flashcardService.delete(item.id);
     } catch (err) {
       const status = err.response?.status;
       alert(status === 403 ? "Bạn không có quyền xóa bộ thẻ này."
@@ -101,8 +106,6 @@ const Flashcards = () => {
       setDeleteTarget(null);
       return;
     }
-    const local = JSON.parse(localStorage.getItem("flashcards") || "[]");
-    localStorage.setItem("flashcards", JSON.stringify(local.filter((i) => String(i.id) !== String(item.id))));
     setAllData((prev) => prev.filter((i) => String(i.id) !== String(item.id)));
     setDeleteTarget(null);
   };

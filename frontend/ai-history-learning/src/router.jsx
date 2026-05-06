@@ -55,8 +55,8 @@ function PrivateRoute({ allowedRole }) {
         </div>
       </div>
     );
-  if (!user) return <Navigate to="/" replace />;
-  return role === allowedRole ? <Outlet /> : <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  return role === allowedRole ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 // PublicRoute logic
@@ -87,9 +87,11 @@ function AppLayout() {
 export default function AppRouter() {
   return (
     <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
       {/* AUTH ROUTES */}
       <Route element={<PublicRoute />}>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
@@ -127,6 +129,7 @@ export default function AppRouter() {
           <Route path="stats" element={<AssignmentStatistics />} />
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="flashcards/add" element={<AddFlashcards />} />
+          <Route path="flashcards/edit/:id" element={<AddFlashcards />} />
           <Route path="flashcards/:id" element={<FlashcardDetail />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

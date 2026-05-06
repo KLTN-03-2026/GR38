@@ -1,256 +1,253 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Plus, Search, Image as ImageIcon, Settings, ChevronsUpDown, FileText, Loader2 } from "lucide-react";
-import api from "@/lib/api"; 
+import { 
+  Send, Plus, Search, Image as ImageIcon, Settings, 
+  ChevronsUpDown, FileText, Loader2, AlertCircle, 
+  RotateCcw, MessageSquare, Bot, MoreHorizontal,
+  Sun, Moon, Check
+} from "lucide-react";
+import api from "@/lib/api";
 
-// Import Assets
-import logoApp from "@/assets/img/logo.jpg"; 
-import logoAI from "@/assets/img/logoGV.webp"; 
-import logoUserDefault from "@/assets/img/logohs.png";
+// --- CONSTANTS & THEMES ---
+const GRAD = {
+  indigo: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+};
 
-const ChatAI = ({ documentId }) => {
+const THEME = {
+  light: {
+    sidebar: "#FAFAFA", sidebar2: "#FFFFFF", sbBorder: "#E5E7EB", sbHover: "#F3F4F6", sbBright: "#18181B", sbDim: "#3F3F46", sbMuted: "#71717A",
+    chatBg: "#FFFFFF", chatBorder: "#E4E4E7", surface: "#FFFFFF",
+    titleColor: "#09090B", subColor: "#71717A",
+    inputBg: "#FFFFFF", inputBorder: "#E4E4E7",
+    msgAiBg: "#F4F4F5", msgAiColor: "#09090B", msgUserBg: "#1473E6", msgUserColor: "#FFFFFF",
+    btnBg: "#FFFFFF", btnBorder: "#E4E4E7", btnIcon: "#3F3F46",
+    teacherBadgeBg: "#F4F4F5", teacherBadgeClr: "#71717A", hintColor: "#A1A1AA"
+  },
+  dark: {
+    sidebar: "#09090B", sidebar2: "#18181B", sbBorder: "rgba(255,255,255,0.1)", sbHover: "#27272A", sbBright: "#FAFAFA", sbDim: "#D4D4D8", sbMuted: "#A1A1AA",
+    chatBg: "#09090B", chatBorder: "rgba(255,255,255,0.1)", surface: "#09090B",
+    titleColor: "#FAFAFA", subColor: "#A1A1AA",
+    inputBg: "#18181B", inputBorder: "rgba(255,255,255,0.1)",
+    msgAiBg: "#18181B", msgAiColor: "#F4F4F5", msgUserBg: "#1473E6", msgUserColor: "#FFFFFF",
+    btnBg: "#18181B", btnBorder: "rgba(255,255,255,0.1)", btnIcon: "#A1A1AA",
+    teacherBadgeBg: "#27272A", teacherBadgeClr: "#A1A1AA", hintColor: "#52525B"
+  }
+};
+
+const QUICK_ACTIONS = [
+  { label: "Tóm tắt", cmd: "tóm tắt", Icon: FileText, grad: "linear-gradient(135deg, #3b82f6, #2dd4bf)" },
+  { label: "Tạo Flashcard", cmd: "tạo flashcard", Icon: ImageIcon, grad: "linear-gradient(135deg, #8b5cf6, #ec4899)" },
+  { label: "Tạo Quiz", cmd: "tạo quiz", Icon: Settings, grad: "linear-gradient(135deg, #f59e0b, #ef4444)" }
+];
+
+// --- MAIN COMPONENT ---
+const ChatAI = ({ documentId, documentTitle }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [language, setLanguage] = useState("vi");
   const [isTyping, setIsTyping] = useState(false);
-  const [userData, setUserData] = useState({
-    name: "Nguyễn Văn A",
-    email: "nguyenvana@gmail.com",
-    avatar: logoUserDefault
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [dark, setDark] = useState(false);
+  const [activeSide, setActiveSide] = useState("chat");
+  const [userData] = useState({
+    name: "Lương Công Phúc",
+    email: "congphuc@example.com",
+    avatar: "" // Có thể thay bằng logoUserDefault
   });
 
-  const imageInputRef = useRef(null);
-  const pdfInputRef = useRef(null);
   const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
+  const T = dark ? THEME.dark : THEME.light;
 
-  // 1. Lấy lịch sử chat khi vào trang
+  // Fetch lịch sử chat
   useEffect(() => {
-    const fetchChatHistory = async () => {
+    const fetchHistory = async () => {
       if (!documentId) return;
+      setIsLoadingHistory(true);
       try {
         const res = await api.get(`/ai/chat-history/${documentId}`);
         if (res.data?.success) {
-          const history = res.data.data.map((item, index) => ({
-            id: index,
+          const history = res.data.data.map((item, idx) => ({
+            id: idx,
             text: item.content,
             sender: item.role === "assistant" ? "ai" : "user"
           }));
           setMessages(history);
         }
       } catch (err) {
-        console.error("Không thể lấy lịch sử chat:", err);
-        setMessages([{ id: 1, text: "Chào bạn, tôi là trợ lý AI. Hãy đặt câu hỏi hoặc yêu cầu tôi tạo Flashcard/Quiz từ tài liệu này!", sender: "ai" }]);
+        console.error("Lỗi sử chat:", err);
+        setMessages([{ id: "welcome", text: "Chào bạn! Tôi là trợ lý AI. Hãy đặt câu hỏi về tài liệu này nhé.", sender: "ai" }]);
+      } finally {
+        setIsLoadingHistory(false);
       }
     };
-    fetchChatHistory();
+    fetchHistory();
   }, [documentId]);
 
-  // Tự động cuộn xuống
+  // Scroll xuống cuối
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
 
-  // 2. Logic xử lý lệnh đặc biệt và Chat
-  const handleSend = async () => {
-    if (!input.trim() || !documentId || isTyping) return;
+  const handleSend = async (command = null) => {
+    const content = command || input.trim();
+    if (!content || !documentId || isTyping) return;
 
-    const currentInput = input.trim();
-    const lowerInput = currentInput.toLowerCase();
-    
-    // Thêm tin nhắn user vào UI
-    const userMsg = { id: Date.now(), text: currentInput, sender: "user" };
-    setMessages((prev) => [...prev, userMsg]);
+    const userMsg = { id: Date.now(), text: content, sender: "user" };
+    setMessages(prev => [...prev, userMsg]);
     setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsTyping(true);
 
     try {
       let res;
-      
-      // KIỂM TRA LỆNH: TẠO FLASHCARD
+      const lowerInput = content.toLowerCase();
+
       if (lowerInput.includes("tạo flashcard")) {
         res = await api.post("/ai/generate-flashcards", { documentId, count: 10 });
-        if (res.data?.success) {
-          const count = res.data.data?.cards?.length || 0;
-          addAiMessage(`✨ Đã tạo xong ${count} Flashcards cho bạn! Bạn có thể xem chúng ở tab Flashcard.`);
-        } else {
-          addAiMessage("Server không trả về dữ liệu thành công. Vui lòng kiểm tra lại tài liệu.");
-        }
-      } 
-      // KIỂM TRA LỆNH: TẠO QUIZ
-      else if (lowerInput.includes("tạo quiz") || lowerInput.includes("làm bài tập")) {
-        res = await api.post("/ai/generate-quiz", { documentId, numQuestions: 5, title: "Quiz ôn tập" });
-        if (res.data?.success) {
-          const total = res.data.data?.totalQuestions || 0;
-          addAiMessage(`📝 Tôi đã chuẩn bị xong Quiz gồm ${total} câu hỏi dựa trên nội dung tài liệu.`);
-        }
-      }
-      // KIỂM TRA LỆNH: TÓM TẮT
-      else if (lowerInput.includes("tóm tắt")) {
+        if (res.data?.success) addAiMsg(`✨ Đã tạo xong ${res.data.data?.cards?.length || 0} Flashcards!`);
+      } else if (lowerInput.includes("tạo quiz")) {
+        res = await api.post("/ai/generate-quiz", { documentId, numQuestions: 5 });
+        if (res.data?.success) addAiMsg(`📝 Tôi đã chuẩn bị xong Quiz gồm ${res.data.data?.totalQuestions || 0} câu hỏi.`);
+      } else if (lowerInput.includes("tóm tắt")) {
         res = await api.post("/ai/generate-summary", { documentId });
-        if (res.data?.success) {
-          addAiMessage(`📋 **Tóm tắt tài liệu:**\n${res.data.data.summary}`);
-        }
-      }
-      // CHAT BÌNH THƯỜNG
-      else {
-        res = await api.post("/ai/chat", { documentId, question: currentInput });
-        if (res.data?.success) {
-          addAiMessage(res.data.data.answer);
-        } else {
-          addAiMessage("AI không thể tìm thấy thông tin phù hợp trong tài liệu này.");
-        }
+        if (res.data?.success) addAiMsg(`📋 **Tóm tắt:**\n${res.data.data.summary}`);
+      } else {
+        res = await api.post("/ai/chat", { documentId, question: content });
+        if (res.data?.success) addAiMsg(res.data.data.answer);
       }
     } catch (err) {
-      console.error("Lỗi API chi tiết:", err.response?.data || err.message);
-      addAiMessage("Xin lỗi, hệ thống đang gặp sự cố khi kết nối server. Hãy kiểm tra Backend hoặc API Key.");
+      addAiMsg("❌ Hệ thống gặp sự cố kết nối. Vui lòng thử lại.");
     } finally {
       setIsTyping(false);
     }
   };
 
-  const addAiMessage = (text) => {
-    setMessages((prev) => [...prev, { id: Date.now() + Math.random(), text, sender: "ai" }]);
+  const addAiMsg = (text) => {
+    setMessages(prev => [...prev, { id: Date.now() + Math.random(), text, sender: "ai" }]);
   };
 
   const handleNewChat = () => {
-    setMessages([{ 
-      id: Date.now(), 
-      text: "Phiên chat mới đã bắt đầu. Bạn muốn tôi giúp gì với tài liệu này?", 
-      sender: "ai" 
-    }]);
-  };
-
-  const handlePdfChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type === "application/pdf") {
-      alert(`Hệ thống đang xử lý file: ${file.name}`);
-    }
+    setMessages([{ id: Date.now(), text: "Phiên chat mới đã bắt đầu!", sender: "ai" }]);
   };
 
   return (
-    <div className="flex w-full h-[600px] bg-white rounded-xl overflow-hidden border border-[#E4E4E7] shadow-lg font-['Inter']">
+    <div style={{
+      display: "flex", width: "100%", height: "600px",
+      fontFamily: "sans-serif", borderRadius: 16, overflow: "hidden",
+      border: `1px solid ${T.chatBorder}`,
+      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+      background: T.chatBg
+    }}>
       
-      {/* SIDEBAR LEFT */}
-      <div className="w-[256px] bg-[#FAFAFA] border-r border-[#E5E7EB] flex flex-col">
-        <div className="p-4 border-b border-[#E5E7EB]">
-          <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-[#E5E7EB] cursor-pointer hover:bg-gray-50 transition-all">
-            <div className="w-8 h-8 rounded-md overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${logoApp})` }} />
-            <span className="flex-1 font-semibold text-sm text-[#3F3F46] truncate">Lịch sử Việt Nam</span>
-            <ChevronsUpDown size={16} className="text-[#3F3F46]" />
+      {/* --- SIDEBAR --- */}
+      <div style={{ width: 240, background: T.sidebar, borderRight: `1px solid ${T.sbBorder}`, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: 16, borderBottom: `1px solid ${T.sbBorder}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.sidebar2, padding: 8, borderRadius: 8, border: `1px solid ${T.sbBorder}` }}>
+             <div style={{ width: 28, height: 28, background: GRAD.indigo, borderRadius: 6 }} />
+             <span style={{ fontSize: 13, fontWeight: 600, color: T.sbBright, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {documentTitle || "Lịch sử Việt Nam"}
+             </span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-4">
-          <div>
-            <button 
-              onClick={handleNewChat}
-              className="w-full flex items-center justify-between px-3 py-2 text-[#3F3F46] hover:bg-gray-100 rounded-md transition-all"
-            >
-              <span className="text-xs font-medium uppercase tracking-wider">New chat</span>
-              <Plus size={14} />
+        <div style={{ flex: 1, padding: 10, overflowY: "auto" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: T.sbMuted, marginBottom: 8, textTransform: "uppercase" }}>Menu</div>
+          <button onClick={() => setActiveSide("chat")} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 8, border: "none", background: activeSide === "chat" ? T.sbHover : "transparent", color: T.sbDim, cursor: "pointer", marginBottom: 4 }}>
+            <MessageSquare size={16} /> <span style={{ fontSize: 13 }}>Chat hiện tại</span>
+          </button>
+          <button onClick={handleNewChat} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 8, border: "none", background: "transparent", color: T.sbDim, cursor: "pointer" }}>
+            <RotateCcw size={16} /> <span style={{ fontSize: 13 }}>Làm mới chat</span>
+          </button>
+          
+          <div style={{ height: 1, background: T.sbBorder, margin: "15px 0" }} />
+          <div style={{ fontSize: 10, fontWeight: 700, color: T.sbMuted, marginBottom: 8, textTransform: "uppercase" }}>Công cụ nhanh</div>
+          {QUICK_ACTIONS.map(qa => (
+            <button key={qa.cmd} onClick={() => handleSend(qa.cmd)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 8, border: "none", background: "transparent", color: T.sbDim, cursor: "pointer" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: qa.grad }} />
+              <span style={{ fontSize: 13 }}>{qa.label}</span>
             </button>
-            <div className="mt-2 ml-2 pl-3 border-l border-[#E5E7EB] flex flex-col gap-1">
-              <p className="text-sm text-[#3F3F46] py-1.5 px-2 hover:bg-gray-100 rounded cursor-pointer truncate italic">
-                Tài liệu: {documentId?.slice(-6) || "Chưa chọn"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1 mt-auto border-t pt-4">
-            <div className="flex items-center gap-3 p-2 text-sm text-[#3F3F46] hover:bg-gray-100 rounded cursor-pointer">
-              <Search size={16} /> Tìm kiếm chat
-            </div>
-            <div onClick={() => imageInputRef.current.click()} className="flex items-center gap-3 p-2 text-sm text-[#3F3F46] hover:bg-gray-100 rounded cursor-pointer">
-              <ImageIcon size={16} /> Images
-              <input type="file" ref={imageInputRef} className="hidden" accept="image/*" />
-            </div>
-            <div onClick={() => setLanguage(language === "vi" ? "en" : "vi")} className="flex items-center gap-3 p-2 text-sm text-[#3F3F46] hover:bg-gray-100 rounded cursor-pointer">
-              <Settings size={16} /> {language === "vi" ? "Tiếng Việt" : "English"}
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="p-4 bg-[#FAFAFA] border-t border-[#E5E7EB]">
-          <div className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-all">
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-              <img src={userData.avatar} alt="User Avatar" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[#3F3F46] truncate">{userData.name}</p>
-              <p className="text-[11px] text-[#71717A] truncate">{userData.email}</p>
-            </div>
-            <ChevronsUpDown size={14} className="text-[#3F3F46]" />
+        <div style={{ padding: 16, borderTop: `1px solid ${T.sbBorder}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#ccc" }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.sbBright, truncate: "true" }}>{userData.name}</div>
+            <div style={{ fontSize: 10, color: T.sbMuted, truncate: "true" }}>Học sinh</div>
           </div>
         </div>
       </div>
 
-      {/* CHAT AREA RIGHT */}
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="px-6 py-4 border-b border-[#E4E4E7] flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-[#E4E4E7] shadow-sm">
-              <img src={logoAI} alt="AI Avatar" className="w-full h-full object-cover" />
+      {/* --- MAIN CHAT --- */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Header */}
+        <div style={{ padding: "12px 20px", borderBottom: `1px solid ${T.chatBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: GRAD.indigo, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Bot size={20} color="white" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-[#09090B]">Trợ lý Giáo viên AI</h3>
-              <p className="text-[11px] text-green-500 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Online
-              </p>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.titleColor }}>Trợ lý Học tập AI</div>
+              <div style={{ fontSize: 11, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }} /> Online
+              </div>
             </div>
           </div>
-          
-          <button 
-            onClick={() => pdfInputRef.current.click()}
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-[#E4E4E7] shadow-sm hover:bg-blue-50 hover:text-blue-600 transition-all"
-          >
-            <Plus size={20} />
-            <input type="file" ref={pdfInputRef} onChange={handlePdfChange} className="hidden" accept=".pdf" />
+          <button onClick={() => setDark(!dark)} style={{ border: "none", background: "transparent", cursor: "pointer", color: T.btnIcon }}>
+            {dark ? <Sun size={20} /> : <Moon size={20} />}
           </button>
         </div>
 
-        {/* Chat Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 scroll-smooth">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex flex-col ${msg.sender === "ai" ? "items-start" : "items-end"}`}>
-              <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-[14px] shadow-sm flex items-center gap-2 whitespace-pre-line ${
-                msg.sender === "ai" ? "bg-[#F4F4F5] text-[#09090B] rounded-tl-none" : "bg-[#1473E6] text-white rounded-tr-none"
-              }`}>
-                {msg.text.includes("Flashcards") || msg.text.includes("Tài liệu") ? <FileText size={16} /> : null}
+        {/* Messages Scroll */}
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 16, background: T.surface }}>
+          {messages.map(msg => (
+            <div key={msg.id} style={{ alignSelf: msg.sender === "ai" ? "flex-start" : "flex-end", maxWidth: "80%" }}>
+              <div style={{ 
+                padding: "10px 16px", borderRadius: 14, fontSize: 14, lineHeight: 1.5,
+                background: msg.sender === "ai" ? T.msgAiBg : T.msgUserBg,
+                color: msg.sender === "ai" ? T.msgAiColor : T.msgUserColor,
+                border: msg.sender === "ai" ? `1px solid ${T.chatBorder}` : "none",
+                whiteSpace: "pre-line"
+              }}>
                 {msg.text}
               </div>
             </div>
           ))}
           {isTyping && (
-            <div className="flex items-center gap-2 text-gray-400 text-xs italic ml-2">
-              <Loader2 size={14} className="animate-spin" /> AI đang xử lý...
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.subColor, fontSize: 12 }}>
+              <Loader2 size={14} className="animate-spin" /> AI đang suy nghĩ...
             </div>
           )}
         </div>
 
-        {/* Chat Compose */}
-        <div className="p-6 border-t border-[#E4E4E7]">
-          <div className="flex items-center gap-2 p-1 border border-[#E4E4E7] rounded-lg bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-            <input
-              type="text"
+        {/* Input Area */}
+        <div style={{ padding: 20, borderTop: `1px solid ${T.chatBorder}` }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: T.inputBg, border: `1px solid ${T.inputBorder}`, borderRadius: 12, padding: "8px 12px" }}>
+            <textarea
+              ref={textareaRef}
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Gõ 'tạo flashcard', 'tạo quiz' hoặc đặt câu hỏi..."
-              className="flex-1 px-4 py-2 outline-none text-sm text-[#09090B]"
-              disabled={isTyping}
+              onKeyDown={(e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }}}
+              placeholder="Hỏi AI về bài học..."
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", resize: "none", fontSize: 14, color: T.msgAiColor, padding: "8px 0" }}
             />
             <button 
-              onClick={handleSend}
-              className="bg-[#1473E6] text-white p-2 rounded-md hover:bg-blue-600 transition-colors shadow-md disabled:opacity-50"
+              onClick={() => handleSend()} 
               disabled={!input.trim() || isTyping}
+              style={{ background: input.trim() ? GRAD.indigo : "#ccc", border: "none", width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "0.2s" }}
             >
-              {isTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              <Send size={18} color="white" />
             </button>
           </div>
+          <p style={{ fontSize: 10, color: T.hintColor, textAlign: "center", marginTop: 8 }}>
+            Dự án KLTN - Trợ lý học tập thông minh
+          </p>
         </div>
       </div>
     </div>
   );
 };
+
 export default ChatAI;

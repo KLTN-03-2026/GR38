@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../lib/api";
+import DocumentViewer from "../../../components/documents/DocumentViewer";
 import {
   ChevronLeft,
   Clock,
@@ -283,32 +284,7 @@ export default function BaiGiangPage() {
           </div>
 
           {/* PDF VIEWER */}
-          <div className="flex-1 overflow-hidden bg-[#525659] flex items-stretch">
-            {doc?.filePath ? (
-              <iframe
-                src={`${doc.filePath}#toolbar=1&navpanes=1&view=FitH&zoom=60&sidebarsize=120`}
-                 allow="fullscreen"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  display: "block",
-                }}
-                title={doc?.title}
-              />
-            ) : (
-              <div
-                style={{
-                  color: "#aaa",
-                  fontSize: "14px",
-                  textAlign: "center",
-                  margin: "auto",
-                }}
-              >
-                Không tìm thấy file PDF gốc.
-              </div>
-            )}
-          </div>
+          <DocumentViewer fileUrl={doc?.filePath} title={doc?.title} />
           {/* FOOTER ACTION */}
           <div className="bg-white border-t border-gray-100 px-8 py-4 flex items-center justify-between shrink-0">
             <p className="text-xs text-gray-400">

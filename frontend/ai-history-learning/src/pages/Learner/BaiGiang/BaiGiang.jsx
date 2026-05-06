@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
-import api from "../../../lib/api"; // Chuyển sang dùng api.js thống nhất
+import api from "@/lib/api";
 
 import ChatAI from "./ChatAI"; 
 import Quizz from "./Quizz"; 
 import FlashCard from "./FlashCard"; 
+import DocumentViewer from "@/components/documents/DocumentViewer";
 
 const BaiGiang = () => {
   const navigate = useNavigate();
@@ -89,20 +90,16 @@ const BaiGiang = () => {
         </div>
 
         {/* Nội dung các Tab */}
-        <div className="w-full flex-1 bg-white pt-4">
-          {activeTab === "Thông tin" && (
-            <div className="w-full min-h-[600px] bg-gray-900 flex justify-center items-start pt-6 md:pt-10 rounded-[6px] overflow-y-auto">
-              <div className="w-full max-w-[800px] min-h-[700px] bg-white p-8 md:p-16 mb-10 shadow-2xl rounded-sm">
-                <h2 className="text-[24px] font-bold text-center mb-8 border-b pb-6 text-gray-800 uppercase">
-                  {lectureData.title}
-                </h2>
-                {/* Đã sửa lỗi font tại đây: Thay font-serif bằng font-sans và antialiased */}
-                <div className="text-[17px] leading-[32px] text-justify whitespace-pre-line text-[#18181B] font-sans antialiased">
-                  {lectureData.extractedText || "Nội dung đang được cập nhật..."}
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="w-full flex-1 bg-white pt-4 flex flex-col">
+  {activeTab === "Thông tin" && (
+    /* ĐIỂM QUAN TRỌNG: Cấp chiều cao cố định cho thẻ bọc ngoài (ví dụ: 75vh hoặc 800px) */
+    <div className="w-full h-[75vh] min-h-[700px] flex flex-col border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      <DocumentViewer 
+        fileUrl={lectureData?.filePath} 
+        title={lectureData?.title} 
+      />
+    </div>
+  )}
 
           {/* Truyền đúng ID cho các component con */}
           {activeTab === "Chat" && <ChatAI documentId={id} />}

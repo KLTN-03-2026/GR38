@@ -153,14 +153,15 @@ export const createManualFlashcardSet = async (req, res, next) => {
 };
 
 
-//@desc Chỉnh sửa thông tin bộ flashcard (Tiêu đề, ảnh bìa, mô tả)
+// @desc Chỉnh sửa thông tin bộ flashcard (Tiêu đề, ảnh bìa, mô tả, mảng thẻ)
 // @route PUT /api/v1/flashcards/:id
 // @access Private (Teacher)
 export const updateFlashcardSet = async (req, res, next) => {
   try {
     const { title, description, tags } = req.body;
-
     let parsedCards = req.body.cards;
+
+    // 1. Xử lý Parse JSON (Vì dùng FormData có file nên cards thường bị ép thành string)
     if (typeof parsedCards === "string") {
       try {
         parsedCards = JSON.parse(parsedCards);
@@ -168,53 +169,62 @@ export const updateFlashcardSet = async (req, res, next) => {
         return res.status(400).json({
           success: false,
           error: "Dữ liệu cards không đúng định dạng JSON",
-          statusCode: 400,
         });
       }
     }
 
-    const flashcardSet = await Flashcard.findOne({
-      _id: req.params.id,
-      teacherId: req.user._id,
-    });
+    // 2. Gom toàn bộ dữ liệu cần update vào 1 Object
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (tags !== undefined) updateData.tags = typeof tags === "string" ? JSON.parse(tags) : tags;
 
-    if (!flashcardSet) {
-      return res.status(404).json({
-        success: false,
-        error: "Không tìm thấy bộ flashcard hoặc bạn không có quyền chỉnh sửa",
-        statusCode: 404,
-      });
-    }
-
-    if (title !== undefined) flashcardSet.title = title;
-    if (description !== undefined) flashcardSet.description = description;
-    if (tags !== undefined) flashcardSet.tags = tags;
-
-    if (Array.isArray(parsedCards) && parsedCards.length > 0) {
-      flashcardSet.cards = parsedCards.map((card) => ({
+    // Cho phép mảng rỗng để user có thể xóa toàn bộ thẻ nếu muốn
+    if (Array.isArray(parsedCards)) {
+      updateData.cards = parsedCards.map((card) => ({
         front: card.front,
         back: card.back,
         difficulty: card.difficulty || "Trung bình",
       }));
+      // Tự động cập nhật tổng số lượng thẻ (Nếu Model của bạn có trường này)
+      updateData.totalCards = parsedCards.length; 
     }
 
     // Chỉ cập nhật thumbnail nếu có upload file mới
     if (req.file) {
-      flashcardSet.thumbnail = req.file.path;
+      updateData.thumbnail = req.file.path;
     }
 
-    await flashcardSet.save();
+    // 3. Sử dụng findOneAndUpdate (Thao tác DB nhanh hơn .save())
+    const updatedFlashcardSet = await Flashcard.findOneAndUpdate(
+      { 
+        _id: req.params.id, 
+        teacherId: req.user._id // Xác thực quyền sở hữu
+      }, 
+      { $set: updateData }, // Set các field có thay đổi
+      { 
+        returnDocument: 'after',
+        runValidators: true  // Vẫn bắt Mongoose kiểm tra rule (required, maxlength...)
+      }
+    );
 
+    if (!updatedFlashcardSet) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy bộ flashcard hoặc bạn không có quyền chỉnh sửa",
+      });
+    }
+
+    // 4. Trả về Response
     res.status(200).json({
       success: true,
       message: "Đã cập nhật thông tin bộ flashcard thành công",
-      data: flashcardSet,
+      data: updatedFlashcardSet,
     });
   } catch (error) {
     next(error);
   }
 };
-
 
 //@desc Chỉnh sửa nội dung một thẻ flashcard
 // @route PUT /api/v1/flashcards/:setId/cards/:cardId

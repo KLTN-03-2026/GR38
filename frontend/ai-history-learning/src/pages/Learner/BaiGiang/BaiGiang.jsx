@@ -96,7 +96,8 @@ const BaiGiang = () => {
                 <h2 className="text-[24px] font-bold text-center mb-8 border-b pb-6 text-gray-800 uppercase">
                   {lectureData.title}
                 </h2>
-                <div className="text-[17px] leading-[32px] text-justify whitespace-pre-line text-[#18181B] font-serif">
+                {/* Đã sửa lỗi font tại đây: Thay font-serif bằng font-sans và antialiased */}
+                <div className="text-[17px] leading-[32px] text-justify whitespace-pre-line text-[#18181B] font-sans antialiased">
                   {lectureData.extractedText || "Nội dung đang được cập nhật..."}
                 </div>
               </div>

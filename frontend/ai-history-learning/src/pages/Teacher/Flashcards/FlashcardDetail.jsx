@@ -74,7 +74,7 @@ const FlashcardDetail = () => {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-          <p className="text-sm text-gray-500">Dang tai flashcard...</p>
+          <p className="text-sm text-gray-500">Đang tải FlashCard...</p>
         </div>
       </div>
     );
@@ -88,7 +88,7 @@ const FlashcardDetail = () => {
           onClick={() => navigate("/teacher/flashcards")}
           className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
         >
-          Quay lai
+          Quay lại
         </button>
       </div>
     );
@@ -101,7 +101,7 @@ const FlashcardDetail = () => {
           onClick={() => navigate("/teacher/flashcards")}
           className="text-sm font-semibold text-gray-500 hover:text-gray-800"
         >
-          Quay lai
+          Quay lại
         </button>
         <h2 className="truncate text-base font-bold text-gray-900 sm:text-lg">
           {flashcardSet?.title || "Flashcard"}

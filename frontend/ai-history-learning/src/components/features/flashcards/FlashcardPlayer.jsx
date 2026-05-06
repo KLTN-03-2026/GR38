@@ -1,16 +1,28 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+
+const DIFFICULTY_CONFIG = {
+	easy: { label: "Dễ", className: "bg-green-100 text-green-700" },
+	medium: { label: "Trung bình", className: "bg-yellow-100 text-yellow-700" },
+	hard: { label: "Khó", className: "bg-red-100 text-red-600" },
+	// Tiếng Việt fallback
+	dễ: { label: "Dễ", className: "bg-green-100 text-green-700" },
+	"trung bình": { label: "Trung bình", className: "bg-yellow-100 text-yellow-700" },
+	khó: { label: "Khó", className: "bg-red-100 text-red-600" },
+};
 
 export default function FlashcardPlayer({ cards }) {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [isFlipped, setIsFlipped] = useState(false);
+	const [starred, setStarred] = useState(new Set());
+	const [seen, setSeen] = useState(new Set());
 
 	const normalizedCards = useMemo(() => {
 		if (!Array.isArray(cards)) return null;
 		return cards.map((card) => ({
 			front: card.front ?? card.q ?? card.question ?? "",
 			back: card.back ?? card.a ?? card.answer ?? "",
-			difficulty: card.difficulty ?? null,
+			difficulty: (card.difficulty ?? "").toString().toLowerCase().trim() || null,
 		}));
 	}, [cards]);
 
@@ -34,6 +46,8 @@ export default function FlashcardPlayer({ cards }) {
 
 	const total = normalizedCards.length;
 	const currentCard = normalizedCards[currentIndex];
+	const diff = currentCard.difficulty ? DIFFICULTY_CONFIG[currentCard.difficulty] ?? { label: currentCard.difficulty, className: "bg-gray-100 text-gray-600" } : null;
+	const isStarred = starred.has(currentIndex);
 
 	const goPrev = () => {
 		if (currentIndex === 0) return;
@@ -47,68 +61,158 @@ export default function FlashcardPlayer({ cards }) {
 		setIsFlipped(false);
 	};
 
+	const handleFlip = () => {
+		if (!isFlipped) setSeen((prev) => new Set(prev).add(currentIndex));
+		setIsFlipped((prev) => !prev);
+	};
+
+	const toggleStar = (e) => {
+		e.stopPropagation();
+		setStarred((prev) => {
+			const next = new Set(prev);
+			next.has(currentIndex) ? next.delete(currentIndex) : next.add(currentIndex);
+			return next;
+		});
+	};
+
 	return (
-		<div className="w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-			<div className="mb-4 flex items-center justify-between">
-				<span className="text-xs font-bold uppercase tracking-wider text-gray-400">Thẻ {currentIndex + 1}</span>
-				<span className="rounded-full bg-orange-50 px-3 py-1 text-sm font-semibold text-orange-600">
-					{currentIndex + 1}/{total}
+		<div className="w-full">
+			{/* Stats row */}
+			<div className="mb-3 flex items-center justify-between px-1">
+				<span className="text-sm text-gray-400">
+					{currentIndex + 1} / {total}
+				</span>
+				<span className="text-sm text-gray-400">
+					{seen.size} / {total} đã xem
 				</span>
 			</div>
 
-			<div className="perspective [perspective:1200px]">
-				<button
-					type="button"
-					onClick={() => setIsFlipped((prev) => !prev)}
-					className="group relative block h-[320px] w-full cursor-pointer rounded-2xl border border-gray-200 focus:outline-none"
+			{/* Card */}
+			<div style={{ perspective: "1200px" }}>
+				<div
+					role="button"
+					tabIndex={0}
+					onClick={handleFlip}
+					onKeyDown={(e) => e.key === "Enter" && handleFlip()}
+					className="relative block h-[320px] w-full cursor-pointer rounded-2xl border-none bg-transparent focus:outline-none"
 				>
 					<div
-						className={`transform-style-3d relative h-full w-full rounded-2xl transition-transform duration-500 [transform-style:preserve-3d] ${
-							isFlipped ? "rotate-y-180 [transform:rotateY(180deg)]" : ""
-						}`}
+						className="relative h-full w-full rounded-2xl transition-transform duration-500"
+						style={{
+							transformStyle: "preserve-3d",
+							transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+						}}
 					>
-						<div className="backface-hidden absolute inset-0 flex h-full flex-col rounded-2xl bg-gradient-to-br from-white to-orange-50 p-6 [backface-visibility:hidden]">
-							<span className="mb-4 inline-flex w-fit rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-								Câu hỏi
-							</span>
-							<p className="m-auto text-center text-lg font-semibold leading-relaxed text-gray-900 sm:text-2xl">
-								{currentCard.front || "Không có câu hỏi"}
-							</p>
-							{currentCard.difficulty && (
-								<span className="mt-4 inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-									Độ khó: {currentCard.difficulty}
-								</span>
-							)}
+						{/* FRONT */}
+						<div
+							className="absolute inset-0 flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+							style={{ backfaceVisibility: "hidden" }}
+						>
+							{/* Header */}
+							<div className="mb-3 flex items-center justify-between">
+								<span className="text-xs font-bold uppercase tracking-widest text-gray-400">Câu hỏi</span>
+								<div className="flex items-center gap-2">
+									{diff && (
+										<span className={`rounded-full px-3 py-1 text-xs font-semibold ${diff.className}`}>
+											{diff.label}
+										</span>
+									)}
+									<button
+										type="button"
+										onClick={toggleStar}
+										className="flex items-center justify-center transition-colors"
+										aria-label="Đánh dấu thẻ"
+									>
+										<Star
+											size={18}
+											className={
+												isStarred
+													? "fill-yellow-400 text-yellow-400"
+													: "text-gray-300 hover:text-yellow-400"
+											}
+										/>
+									</button>
+								</div>
+							</div>
+
+							{/* Question */}
+							<div className="flex flex-1 items-center justify-center">
+								<p className="text-center text-xl font-semibold leading-relaxed text-gray-900">
+									{currentCard.front || "Không có câu hỏi"}
+								</p>
+							</div>
+
+							{/* Show answer button */}
+							<button
+								type="button"
+								onClick={handleFlip}
+								className="mx-auto mt-4 rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-400 hover:bg-gray-50"
+							>
+								Xem đáp án
+							</button>
 						</div>
 
-						<div className="backface-hidden absolute inset-0 flex h-full flex-col rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-							<span className="mb-4 inline-flex w-fit rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white">
-								Đáp án 
-							</span>
-							<p className="m-auto text-center text-lg font-semibold leading-relaxed text-emerald-900 sm:text-2xl">
-								{currentCard.back || "Chưa có đáp án"}
-							</p>
+						{/* BACK */}
+						<div
+							className="absolute inset-0 flex h-full flex-col rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-100 p-6 shadow-sm"
+							style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+						>
+							<div className="mb-3 flex items-center justify-between">
+								<span className="inline-flex rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
+									Đáp án
+								</span>
+								{/* Star visible on back too */}
+								<button
+									type="button"
+									onClick={toggleStar}
+									className="flex items-center justify-center transition-colors"
+									aria-label="Đánh dấu thẻ"
+								>
+									<Star
+										size={18}
+										className={
+											isStarred
+												? "fill-yellow-400 text-yellow-400"
+												: "text-orange-300 hover:text-yellow-400"
+										}
+									/>
+								</button>
+							</div>
+							<div className="flex flex-1 items-center justify-center">
+								<p className="text-center text-xl font-semibold leading-relaxed text-orange-900">
+									{currentCard.back || "Chưa có đáp án"}
+								</p>
+							</div>
 						</div>
 					</div>
-				</button>
+				</div>
 			</div>
 
-			<div className="mt-5 flex items-center justify-between gap-3">
+			{/* Hint */}
+			<p className="mt-2 text-center text-xs text-gray-400">Nhấn vào thẻ để lật</p>
+
+			{/* Navigation */}
+			<div className="mt-4 flex items-center justify-between px-1">
 				<button
 					type="button"
 					onClick={goPrev}
 					disabled={currentIndex === 0}
-					className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+					className="flex items-center gap-1 text-sm font-semibold text-gray-500 transition hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-35"
 				>
 					<ChevronLeft size={16} />
-					Trước   
+					Trước
 				</button>
+
+				<span className="text-2xl font-black text-gray-900">
+					{currentIndex + 1}{" "}
+					<span className="text-sm font-medium text-gray-400">/ {total}</span>
+				</span>
 
 				<button
 					type="button"
 					onClick={goNext}
 					disabled={currentIndex >= total - 1}
-					className="inline-flex items-center gap-1 rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
+					className="flex items-center gap-1 text-sm font-semibold text-gray-500 transition hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-35"
 				>
 					Tiếp
 					<ChevronRight size={16} />

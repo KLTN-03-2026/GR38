@@ -5,10 +5,8 @@ import {
   ClipboardList,
   BookOpen,
   LayoutGrid,
-  AlertTriangle,
   FileText,
   PenLine,
-  Wrench,
   CreditCard,
   Users,
   GraduationCap,
@@ -19,9 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 
-const API = "http://localhost:8000/api/v1";
-
-const activities = [
+const ACTIVITIES = [
   {
     Icon: FileText,
     color: "#0EA472",
@@ -44,8 +40,21 @@ const activities = [
     time: "1 giờ trước",
   },
 ];
+const RANKS = [
+  { name: "Công Phúc", score: 10 },
+  { name: "Nguyễn Toàn Chung", score: 9 },
+  { name: "Nguyễn Tấn Anh", score: 8.5 },
+];
+const RANK_COLORS = ["#F59E0B", "#9CA3AF", "#CD7C2F"];
 
-const rankColors = ["#F59E0B", "#9CA3AF", "#CD7C2F"];
+function getUserName() {
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}");
+    return u.fullName ?? u.name ?? "Giáo viên";
+  } catch {
+    return "Giáo viên";
+  }
+}
 
 function AnimatedNumber({ target }) {
   const [val, setVal] = useState(0);
@@ -58,16 +67,16 @@ function AnimatedNumber({ target }) {
       setVal(target);
       return;
     }
-    let start = 0;
+    let cur = 0;
     const step = Math.ceil(raw / 40);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= raw) {
+    const t = setInterval(() => {
+      cur += step;
+      if (cur >= raw) {
         setVal(raw.toLocaleString("vi-VN"));
-        clearInterval(timer);
-      } else setVal(start.toLocaleString("vi-VN"));
+        clearInterval(t);
+      } else setVal(cur.toLocaleString("vi-VN"));
     }, 30);
-    return () => clearInterval(timer);
+    return () => clearInterval(t);
   }, [target]);
   return <span>{val}</span>;
 }
@@ -82,41 +91,46 @@ export default function TeacherDashboard() {
         ? "Chào buổi chiều"
         : "Chào buổi tối";
 
+  const [userName, setUserName] = useState(getUserName);
   const [docCount, setDocCount] = useState(0);
   const [flashcardCount, setFlashcardCount] = useState(0);
   const [quizCount, setQuizCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  // Lấy tên giáo viên từ localStorage
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const headers = { Authorization: `Bearer ${token}` };
+    const onUpdate = () => setUserName(getUserName());
+    window.addEventListener("user-update", onUpdate);
+    window.addEventListener("storage", onUpdate);
+    return () => {
+      window.removeEventListener("user-update", onUpdate);
+      window.removeEventListener("storage", onUpdate);
+    };
+  }, []);
 
-    const fetchStats = async () => {
+  useEffect(() => {
+    (async () => {
       try {
-        const [docRes, flashRes] = await Promise.all([
+        const [docRes, flashRes, quizRes] = await Promise.all([
           api.get("/documents"),
           api.get("/flashcards"),
+          api.get("/quizzes/my-quizzes"),
         ]);
-
         setDocCount(docRes.data.count ?? docRes.data.data?.length ?? 0);
         setFlashcardCount(
           flashRes.data.count ?? flashRes.data.data?.length ?? 0,
         );
+        setQuizCount(quizRes.data.count ?? quizRes.data.data?.length ?? 0);
       } catch (err) {
         console.error("Lỗi tải thống kê:", err);
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchStats();
-  }, [token]);
+    })();
+  }, []);
 
   const stats = [
     {
-      label: "Tổng bài TestQuiz",
+      label: "Tổng bài TestQuiz đã tạo",
       value: loading ? "..." : String(quizCount),
       Icon: ClipboardList,
       color: "#F26739",
@@ -124,7 +138,7 @@ export default function TeacherDashboard() {
       trend: "+12%",
     },
     {
-      label: "Tổng tài liệu",
+      label: "Tổng tài liệu đã tạo",
       value: loading ? "..." : String(docCount),
       Icon: BookOpen,
       color: "#1473E6",
@@ -132,7 +146,7 @@ export default function TeacherDashboard() {
       trend: "+5%",
     },
     {
-      label: "FlashCard",
+      label: "Tổng FlashCard đã tạo",
       value: loading ? "..." : String(flashcardCount),
       Icon: LayoutGrid,
       color: "#0EA472",
@@ -142,44 +156,18 @@ export default function TeacherDashboard() {
   ];
 
   return (
-    <div
-      style={{
-        fontFamily: "'Inter', sans-serif",
-        minHeight: "100vh",
-        background: "#F5F6FA",
-        padding: "32px 28px",
-      }}
-    >
+    <div className="min-h-screen bg-[#F5F6FA] font-sans">
       <style>{`
-        .stat-card { transition: transform .25s, box-shadow .25s; }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.10) !important; }
-        .act-row { transition: background .2s; }
-        .act-row:hover { background: #F5F6FA; }
-        .export-btn { transition: background .2s, transform .15s; }
+        .stat-card:hover  { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.10) !important; }
+        .act-row:hover    { background: #F5F6FA; }
         .export-btn:hover { background: #d9562d; transform: scale(1.03); }
-        .rank-card { transition: transform .2s; }
-        .rank-card:hover { transform: translateX(4px); }
+        .rank-card:hover  { transform: translateX(4px); }
       `}</style>
 
-      {/* ── HEADER ── */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 32,
-        }}
-      >
+      {/* HEADER */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <p
-            style={{
-              fontSize: 13,
-              color: "#9CA3AF",
-              fontWeight: 500,
-              marginBottom: 4,
-              letterSpacing: ".04em",
-            }}
-          >
+          <p className="text-xs text-gray-400 font-medium tracking-wide mb-1">
             {new Date().toLocaleDateString("vi-VN", {
               weekday: "long",
               year: "numeric",
@@ -187,333 +175,79 @@ export default function TeacherDashboard() {
               day: "numeric",
             })}
           </p>
-          <h1
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color: "#111827",
-              margin: 0,
-              lineHeight: 1.2,
-            }}
-          >
-            {greeting},{" "}
-            <span style={{ color: "#F26739" }}>
-              {user.fullName ?? "Giáo viên"}
-            </span>
+          <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">
+            {greeting}, <span className="text-[#F26739]">{userName}</span>
           </h1>
-          <p
-            style={{
-              fontSize: 14,
-              color: "#6B7280",
-              marginTop: 4,
-              fontWeight: 400,
-            }}
-          >
+          <p className="text-sm text-gray-500 mt-1">
             Đây là tổng quan hoạt động hôm nay của bạn.
           </p>
         </div>
-        <button
-          className="export-btn"
-          style={{
-            background: "#F26739",
-            color: "#fff",
-            border: "none",
-            borderRadius: 12,
-            padding: "12px 24px",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(242,103,57,.35)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <button className="export-btn flex items-center gap-2 bg-[#F26739] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all">
           <Download size={15} strokeWidth={2.5} /> Xuất báo cáo
         </button>
       </div>
 
-      {/* ── STAT CARDS ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 18,
-          marginBottom: 24,
-        }}
-      >
-        {stats.map((s, i) => (
+      {/* STAT CARDS */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {stats.map((s) => (
           <div
-            key={i}
-            className="stat-card"
-            style={{
-              background: "#fff",
-              borderRadius: 18,
-              padding: "22px 20px",
-              boxShadow: "0 2px 12px rgba(0,0,0,.06)",
-              position: "relative",
-              overflow: "hidden",
-            }}
+            key={s.label}
+            className="stat-card bg-white rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all"
           >
             <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 4,
-                background: s.color,
-                borderRadius: "18px 18px 0 0",
-              }}
+              className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
+              style={{ background: s.color }}
             />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                marginBottom: 14,
-              }}
-            >
+            <div className="flex justify-between items-start mb-3">
               <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: s.bg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{ background: s.bg }}
               >
                 <s.Icon size={20} color={s.color} strokeWidth={2} />
               </div>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#10B981",
-                  background: "#ECFDF5",
-                  padding: "3px 9px",
-                  borderRadius: 20,
-                }}
-              >
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                 {s.trend}
               </span>
             </div>
-            <p
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                color: "#111827",
-                margin: "0 0 4px",
-              }}
-            >
+            <p className="text-2xl font-extrabold text-gray-900 mb-1">
               <AnimatedNumber target={s.value} />
             </p>
-            <p
-              style={{
-                fontSize: 12,
-                color: "#9CA3AF",
-                margin: 0,
-                fontWeight: 500,
-              }}
-            >
-              {s.label}
-            </p>
+            <p className="text-xs text-gray-400 font-medium">{s.label}</p>
           </div>
         ))}
       </div>
-
-      {/* ── STUDENT OVERVIEW ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 18,
-          marginBottom: 24,
-        }}
-      >
-        {[
-          {
-            label: "Tổng Người đọc",
-            value: "500",
-            Icon: Users,
-            color: "#1473E6",
-            note: "Đang hoạt động",
-          },
-          {
-            label: "Người đọc làm bài kiểm tra",
-            value: "200",
-            Icon: GraduationCap,
-            color: "#10B981",
-            note: "Trong tháng này",
-          },
-        ].map((item, i) => (
-          <div
-            key={i}
-            style={{
-              background: `linear-gradient(135deg, ${item.color}18 0%, #fff 60%)`,
-              border: `1.5px solid ${item.color}22`,
-              borderRadius: 18,
-              padding: "24px 26px",
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
-              boxShadow: "0 2px 12px rgba(0,0,0,.05)",
-            }}
-          >
-            <div
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 16,
-                background: item.color,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                boxShadow: `0 6px 18px ${item.color}55`,
-              }}
-            >
-              <item.Icon size={26} color="#fff" strokeWidth={1.8} />
-            </div>
-            <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "#9CA3AF",
-                  fontWeight: 600,
-                  letterSpacing: ".06em",
-                  textTransform: "uppercase",
-                  margin: "0 0 4px",
-                }}
-              >
-                {item.label}
-              </p>
-              <p
-                style={{
-                  fontSize: 30,
-                  fontWeight: 800,
-                  color: "#111827",
-                  margin: "0 0 2px",
-                }}
-              >
-                <AnimatedNumber target={item.value} />
-              </p>
-              <p
-                style={{
-                  fontSize: 12,
-                  color: item.color,
-                  fontWeight: 600,
-                  margin: 0,
-                }}
-              >
-                ● {item.note}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── BOTTOM: ACTIVITY + RANKING ── */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 18 }}
-      >
-        {/* Activity Feed */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 18,
-            padding: "24px",
-            boxShadow: "0 2px 12px rgba(0,0,0,.06)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 20,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#111827",
-                margin: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
+      {/* ACTIVITY + RANKING */}
+      <div className="grid gap-4" style={{ gridTemplateColumns: "1.1fr 1fr" }}>
+        {/* Activity */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <Zap size={16} color="#F26739" strokeWidth={2.5} /> Hoạt động gần
               đây
             </h2>
-            <span
-              style={{
-                fontSize: 12,
-                color: "#1473E6",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
+            <span className="text-xs text-blue-600 font-semibold cursor-pointer">
               Xem tất cả →
             </span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {activities.map((act, i) => (
+          <div className="flex flex-col gap-1">
+            {ACTIVITIES.map((act, i) => (
               <div
                 key={i}
-                className="act-row"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "12px 10px",
-                  borderRadius: 12,
-                }}
+                className="act-row flex items-center gap-3 p-3 rounded-xl transition-colors"
               >
                 <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    background: act.color + "18",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: act.color + "18" }}
                 >
                   <act.Icon size={18} color={act.color} strokeWidth={2} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: "#1F2937",
-                      margin: "0 0 2px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
                     {act.title}
                   </p>
-                  <p style={{ fontSize: 12, color: "#9CA3AF", margin: 0 }}>
-                    {act.subtitle}
-                  </p>
+                  <p className="text-xs text-gray-400">{act.subtitle}</p>
                 </div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "#D1D5DB",
-                    fontWeight: 500,
-                    flexShrink: 0,
-                  }}
-                >
+                <span className="text-xs text-gray-300 font-medium flex-shrink-0">
                   {act.time}
                 </span>
               </div>
@@ -521,187 +255,71 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-        {/* Rankings */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 18,
-            padding: "24px",
-            boxShadow: "0 2px 12px rgba(0,0,0,.06)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 20,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#111827",
-                margin: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
+        {/* Ranking */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <Trophy size={16} color="#F59E0B" strokeWidth={2.5} /> Xếp hạng
               bài kiểm tra
             </h2>
-            <span
-              style={{
-                fontSize: 12,
-                color: "#1473E6",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
+            <span className="text-xs text-blue-600 font-semibold cursor-pointer">
               Chi tiết →
             </span>
           </div>
-
-          {/* Không có API rankings → giữ data tĩnh */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              {
-                name: "Công Phúc",
-                phone: "0934970856",
-                time: "14:00 05/11/2025",
-                score: 10,
-              },
-              {
-                name: "Nguyễn Toàn Chung",
-                phone: "0934970856",
-                time: "14:00 05/11/2025",
-                score: 9,
-              },
-              {
-                name: "Nguyễn Tấn Anh",
-                phone: "0934970856",
-                time: "14:00 05/11/2025",
-                score: 8.5,
-              },
-            ].map((r, i) => (
+          <div className="flex flex-col gap-3">
+            {RANKS.map((r, i) => (
               <div
                 key={i}
-                className="rank-card"
+                className="rank-card flex items-center gap-3 p-3 rounded-2xl border transition-all"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "14px 16px",
-                  borderRadius: 14,
                   background:
                     i === 0
-                      ? "linear-gradient(135deg, #FEF3C7, #FFFBEB)"
+                      ? "linear-gradient(135deg,#FEF3C7,#FFFBEB)"
                       : "#F9FAFB",
-                  border:
-                    i === 0 ? "1.5px solid #F59E0B44" : "1.5px solid #F3F4F6",
+                  borderColor: i === 0 ? "#F59E0B44" : "#F3F4F6",
                 }}
               >
                 <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    background: rankColors[i] + "22",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: RANK_COLORS[i] + "22" }}
                 >
-                  <Medal size={17} color={rankColors[i]} strokeWidth={2} />
+                  <Medal size={17} color={RANK_COLORS[i]} strokeWidth={2} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#111827",
-                      margin: "0 0 2px",
-                    }}
-                  >
-                    {r.name}
-                  </p>
-                  <p style={{ fontSize: 11, color: "#9CA3AF", margin: 0 }}>
-                    {r.phone} · {r.time}
-                  </p>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-900">{r.name}</p>
+                  <p className="text-xs text-gray-400">14:00 05/11/2025</p>
                 </div>
-                <div style={{ textAlign: "right" }}>
+                <div className="text-right">
                   <span
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 800,
-                      color: rankColors[i],
-                    }}
+                    className="text-lg font-extrabold"
+                    style={{ color: RANK_COLORS[i] }}
                   >
                     {r.score}
                   </span>
-                  <p style={{ fontSize: 10, color: "#D1D5DB", margin: 0 }}>
-                    /10
-                  </p>
+                  <p className="text-xs text-gray-300">/10</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Mini CTA */}
+          {/* CTA */}
           <div
-            style={{
-              marginTop: 20,
-              padding: "14px 16px",
-              borderRadius: 14,
-              background: "linear-gradient(135deg, #F26739, #f9a87e)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
+            className="mt-5 p-4 rounded-2xl flex items-center justify-between"
+            style={{ background: "linear-gradient(135deg,#F26739,#f9a87e)" }}
           >
             <div>
-              <p
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#fff",
-                  margin: "0 0 2px",
-                }}
-              >
+              <p className="text-sm font-bold text-white mb-0.5">
                 Tạo bài kiểm tra mới
               </p>
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "rgba(255,255,255,.8)",
-                  margin: 0,
-                }}
-              >
-                Thêm câu hỏi cho học sinh
+              <p className="text-xs text-white/80">
+                Thêm câu hỏi cho người học
               </p>
             </div>
             <button
               onClick={() => navigate("/teacher/quizzes")}
-              style={{
-                background: "rgba(255,255,255,.25)",
-                border: "1.5px solid rgba(255,255,255,.5)",
-                color: "#fff",
-                borderRadius: 10,
-                padding: "8px 16px",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
+              className="flex items-center gap-1 text-white text-xs font-bold px-4 py-2 rounded-xl border border-white/50 bg-white/25"
             >
-              Tạo ngay{" "}
-              <Plus
-                size={13}
-                strokeWidth={3}
-                style={{ display: "inline", marginLeft: 2 }}
-              />
+              Tạo ngay <Plus size={13} strokeWidth={3} />
             </button>
           </div>
         </div>

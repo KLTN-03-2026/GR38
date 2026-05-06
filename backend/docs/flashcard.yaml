@@ -73,6 +73,10 @@ components:
         description:
           type: string
           example: Bộ thẻ ghi nhớ cho phần lịch sử Việt Nam giai đoạn 1858-1945
+        isAiGenerated:
+          type: boolean
+          example: false
+          description: Đánh dấu bộ thẻ do AI tự động tạo hay Giáo viên tạo thủ công
         cards:
           type: array
           items:
@@ -146,6 +150,11 @@ components:
           type: string
           format: date-time
           example: '2026-04-17T08:30:00.000Z'
+        nextReviewDate:
+          type: string
+          format: date-time
+          example: '2026-04-18T08:30:00.000Z'
+          description: Ngày cần ôn tập lại theo thuật toán lặp lại ngắt quãng (Spaced Repetition)
         isStarred:
           type: boolean
           example: true
@@ -167,24 +176,11 @@ components:
           items:
             $ref: '#/components/schemas/FlashcardProgressCard'
 
-    ErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        error:
-          type: string
-          example: Thông báo lỗi chi tiết
-        statusCode:
-          type: integer
-          example: 400
-
 paths:
   /api/v1/flashcards:
     get:
       summary: Lấy danh sách bộ flashcard
-      description: Giáo viên xem bộ do mình tạo, học sinh xem tất cả. Tự động ưu tiên ảnh bìa riêng hoặc ảnh của tài liệu gốc.
+      description: Dành cho Learner xem toàn bộ và Teacher xem bộ do mình tạo. Tự động ưu tiên ảnh bìa.
       tags: [Flashcard]
       security:
         - bearerAuth: []
@@ -209,7 +205,6 @@ paths:
         '401':
           description: Chưa đăng nhập hoặc token hết hạn
 
-  /api/v1/flashcards/manual:
     post:
       summary: Tạo bộ flashcard thủ công
       description: Chỉ Giáo viên mới được tạo. Gửi dữ liệu bằng form-data. Có thể đính kèm file ảnh làm thumbnail.
@@ -244,7 +239,7 @@ paths:
                     type: string
                 cards:
                   type: string
-                  description: Chuỗi JSON chứa mảng các thẻ. Ví dụ `[{"front":"A", "back":"B"}]`
+                  description: Chuỗi JSON chứa mảng các thẻ. Ví dụ `[{"front":"A", "back":"B", "difficulty":"Dễ"}]`
       responses:
         '201':
           description: Tạo thành công
@@ -266,6 +261,35 @@ paths:
         '403':
           description: Chỉ giáo viên mới có quyền tạo
 
+  /api/v1/flashcards/my-flashcards:
+    get:
+      summary: Lấy danh sách bộ flashcard do giáo viên tự tạo
+      description: API dành riêng cho trang quản lý cá nhân của TEACHER.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 5
+                  message:
+                    type: string
+                    example: Lấy danh sách bộ Flashcard của giáo viên thành công
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FlashcardSetListResponse'
+
   /api/v1/flashcards/document/{documentId}:
     get:
       summary: Lấy bộ flashcard theo ID Tài liệu
@@ -281,7 +305,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Lấy thành công (Nếu chưa có flashcard sẽ trả về rỗng)
+          description: Lấy thành công (Nếu chưa có flashcard sẽ trả về count = 0)
           content:
             application/json:
               schema:
@@ -296,6 +320,124 @@ paths:
                     $ref: '#/components/schemas/FlashcardSetDetailResponse'
         '401':
           description: Chưa đăng nhập
+
+  /api/v1/flashcards/{setId}/cards/{cardId}:
+    put:
+      summary: Chỉnh sửa nội dung một thẻ flashcard
+      description: Cập nhật mặt trước, mặt sau hoặc độ khó của thẻ. Gửi bằng JSON thông thường.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: setId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                front:
+                  type: string
+                back:
+                  type: string
+                difficulty:
+                  type: string
+                  enum: [Dễ, Trung bình, Khó]
+      responses:
+        '200':
+          description: Cập nhật thẻ thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/FlashcardCard'
+        '403':
+          description: Không có quyền chỉnh sửa
+        '404':
+          description: Không tìm thấy thẻ
+
+  /api/v1/flashcards/{setId}/cards/{cardId}/review:
+    post:
+      summary: Ghi nhận một lần ôn tập thẻ
+      description: Tăng số lần xem lại của thẻ và cập nhật nextReviewDate theo thuật toán Spaced Repetition.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: setId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ghi nhận ôn tập thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/FlashcardProgress'
+        '404':
+          description: Không tìm thấy thẻ
+
+  /api/v1/flashcards/{setId}/cards/{cardId}/star:
+    put:
+      summary: Bật/tắt đánh dấu sao cho thẻ
+      description: Cập nhật trạng thái yêu thích trong tiến độ học tập cá nhân.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: setId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cập nhật trạng thái sao thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/FlashcardProgress'
+        '404':
+          description: Không tìm thấy thẻ
 
   /api/v1/flashcards/{id}:
     get:
@@ -395,121 +537,3 @@ paths:
           description: Không có quyền xóa
         '404':
           description: Không tìm thấy bộ thẻ
-
-  /api/v1/flashcards/{setId}/cards/{cardId}:
-    put:
-      summary: Chỉnh sửa nội dung một thẻ flashcard
-      description: Cập nhật mặt trước, mặt sau hoặc độ khó của thẻ. Gửi bằng JSON thông thường.
-      tags: [Flashcard]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: setId
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: cardId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                front:
-                  type: string
-                back:
-                  type: string
-                difficulty:
-                  type: string
-                  enum: [Dễ, Trung bình, Khó]
-      responses:
-        '200':
-          description: Cập nhật thẻ thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/FlashcardCard'
-        '403':
-          description: Không có quyền chỉnh sửa
-        '404':
-          description: Không tìm thấy thẻ
-
-  /api/v1/flashcards/{setId}/cards/{cardId}/review:
-    post:
-      summary: Ghi nhận một lần ôn tập thẻ
-      description: Tăng số lần xem lại của thẻ trong tiến độ cá nhân.
-      tags: [Flashcard]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: setId
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: cardId
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Ghi nhận ôn tập thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/FlashcardProgress'
-        '404':
-          description: Không tìm thấy thẻ
-
-  /api/v1/flashcards/{setId}/cards/{cardId}/star:
-    put:
-      summary: Bật/tắt đánh dấu sao cho thẻ
-      description: Cập nhật trạng thái yêu thích trong tiến độ học tập cá nhân.
-      tags: [Flashcard]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: setId
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: cardId
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Cập nhật trạng thái sao thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/FlashcardProgress'
-        '404':
-          description: Không tìm thấy thẻ

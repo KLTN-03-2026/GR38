@@ -14,12 +14,27 @@ const quizResultSchema = new mongoose.Schema({
     score: {
         type: Number,
         required: true,
+        min: 0,
+        max: 10 
+    },
+
+    correctAnswersCount: {
+        type: Number,
+        required: true,
         min: 0
     },
     totalQuestions: {
         type: Number,
         required: true,
         min: 0
+    },
+    timeSpent: {
+        type: Number,
+        default: 0, 
+    },
+    isTeacherPreview: {
+        type: Boolean,
+        default: false
     },
     answers: [
         {
@@ -38,10 +53,14 @@ const quizResultSchema = new mongoose.Schema({
         }
     ]
 }, {
-    timestamps: true
+    timestamps: true 
 });
 
+// CẬP NHẬT INDEX:
 quizResultSchema.index({ userId: 1, quizId: 1, createdAt: -1 });
+quizResultSchema.index({ userId: 1, createdAt: -1 });
+
+quizResultSchema.index({ quizId: 1, isTeacherPreview: 1, score: -1 });
 
 const QuizResult = mongoose.model('QuizResult', quizResultSchema);
 

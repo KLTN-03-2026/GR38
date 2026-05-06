@@ -4,24 +4,39 @@ import api from "../../../lib/api";
 
 export default function FlashcardPageInline({ flash, onBack }) {
   const [cards, setCards] = useState(null);
+  const [setId, setSetId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [animDir, setAnimDir] = useState(null);
   const animRef = useRef(null);
 
+  const [deckName, setDeckName] = useState(flash.title ?? "");
+  const [started, setStarted] = useState(false);
+
   useEffect(() => {
-    const existingCards = flash.cards ?? [];
-    if (existingCards.length > 0) {
-      setCards(
-        existingCards.map((c) => ({
-          q: c.front ?? c.question ?? "",
-          a: c.back ?? c.answer ?? "",
-        })),
-      );
-      return;
-    }
-    alert("Bộ thẻ này chưa có nội dung!");
-    onBack();
+    (async () => {
+      try {
+        const res = await api.get(`/flashcards/${flash._id ?? flash.id}`);
+        const raw = res?.data?.data ?? res?.data ?? null;
+        if (!raw || !Array.isArray(raw.cards) || raw.cards.length === 0) {
+          alert("Bộ thẻ này chưa có nội dung!");
+          onBack();
+          return;
+        }
+        setSetId(raw._id);
+        setDeckName(raw.title ?? flash.title ?? "");
+        setCards(
+          raw.cards.map((c) => ({
+            _id: c._id ?? c.id ?? null,
+            q: c.front ?? c.question ?? "",
+            a: c.back ?? c.answer ?? "",
+          }))
+        );
+      } catch (err) {
+        alert("Không tải được flashcard. Vui lòng thử lại.");
+        onBack();
+      }
+    })();
   }, [flash._id]);
 
   if (!cards)
@@ -32,9 +47,88 @@ export default function FlashcardPageInline({ flash, onBack }) {
       </div>
     );
 
+  // Setup screen — shown after cards are loaded, before starting
+  if (!started)
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Danh sách bộ thẻ
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+          <h2 className="text-base font-bold text-gray-800">
+            ⚙️ Cài đặt bộ flashcard
+          </h2>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-1.5 block">
+              Tên bộ thẻ
+            </label>
+            <input
+              value={deckName}
+              onChange={(e) => setDeckName(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-purple-400 transition"
+              placeholder="Nhập tên bộ thẻ..."
+            />
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
+            <span>🃏 {cards.length} thẻ</span>
+          </div>
+
+          <button
+            onClick={() => setStarted(true)}
+            className="w-full py-3 rounded-xl text-sm font-bold text-white transition"
+            style={{ background: "#8b5cf6" }}
+          >
+            Bắt đầu học →
+          </button>
+        </div>
+      </div>
+    );
+
   const total = cards.length;
   const card = cards[currentIndex];
   const progress = ((currentIndex + 1) / total) * 100;
+
+  const handleFlip = async () => {
+    if (!cards?.length) return;
+    const current = cards[currentIndex];
+    if (!isFlipped && current && !current.a && setId) {
+      try {
+        const res = await api.get(`/flashcards/${setId}/cards/${current._id}/back`);
+        const backData = res?.data?.data || res?.data || null;
+        if (backData?.back !== undefined) {
+          setCards((prev) =>
+            prev.map((c, idx) =>
+              idx === currentIndex ? { ...c, a: backData.back } : c
+            )
+          );
+        }
+      } catch (err) {
+        // ignore back fetch error
+      }
+    }
+    setIsFlipped((prev) => !prev);
+  };
 
   const goTo = (next, dir) => {
     if (next < 0 || next >= total) return;
@@ -77,7 +171,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
           </svg>
           Danh sách bộ thẻ
         </button>
-        <span className="text-xs text-gray-400">{flash.title}</span>
+        <span className="text-xs text-gray-400">{deckName || flash.title}</span>
       </div>
 
       {/* Flashcard */}
@@ -87,7 +181,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
             ? "bg-[#47ED70] border-[#36BA58]"
             : "bg-[#F4F4F5] border-[#E4E4E7]"
         }`}
-        onClick={() => setIsFlipped(!isFlipped)}
+        onClick={handleFlip}
       >
         <div className="flex justify-start mb-4">
           <span
@@ -107,7 +201,7 @@ export default function FlashcardPageInline({ flash, onBack }) {
               isFlipped ? "text-[#064E3B]" : "text-[#18181B]"
             }`}
           >
-            {isFlipped ? card.a : card.q}
+            {isFlipped ? (card.a || "...") : card.q}
           </p>
         </div>
 

@@ -286,12 +286,11 @@ components:
         statusCode:
           type: integer
           example: 404
-
 paths:
   /api/v1/ai/generate-flashcards:
     post:
-      summary: Tạo flashcard từ tài liệu
-      description: Chỉ giáo viên hoặc admin được phép tạo flashcard theo router hiện tại.
+      summary: Tạo flashcard từ tài liệu bằng AI
+      description: Chỉ giáo viên hoặc admin được phép tạo. AI sẽ tự động đọc nội dung tài liệu để sinh câu hỏi, đồng thời kế thừa ảnh bìa (thumbnail) của tài liệu đó.
       tags: [AI]
       security:
         - bearerAuth: []
@@ -310,6 +309,7 @@ paths:
                 count:
                   type: integer
                   example: 10
+                  description: Số lượng thẻ flashcard muốn AI tạo
       responses:
         '200':
           description: Tạo flashcard thành công
@@ -335,6 +335,7 @@ paths:
                       teacherId: 66a1f2c9b8d4e01f12340002
                       documentId: 66a1f2c9b8d4e01f12340001
                       title: Lịch sử Việt Nam lớp 12 - Flashcards
+                      thumbnail: https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg
                       description: Bộ flashcard được tạo tự động từ tài liệu Lịch sử Việt Nam lớp 12
                       cards:
                         - front: Chiến dịch Điện Biên Phủ diễn ra vào năm nào?
@@ -344,28 +345,13 @@ paths:
                           back: Võ Nguyên Giáp
                           difficulty: Dễ
                       isPublished: false
-                      tags:
-                        - lich-su-viet-nam
+                      isAiGenerated: true
+                      tags: []
                       stats:
                         enrolledLearners: 0
                       createdAt: '2026-04-17T08:00:00.000Z'
                       updatedAt: '2026-04-17T08:10:00.000Z'
                     message: Flashcards đã được tạo thành công
-        '201':
-          description: Flashcard được tạo mới thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/AIFlashcardSetCreated'
-                  message:
-                    type: string
-                    example: Flashcards đã được tạo thành công
         '400':
           description: Thiếu documentId hoặc dữ liệu đầu vào không hợp lệ
           content:
@@ -393,8 +379,8 @@ paths:
 
   /api/v1/ai/generate-quiz:
     post:
-      summary: Tạo quiz từ tài liệu
-      description: Chỉ giáo viên hoặc admin được phép tạo quiz theo router hiện tại.
+      summary: Tạo quiz từ tài liệu bằng AI
+      description: Chỉ giáo viên hoặc admin được phép tạo. AI sẽ tự động sinh câu hỏi trắc nghiệm và kế thừa ảnh bìa (thumbnail) từ tài liệu gốc.
       tags: [AI]
       security:
         - bearerAuth: []
@@ -413,6 +399,7 @@ paths:
                 numQuestions:
                   type: integer
                   example: 5
+                  description: Số lượng câu hỏi trắc nghiệm
                 title:
                   type: string
                   example: Quiz ôn tập Điện Biên Phủ
@@ -441,7 +428,8 @@ paths:
                       documentId: 66a1f2c9b8d4e01f12340001
                       teacherId: 66a1f2c9b8d4e01f12340002
                       title: Quiz ôn tập Điện Biên Phủ
-                      description: Quiz trắc nghiệm được tạo tự động từ tài liệu Lịch sử Việt Nam lớp 12
+                      thumbnail: https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg
+                      description: Quiz trắc nghiệm được tạo tự động từ tài liệu
                       questions:
                         - question: Chiến thắng Điện Biên Phủ diễn ra vào năm nào?
                           options:
@@ -454,29 +442,14 @@ paths:
                           difficulty: Trung bình
                       totalQuestions: 1
                       isPublished: false
-                      tags:
-                        - dien-bien-phu
+                      isAiGenerated: true
+                      tags: []
                       stats:
                         enrolledLearners: 0
                         totalAttempts: 0
                       createdAt: '2026-04-17T08:00:00.000Z'
                       updatedAt: '2026-04-17T08:10:00.000Z'
                     message: Quiz đã được tạo thành công
-        '201':
-          description: Quiz được tạo mới thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/AIQuizSetCreated'
-                  message:
-                    type: string
-                    example: Quiz đã được tạo thành công
         '400':
           description: Thiếu documentId hoặc dữ liệu đầu vào không hợp lệ
           content:

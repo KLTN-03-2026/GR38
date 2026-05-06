@@ -7,8 +7,6 @@ import {
   Check,
   AlertTriangle,
   Loader2,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from "lucide-react";
 
 // ── Render nội dung PDF - format tự nhiên ──
@@ -187,7 +185,6 @@ export default function BaiGiangPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completed, setCompleted] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   useEffect(() => {
@@ -199,14 +196,17 @@ export default function BaiGiangPage() {
         const d = res.data.data;
         setDoc(d);
         if (d.status === "failed")
-          return setError("Tài liệu bị lỗi xử lý. Vui lòng xóa và tải lên lại.");
+          return setError(
+            "Tài liệu bị lỗi xử lý. Vui lòng xóa và tải lên lại.",
+          );
         if (d.status === "processing")
           return setError("Tài liệu đang được xử lý. Vui lòng thử lại sau.");
         if (d.status !== "ready")
           return setError(`Trạng thái không hợp lệ: "${d.status}"`);
       } catch (err) {
         if (err.response?.status === 404) setError("Không tìm thấy tài liệu.");
-        else if (err.response?.status === 401) setError("Phiên đăng nhập hết hạn.");
+        else if (err.response?.status === 401)
+          setError("Phiên đăng nhập hết hạn.");
         else setError("Không thể tải nội dung bài giảng. Vui lòng thử lại.");
       } finally {
         setLoading(false);
@@ -260,59 +260,17 @@ export default function BaiGiangPage() {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-500 font-medium">{progress}%</span>
+            <span className="text-xs text-gray-500 font-medium">
+              {progress}%
+            </span>
           </div>
-          <button
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="text-gray-400 hover:text-gray-700 transition p-1.5 rounded-lg hover:bg-gray-100"
-          >
-            {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-          </button>
         </div>
       </div>
 
       {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
-        {/* SIDEBAR */}
-        {sidebarOpen && (
-          <div className="w-72 shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <img
-                src={doc?.coverImage ?? "/anh1.jpg"}
-                alt={doc?.title}
-                className="w-full h-28 object-cover rounded-xl mb-3"
-                onError={(e) => (e.target.style.display = "none")}
-              />
-              <p className="text-sm font-semibold text-gray-800 line-clamp-2">
-                {doc?.title}
-              </p>
-              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                <Clock size={12} /> 1 phần
-              </p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="w-full text-left px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-200 flex items-start gap-2.5">
-                <div
-                  className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                    completed ? "bg-green-500 text-white" : "bg-[#F26739] text-white"
-                  }`}
-                >
-                  {completed ? (
-                    <Check size={11} strokeWidth={3} />
-                  ) : (
-                    <span className="text-xs font-bold">1</span>
-                  )}
-                </div>
-                <p className="text-xs font-medium text-[#F26739]">
-                  Nội dung bài giảng
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* MAIN CONTENT */}
-        <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col">
           {/* TAB HEADER */}
           <div className="bg-white border-b border-gray-100 px-6">
             <div className="flex justify-center">
@@ -325,83 +283,32 @@ export default function BaiGiangPage() {
           </div>
 
           {/* PDF VIEWER */}
-          <div className="flex-1 bg-[#525659] flex items-start justify-center overflow-auto py-8 px-4">
-            <div
-              style={{
-                background: "#fff",
-                width: "794px",
-                minHeight: "1123px",
-                padding: "80px 96px",
-                fontFamily: "'Times New Roman', Times, serif",
-                boxSizing: "border-box",
-                boxShadow: "0 4px 32px rgba(0,0,0,0.35)",
-              }}
-            >
-              {/* Tiêu đề tài liệu */}
-              <div style={{ textAlign: "center", marginBottom: "28px" }}>
-                <h1
-                  style={{
-                    fontSize: "17px",
-                    fontWeight: "bold",
-                    color: "#111",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    lineHeight: 1.5,
-                    marginBottom: "6px",
-                  }}
-                >
-                  {doc?.title}
-                </h1>
-                {doc?.description && (
-                  <p
-                    style={{
-                      fontSize: "12.5px",
-                      color: "#555",
-                      marginTop: "6px",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    {doc.description}
-                  </p>
-                )}
-                <div
-                  style={{
-                    width: "56px",
-                    height: "3px",
-                    background: "#F26739",
-                    margin: "12px auto 0",
-                    borderRadius: "2px",
-                  }}
-                />
-              </div>
-
-              {/* Đường kẻ */}
-              <div
-                style={{ borderTop: "1px solid #ccc", marginBottom: "24px" }}
+          <div className="flex-1 overflow-hidden bg-[#525659] flex items-stretch">
+            {doc?.filePath ? (
+              <iframe
+                src={`${doc.filePath}#toolbar=1&navpanes=1&view=FitH&zoom=60&sidebarsize=120`}
+                 allow="fullscreen"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  display: "block",
+                }}
+                title={doc?.title}
               />
-
-              {/* Nội dung */}
-              <RenderChunkContent text={rawContent} />
-
-              {/* Footer */}
+            ) : (
               <div
                 style={{
-                  marginTop: "60px",
-                  borderTop: "1px solid #e0e0e0",
-                  paddingTop: "10px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  color: "#aaa",
+                  fontSize: "14px",
+                  textAlign: "center",
+                  margin: "auto",
                 }}
               >
-                <span style={{ fontSize: "10.5px", color: "#aaa" }}>
-                  {doc?.fileName ?? ""}
-                </span>
-                <span style={{ fontSize: "10.5px", color: "#aaa" }}>1</span>
+                Không tìm thấy file PDF gốc.
               </div>
-            </div>
+            )}
           </div>
-
           {/* FOOTER ACTION */}
           <div className="bg-white border-t border-gray-100 px-8 py-4 flex items-center justify-between shrink-0">
             <p className="text-xs text-gray-400">

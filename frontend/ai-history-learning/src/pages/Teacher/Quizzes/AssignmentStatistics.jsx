@@ -1,78 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import api from "../../../lib/api";
 
-// ─── Helpers map dữ liệu API → shape UI ────────────────────────────────────
-
-// Map overview → 4 stat cards
-function mapStats(overview = {}) {
-  const avg = overview.averageScore ?? 0;
-  return {
-    totalQuizzes:     overview.totalQuizzes     ?? 0,
-    completedQuizzes: overview.completedQuizzes ?? 0,
-    averageScore:     isNaN(Number(avg)) ? 0 : Number(avg),
-    studyStreak:      overview.studyStreak      ?? 0,
-  };
-}
-// ───────────────────────────────────────────────────────────────────────────
-
 const STATUS_CONFIG = {
   "Chưa làm bài": { bg: "#FEF2F2", color: "#DC2626", dot: "#EF4444" },
   "Đã làm bài":   { bg: "#F0FDF4", color: "#16A34A", dot: "#22C55E" },
   "Đang làm":     { bg: "#FFFBEB", color: "#D97706", dot: "#F59E0B" },
 };
-
-function buildStats(s) {
-  return [
-    {
-      label: "Tổng số quiz",
-      value: s.totalQuizzes,
-      icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h.75" />
-        </svg>
-      ),
-      accent: "#F26739",
-      lightBg: "#FFF4EF",
-    },
-    {
-      label: "Đã hoàn thành",
-      value: s.completedQuizzes,
-      icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      accent: "#16A34A",
-      lightBg: "#F0FDF4",
-    },
-    {
-      label: "Điểm trung bình",
-      value: s.averageScore + "%",
-      icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M3 13.5l5-5 4 4 5-6 4 3" />
-        </svg>
-      ),
-      accent: "#3B82F6",
-      lightBg: "#EFF6FF",
-    },
-    {
-      label: "Chuỗi ngày học",
-      value: s.studyStreak,
-      icon: (
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-            d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-        </svg>
-      ),
-      accent: "#D97706",
-      lightBg: "#FFFBEB",
-    },
-  ];
-}
 
 // ─── Custom Select ──────────────────────────────────────────────────────────
 function CustomSelect({ value, onChange, options, placeholder }) {
@@ -145,7 +78,6 @@ function SkeletonRow() {
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function AssignmentStatistics() {
   const [data, setData]                 = useState([]);
-  const [statsValues, setStatsValues]   = useState({ totalQuizzes: 0, completedQuizzes: 0, averageScore: 0, studyStreak: 0 });
   const [loading, setLoading]           = useState(true);
 
   const [search, setSearch]             = useState("");
@@ -161,18 +93,26 @@ export default function AssignmentStatistics() {
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      // Chỉ gọi dashboard — /quizzes/my-history bị 403 với Teacher
       const dashRes = await api.get("/progress/dashboard");
-      const payload  = dashRes.data?.data ?? dashRes.data;
-      const overview = payload?.overview ?? {};
-      setStatsValues(mapStats(overview));
+      const payload = dashRes.data?.data ?? dashRes.data;
+      const recent  = payload?.recent ?? {};
+      const quizzes = recent.quizzes ?? [];
 
-      // Backend chưa có API lấy danh sách bài làm học sinh
-      // → bảng rỗng, chờ API mới từ backend
-      setData([]);
+      const rows = quizzes.map((q) => ({
+        ma:   q._id,
+        ten:  q.title ?? "Không có tên",
+        ngay: q.completedAt
+          ? new Date(q.completedAt).toLocaleDateString("vi-VN")
+          : "—",
+        sl:   q.totalQuestions ?? "—",
+        diem: q.score != null ? String(q.score) : "—",
+        tt:   "Đã làm bài",
+        documentTitle: q.documentId?.title ?? "—",
+      }));
+
+      setData(rows);
     } catch (err) {
-      // Ẩn lỗi khỏi UI, chỉ log console
-      console.warn("[AssignmentStatistics] fetch error:", err?.response?.data?.message ?? err.message);
+      console.error(">>> [dashboard] ERROR:", err?.response?.data ?? err.message);
     } finally {
       setLoading(false);
     }
@@ -226,8 +166,6 @@ export default function AssignmentStatistics() {
     return matchSearch && matchStatus && matchScore;
   });
 
-  const STATS = buildStats(statsValues);
-
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <>
@@ -240,13 +178,6 @@ export default function AssignmentStatistics() {
           to { transform: rotate(360deg); }
         }
         .stats-page { font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
-        .stat-card {
-          background: #fff; border: 1px solid #F3F4F6; border-radius: 14px;
-          padding: 18px 20px; display: flex; align-items: center; gap: 14px;
-          transition: box-shadow 0.18s ease, transform 0.18s ease;
-        }
-        .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); transform: translateY(-1px); }
-        .stat-icon { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .filter-bar {
           background: #fff; border: 1px solid #F3F4F6; border-radius: 14px;
           padding: 16px 20px; display: flex; gap: 10px; flex-wrap: wrap;
@@ -366,7 +297,7 @@ export default function AssignmentStatistics() {
               Thống kê bài làm
             </h1>
             <p style={{ fontSize: 13, color: "#9CA3AF", margin: "4px 0 0" }}>
-              Quản lý và theo dõi tiến độ học sinh
+              Quản lý và theo dõi tiến độ người học
             </p>
           </div>
           <button
@@ -386,25 +317,6 @@ export default function AssignmentStatistics() {
                 </>
             }
           </button>
-        </div>
-
-        {/* Stat Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
-          {STATS.map((s) => (
-            <div className="stat-card" key={s.label}>
-              <div className="stat-icon" style={{ background: s.lightBg }}>
-                <span style={{ color: s.accent }}>{s.icon}</span>
-              </div>
-              <div>
-                <p style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0, lineHeight: 1 }}>
-                  {loading
-                    ? <span style={{ display: "inline-block", width: 40, height: 22, borderRadius: 6, background: "#F3F4F6", animation: "pulse 1.4s ease-in-out infinite" }} />
-                    : s.value}
-                </p>
-                <p style={{ fontSize: 12, color: "#9CA3AF", margin: "5px 0 0", lineHeight: 1.4 }}>{s.label}</p>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Filter Bar */}
@@ -475,10 +387,8 @@ export default function AssignmentStatistics() {
               </tr>
             </thead>
             <tbody>
-              {/* Loading skeletons */}
               {loading && [1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
 
-              {/* Data rows */}
               {!loading && filtered.map((row) => {
                 const cfg = STATUS_CONFIG[row.tt] ?? STATUS_CONFIG["Chưa làm bài"];
                 const scoreNum = parseFloat(row.diem);
@@ -534,7 +444,6 @@ export default function AssignmentStatistics() {
                 );
               })}
 
-              {/* Empty state */}
               {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={7}>
@@ -545,11 +454,11 @@ export default function AssignmentStatistics() {
                       </svg>
                       <p>
                         {data.length === 0
-                          ? "Chưa có dữ liệu thống kê học sinh"
+                          ? "Chưa có dữ liệu thống kê Người học"
                           : "Không tìm thấy bài làm nào"}
                       </p>
                       {data.length === 0 && (
-                        <span>Dữ liệu sẽ xuất hiện khi học sinh hoàn thành bài làm</span>
+                        <span>Dữ liệu sẽ xuất hiện khi Người học hoàn thành bài làm</span>
                       )}
                     </div>
                   </td>

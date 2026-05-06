@@ -1,19 +1,9 @@
 import axios from "axios";
 
-// Instance chính dùng cho toàn bộ app
-const api = axios.create({
-  baseURL: "http://localhost:8000/api/v1",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+const baseURL = import.meta.env.VITE_API_URL;
 
-// Instance riêng cho refresh 
-const refreshClient = axios.create({
-  baseURL: "http://localhost:8000/api/v1",
-});
-
-// Queue xử lý các request bị 401 trong lúc refresh
+const api = axios.create({ baseURL });
+const refreshClient = axios.create({ baseURL }); 
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -26,37 +16,21 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-
-// Helper lấy access token
-
-const getAccessToken = () => {
-  const raw = localStorage.getItem("token");
-  if (!raw) return null;
-
+// 3. Tối ưu hàm lấy và parse token an toàn
+const getAuthData = () => {
   try {
-    const parsed = JSON.parse(raw);
-    return parsed?.access_token || raw;
-  } catch {
-    return raw;
-  }
-};
-
-// Helper lấy refresh token
-
-const getRefreshToken = () => {
-  const raw = localStorage.getItem("token");
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed?.refresh_token;
-  } catch {
+    const raw = localStorage.getItem("token");
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.error("Lỗi parse token từ localStorage", error);
     return null;
   }
 };
 
-// Request Interceptor (gắn token)
+const getAccessToken = () => getAuthData()?.access_token || null;
+const getRefreshToken = () => getAuthData()?.refresh_token || null;
 
+// Request Interceptor
 api.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -68,25 +42,29 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-
-// Response Interceptor (refresh token)
-
+// Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Không có response hoặc không phải 401
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // Tránh loop vô hạn
+    const isAuthRoute =
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/register") ||
+      originalRequest.url?.includes("/auth/refresh-token");
+
+    if (isAuthRoute) {
+      return Promise.reject(error);
+    }
+
     if (originalRequest._retry) {
       return Promise.reject(error);
     }
 
-    // Nếu đang refresh → đưa vào queue
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -108,14 +86,13 @@ api.interceptors.response.use(
         throw new Error("No refresh token");
       }
 
-      // Gọi API refresh (dùng instance riêng)
       const { data } = await refreshClient.post("/auth/refresh-token", {
         refresh_token: refreshToken,
       });
 
       const newAccessToken = data.access_token;
-
-      // Lưu lại token mới
+      
+      // Lưu token mới vào localStorage
       localStorage.setItem(
         "token",
         JSON.stringify({
@@ -124,20 +101,28 @@ api.interceptors.response.use(
         })
       );
 
-      // Cập nhật header mặc định
+      // Cập nhật lại header cho request bị lỗi và gọi lại
       api.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
-
-      processQueue(null, newAccessToken);
-
-      // Retry request cũ
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      
+      processQueue(null, newAccessToken);
+      
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      // Refresh fail → logout
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+      // 2. Chỉnh sửa logic điều hướng: 
+      // Do hệ thống không có khách vãng lai, trang chủ "/" cũng cần xác thực
+      const isOnAuthPage = 
+        window.location.pathname === "/login" || 
+        window.location.pathname === "/register";
+
+      if (!isOnAuthPage) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("role");
+        window.location.href = "/login"; 
+      }
 
       return Promise.reject(refreshError);
     } finally {

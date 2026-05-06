@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Plus, Search, Image as ImageIcon, Settings, ChevronsUpDown, FileText, Loader2 } from "lucide-react";
-import api from "../../../lib/api"; 
+import api from "@/lib/api"; 
 
 // Import Assets
-import logoApp from "../../../assets/logo.jpg"; 
-import logoAI from "../../../assets/logoGV.webp"; 
-import logoUserDefault from "../../../assets/logohs.png";
+import logoApp from "@/assets/img/logo.jpg"; 
+import logoAI from "@/assets/img/logoGV.webp"; 
+import logoUserDefault from "@/assets/img/logohs.png";
 
 const ChatAI = ({ documentId }) => {
   const [messages, setMessages] = useState([]);
@@ -253,5 +253,4 @@ const ChatAI = ({ documentId }) => {
     </div>
   );
 };
-
 export default ChatAI;

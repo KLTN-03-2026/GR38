@@ -1,13 +1,11 @@
 import mongoose from "mongoose";
 
 const flashcardSchema = new mongoose.Schema({
-
     documentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Document',
-        required: true
+        default: null
     },
-
     teacherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -25,6 +23,11 @@ const flashcardSchema = new mongoose.Schema({
     description: {
         type: String,
         default: ''
+    },
+
+    isAiGenerated: {
+        type: Boolean,
+        default: false
     },
     cards: [
         {
@@ -58,6 +61,6 @@ const flashcardSchema = new mongoose.Schema({
 flashcardSchema.index({ teacherId: 1, createdAt: -1 });
 flashcardSchema.index({ teacherId: 1, isPublished: 1 });
 
-const flashcard = mongoose.model("Flashcard", flashcardSchema);
+const Flashcard = mongoose.model("Flashcard", flashcardSchema);
 
-export default flashcard;
+export default Flashcard;

@@ -45,6 +45,7 @@ export const generateFlashcards = async (req, res, next) => {
       teacherId: req.user._id,
       documentId: document._id,
       title: `${document.title} - Flashcards`,
+      thumbnail: document.thumbnail, 
       description: `Bộ flashcard được tạo tự động từ tài liệu ${document.title}`,
       cards: cards.map(card => ({
         front: card.question,
@@ -52,6 +53,7 @@ export const generateFlashcards = async (req, res, next) => {
         difficulty: card.difficulty,
       })),
       isPublished: false,
+      isAiGenerated: true, 
       tags: []
     });
 
@@ -100,7 +102,8 @@ export const generateQuiz = async (req, res, next) => {
       document.extractedText, 
       parseInt(numQuestions)
     );
-   questions.forEach(q => {
+    
+    questions.forEach(q => {
         // Xóa khoảng trắng thừa ở đầu và cuối của đáp án đúng
         q.correctAnswer = q.correctAnswer.trim();
         // Xóa khoảng trắng thừa ở tất cả các lựa chọn
@@ -111,17 +114,19 @@ export const generateQuiz = async (req, res, next) => {
              q.correctAnswer = q.options[indexMap[q.correctAnswer]];
         }
 
-        // Bảo hiểm không crash Server nếu đáp án đúng không nằm trong lựa chọn (dù đã cố gắng sửa ở trên)
+        // Bảo hiểm không crash Server nếu đáp án đúng không nằm trong lựa chọn 
         if (!q.options.includes(q.correctAnswer)) {
             const fallbackOption = q.options.find(opt => opt.includes(q.correctAnswer) || q.correctAnswer.includes(opt));
             q.correctAnswer = fallbackOption || q.options[0]; 
         }
     });
+
     //Lưu quiz vào database
     const quizSet = await Quiz.create({
       teacherId: req.user._id,
       documentId: document._id,
-      title: title ||`${document.title} - Quiz`,
+      title: title || `${document.title} - Quiz`,
+      thumbnail: document.thumbnail, 
       questions: questions,
       totalQuestions : questions.length,
       isAiGenerated: true

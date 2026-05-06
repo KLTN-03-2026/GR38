@@ -1,89 +1,202 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-const navItems = [
-  {
-    label: "Trang chủ",
-    path: "/admin",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    label: "Quản lý tài khoản",
-    path: "/admin/accounts",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
-  {
-    label: "Quản lý nội dung",
-    path: "/admin/content",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
-];
+import {
+  BookOpen,
+  Layers,
+  HelpCircle,
+  Users,
+  FileText,
+  LayoutDashboard,
+  ChevronRight,
+  Home,
+  BarChart2,
+  AlertCircle,
+  TrendingUp,
+} from "lucide-react";
+
+const NAV_CONFIG = {
+  // Menu dành cho Admin: Đã thêm 3 mục nội dung và lược bỏ Thống kê/Báo cáo
+  ADMIN: [
+    { label: "Trang chủ", path: "/admin", icon: LayoutDashboard },
+    { label: "Quản lý tài khoản", path: "/admin/accounts", icon: Users },
+    { label: "Quản lý nội dung", path: "/admin/content", icon: FileText },
+    { label: "Tài liệu", path: "/admin/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/admin/flashcards", icon: Layers },
+    { label: "Quizzes", path: "/admin/quizzes", icon: HelpCircle },
+  ],
+  TEACHER: [
+    { label: "Trang chủ", path: "/teacher", icon: Home },
+    { label: "Tài liệu", path: "/teacher/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/teacher/flashcards", icon: Layers },
+    { label: "Tạo Quiz", path: "/teacher/quizzes", icon: HelpCircle },
+    { label: "Thống kê bài làm", path: "/teacher/stats", icon: BarChart2 },
+  ],
+  LEARNER: [
+    { label: "Trang chủ", path: "/learner", icon: Home },
+    { label: "Tài liệu", path: "/learner/documents", icon: BookOpen },
+    { label: "Flashcards", path: "/learner/flashcards", icon: Layers },
+    { label: "Quizzes", path: "/learner/quizzes", icon: HelpCircle },
+    { label: "Sự cố", path: "/learner/suco", icon: AlertCircle },
+    { label: "Tiến độ học tập", path: "/learner/tiendo", icon: TrendingUp },
+  ],
+};
+
+const ROOT_PATHS = {
+  ADMIN: "/admin",
+  TEACHER: "/teacher",
+  LEARNER: "/learner",
+};
+
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&display=swap');
+
+  .vsn-sidebar {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    width: 220px;
+    position: fixed;
+    top: 64px;
+    left: 0;
+    height: calc(100vh - 64px);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    z-index: 30;
+    border-right: 1px solid #f0f0f0;
+    box-shadow: 2px 0 16px rgba(0,0,0,.04);
+  }
+
+  .vsn-nav {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .vsn-item {
+    position: relative;
+    width: 100%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    outline: none;
+  }
+  .vsn-item:active { opacity: .85; }
+
+  .vsn-item-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: #F26739;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    z-index: 0;
+  }
+  .vsn-item.active .vsn-item-fill { transform: scaleX(1); }
+
+  .vsn-item-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 13px;
+    text-align: left;
+  }
+
+  .vsn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    color: #9ca3af;
+    flex-shrink: 0;
+    transition: all .2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .vsn-item.active .vsn-icon {
+    background: rgba(255,255,255,.22);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    transform: scale(1.08);
+  }
+
+  .vsn-label {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+  .vsn-item.active .vsn-label { color: #fff; font-weight: 600; }
+
+  .vsn-chevron {
+    margin-left: auto;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all .2s;
+    color: rgba(255,255,255,.7);
+    flex-shrink: 0;
+  }
+  .vsn-item.active .vsn-chevron { opacity: 1; transform: translateX(0); }
+
+  .vsn-nav::-webkit-scrollbar { width: 3px; }
+  .vsn-nav::-webkit-scrollbar-track { background: transparent; }
+  .vsn-nav::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
+`;
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = (user.role || "LEARNER").toUpperCase();
+  const navItems = NAV_CONFIG[role] || NAV_CONFIG.LEARNER;
+
+  const isActive = (path) => {
+    if (path === ROOT_PATHS[role]) {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
+  };
+
   return (
-    <aside className="w-[220px] fixed top-0 left-0 h-screen bg-gray-100 border-r border-gray-100 flex flex-col z-30">
-      <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2">
-        <img src="/Logo.jpg" alt="Logo" className="w-8 h-8 object-contain rounded" />
-        <span className="text-sm font-semibold text-gray-800">Lịch sử Việt Nam</span>
-      </div>
-
-      <nav className="flex-1 py-2 overflow-y-auto">
-        {navItems.map((item) => {
-          const active =
-            item.path === "/admin"
-              ? location.pathname === "/admin"
-              : location.pathname.startsWith(item.path);
-
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${
-                active ? "bg-[#F26739] text-white" : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <span className={active ? "text-white" : "text-gray-400"}>
-                {item.icon}
-              </span>
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-gray-100 p-3">
-        <button
-          onClick={() => {
-            localStorage.removeItem("user");
-            navigate("/");
-          }}
-          className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Đăng xuất
-        </button>
-      </div>
-    </aside>
+    <>
+      <style>{STYLES}</style>
+      <aside className="vsn-sidebar">
+        <nav className="vsn-nav">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <button
+                key={item.path}
+                className={`vsn-item${active ? " active" : ""}`}
+                onClick={() => navigate(item.path)}
+              >
+                <span className="vsn-item-fill" />
+                <span className="vsn-item-inner">
+                  <span className="vsn-icon">
+                    <Icon size={16} strokeWidth={2} />
+                  </span>
+                  <span className="vsn-label">{item.label}</span>
+                  <ChevronRight
+                    size={13}
+                    strokeWidth={2.5}
+                    className="vsn-chevron"
+                  />
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 };
+
 export default Sidebar;

@@ -171,7 +171,7 @@ export default function AppRouter() {
 
       </Route>
 
-      {/* ================= LEARNER ================= */}
+      {/* ================= LEARNER ================= // Cập nhật router người học*/}
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<LearnerLayout />}>
           <Route index element={<Dashboard />} />

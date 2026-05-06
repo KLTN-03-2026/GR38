@@ -14,7 +14,8 @@ import {
   submitQuiz,
   getQuizResultDetail,
   getMyHistory,
-  getTeacherStatistics
+  getTeacherStatistics,
+  getQuizForPlay,
 } from "#controllers/Quiz/quizResultController.js";
 
 import protect, { authorize, USER_ROLES } from "#middleware/auth.js";
@@ -29,7 +30,7 @@ router.use(protect);
 // Phải để lên trên cùng để tránh bị nhầm với :id
 // ==========================================
 
-// 1. Route cho Admin (Đây là cái bạn đang thiếu)
+// 1. Route cho Admin
 router.get("/admin/all", authorize(USER_ROLES.ADMIN), getAllQuizzesForAdmin);
 
 // 2. Lấy danh sách quiz của riêng giáo viên đó
@@ -42,7 +43,14 @@ router.get(
 // 3. Xem lịch sử làm bài
 router.get("/my-history", authorize(USER_ROLES.LEARNER), getMyHistory);
 
-// 4. Tạo đề thủ công
+// 4. Thống kê
+router.get(
+  "/statistics",
+  authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN),
+  getTeacherStatistics
+);
+
+// 5. Tạo đề thủ công
 router.post(
   "/manual",
   authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN),
@@ -75,6 +83,13 @@ router.get(
   getQuizzes,
 );
 
+// Lấy nội dung quiz để làm bài (ẩn đáp án)
+router.get(
+  "/:id/play",
+  authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN),
+  getQuizForPlay,
+);
+
 // Nộp bài thi
 router.post(
   "/:quizId/submit",
@@ -104,9 +119,4 @@ router.delete(
   deleteQuiz,
 );
 
-router.get(
-  "/statistics",
-  authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN),
-  getTeacherStatistics
-);
 export default router;

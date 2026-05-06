@@ -222,6 +222,7 @@ function ByDocumentTab({
           description: q.description,
           difficulty: q.difficulty,
           time_limit: q.time_limit,
+          timeLimit: q.timeLimit ?? q.time_limit,
           questionCount:
             q.questionCount ??
             (Array.isArray(q.questions) ? q.questions.length : 0),
@@ -707,6 +708,7 @@ export default function QuizPage() {
           description: q.description,
           difficulty: q.difficulty,
           time_limit: q.time_limit,
+          timeLimit: q.timeLimit ?? q.time_limit,
           questionCount:
             q.questionCount ??
             (Array.isArray(q.questions) ? q.questions.length : 0),

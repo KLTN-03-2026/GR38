@@ -73,8 +73,7 @@ export const generateFlashcards = async (req, res, next) => {
 //@access Private
 export const generateQuiz = async (req, res, next) => {
   try {
-    const { documentId, numQuestions = 5, title } = req.body;
-
+const { documentId, numQuestions = 5, title, timeLimit = 30 } = req.body; // ✅ thêm timeLimit
     if (!documentId) {
       return res.status(400).json({
         success: false,
@@ -102,6 +101,12 @@ export const generateQuiz = async (req, res, next) => {
       document.extractedText, 
       parseInt(numQuestions)
     );
+    if (!questions || questions.length < 5) {
+  return res.status(400).json({
+    success: false,
+    error: `AI chỉ tạo được ${questions?.length ?? 0} câu hỏi hợp lệ. Vui lòng thử lại.`,
+  });
+}
     
     questions.forEach(q => {
         // Xóa khoảng trắng thừa ở đầu và cuối của đáp án đúng
@@ -129,7 +134,8 @@ export const generateQuiz = async (req, res, next) => {
       thumbnail: document.thumbnail, 
       questions: questions,
       totalQuestions : questions.length,
-      isAiGenerated: true
+      isAiGenerated: true,
+      timeLimit: Number(timeLimit),     
     });
 
     res.status(200).json({

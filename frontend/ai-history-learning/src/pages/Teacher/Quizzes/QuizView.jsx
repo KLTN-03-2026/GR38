@@ -16,7 +16,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
   const tabRef = useRef(null);
   const timerRef = useRef(null);
 
-  const timeLimitSec = (quiz.time_limit ?? 30) * 60;
+  const timeLimitSec = (quiz.timeLimit ?? quiz.time_limit ?? 30) * 60;
   const [timeLeft, setTimeLeft] = useState(timeLimitSec);
 
   const total = questions.length;
@@ -33,7 +33,10 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
     const localScore = Object.entries(answers).filter(([i, selectedIndex]) => {
       const question = questions[Number(i)];
       if (!question) return false;
-      return Number(selectedIndex) === Number(question.answer || question.correctAnswer);
+      return (
+        Number(selectedIndex) ===
+        Number(question.answer || question.correctAnswer)
+      );
     }).length;
 
     // 2. Format dữ liệu đáp án để gửi lên API Backend
@@ -41,27 +44,36 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
       const selectedIdx = answers[i];
       return {
         questionId: q._id || q.id,
-        selectedAnswer: selectedIdx !== undefined ? q.options[selectedIdx] : null,
+        selectedAnswer:
+          selectedIdx !== undefined ? q.options[selectedIdx] : null,
       };
     });
 
     try {
       // 3. Gửi API chấm điểm
-      const res = await quizService.submit(quizId, formattedAnswersForAPI, timeSpent);
-      
+      const res = await quizService.submit(
+        quizId,
+        formattedAnswersForAPI,
+        timeSpent,
+      );
+
       const result = res.data?.data ?? res.data;
-      const resultId = typeof result === "string" ? result : (result?.resultId ?? result?._id ?? result?.id ?? null);
-      const serverScore = result?.score !== undefined ? result.score : localScore;
+      const resultId =
+        typeof result === "string"
+          ? result
+          : (result?.resultId ?? result?._id ?? result?.id ?? null);
+      const serverScore =
+        result?.score !== undefined ? result.score : localScore;
 
       // 4. CHÚ Ý: Giữ nguyên cấu trúc trả về onFinish để trang quiz-result không bị trắng màn hình
-      onFinish({ 
-        quiz, 
+      onFinish({
+        quiz,
         answers, // Trả về đúng dạng Object {0: 1, 1: 3} cho Frontend xử lý
-        score: serverScore, 
-        total, 
-        questions, 
-        answered, 
-        resultId 
+        score: serverScore,
+        total,
+        questions,
+        answered,
+        resultId,
       });
     } catch (err) {
       console.warn("Submit API lỗi, tính điểm local:", err.message);
@@ -92,7 +104,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLimitSec]);
 
   const formatTime = (sec) => {
@@ -150,14 +162,14 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
   const pageNums = Array.from({ length: total }, (_, i) => i).filter(
     (i) => i === 0 || i === total - 1 || Math.abs(i - currentQ) <= 1,
   );
-  
+
   const slideClass =
     animDir === "left"
       ? "anim-slide-left"
       : animDir === "right"
         ? "anim-slide-right"
         : "";
-        
+
   const tabContentClass =
     tabAnim === "fade-out"
       ? "tab-fade-out"
@@ -524,7 +536,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                     </svg>
                     {Object.keys(answers).length} đã trả lời
                   </span>
-                  {quiz.time_limit > 0 && (
+                  {(quiz.timeLimit ?? quiz.time_limit) > 0 && (
                     <span className="flex items-center gap-1.5">
                       <svg
                         className="w-4 h-4 text-orange-400"
@@ -539,7 +551,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      {quiz.time_limit} phút
+                      {quiz.timeLimit ?? quiz.time_limit} phút
                     </span>
                   )}
                   {quiz.difficulty && (

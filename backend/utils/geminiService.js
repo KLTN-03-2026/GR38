@@ -163,7 +163,7 @@ ${text.substring(0, 15000)}`;
       }
     }
 
-    return questions.slice(0, numQuestions);
+    return questions;
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
     throw new Error("Hệ thống tạm thời không thể tạo câu hỏi trắc nghiệm.");

@@ -41,7 +41,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     setQuizTitle(editQuiz.title ?? "");
     setDesc(editQuiz.description ?? "");
     setDifficulty(editQuiz.difficulty ?? "EASY");
-    setTimeLimit(editQuiz.time_limit ?? 30);
+setTimeLimit(editQuiz.timeLimit ?? editQuiz.time_limit ?? 30); // ✅
     if (editQuiz.thumbnail) setThumbPreview(editQuiz.thumbnail);
 
     const normalized = (editQuiz.questions ?? []).map((q) => {

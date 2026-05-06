@@ -34,12 +34,75 @@ const getErrorMessage = (err, action) => {
   return defaults[action] || "Có lỗi xảy ra. Vui lòng thử lại.";
 };
 
+// ── Helpers quản lý danh sách phiên ──────────────────────────────────────────
+const SESSION_INDEX_KEY = (docId) => `chat_sessions_${docId}`;
+const SESSION_KEY       = (docId, sid) => `chat_session_${docId}_${sid}`;
+
+const getSessions = (docId) => {
+  try { return JSON.parse(localStorage.getItem(SESSION_INDEX_KEY(docId)) || "[]"); }
+  catch { return []; }
+};
+
+const saveSession = (docId, sid, messages) => {
+  try {
+    const toSave = messages.filter(m => !m.isLoading);
+    if (toSave.length === 0) return;
+    localStorage.setItem(SESSION_KEY(docId, sid), JSON.stringify(toSave));
+    // Cập nhật index
+    const sessions = getSessions(docId);
+    const exists = sessions.find(s => s.id === sid);
+    const preview = toSave.find(m => m.sender === "user")?.text?.slice(0, 40) || "Phiên chat";
+    if (exists) {
+      exists.preview = preview;
+      exists.updatedAt = Date.now();
+    } else {
+      sessions.unshift({ id: sid, preview, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    // Giữ tối đa 20 phiên
+    const trimmed = sessions.slice(0, 20);
+    localStorage.setItem(SESSION_INDEX_KEY(docId), JSON.stringify(trimmed));
+  } catch {}
+};
+
+const loadSession = (docId, sid) => {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY(docId, sid)) || "[]"); }
+  catch { return []; }
+};
+
+const deleteSession = (docId, sid) => {
+  try {
+    localStorage.removeItem(SESSION_KEY(docId, sid));
+    const sessions = getSessions(docId).filter(s => s.id !== sid);
+    localStorage.setItem(SESSION_INDEX_KEY(docId), JSON.stringify(sessions));
+  } catch {}
+};
+
+const newSessionId = () => `s_${Date.now()}`;
+
 export default function useChatAI(documentId) {
-  const [messages, setMessages]           = useState([]);
+  // Phiên hiện tại
+  const [currentSid, setCurrentSid] = useState(() => {
+    if (!documentId) return newSessionId();
+    const sessions = getSessions(documentId);
+    return sessions[0]?.id || newSessionId();
+  });
+
+  const [messages, setMessages] = useState(() => {
+    if (!documentId) return [];
+    const sessions = getSessions(documentId);
+    if (sessions.length === 0) return [];
+    return loadSession(documentId, sessions[0].id);
+  });
+
+  // Danh sách phiên để hiển thị sidebar
+  const [sessionList, setSessionList] = useState(() =>
+    documentId ? getSessions(documentId) : []
+  );
+
   const [input, setInput]                 = useState("");
   const [isTyping, setIsTyping]           = useState(false);
   const [activeSide, setActiveSide]       = useState("chat");
-  const [pendingAction, setPendingAction] = useState(null); // "flashcard" | "quiz" | "concept"
+  const [pendingAction, setPendingAction] = useState(null);
   const [dark, setDark]                   = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
@@ -58,6 +121,13 @@ export default function useChatAI(documentId) {
 
   const scrollRef   = useRef(null);
   const textareaRef = useRef(null);
+
+  // Lưu messages vào phiên hiện tại mỗi khi thay đổi
+  useEffect(() => {
+    if (!documentId || messages.length === 0) return;
+    saveSession(documentId, currentSid, messages);
+    setSessionList(getSessions(documentId));
+  }, [messages, documentId, currentSid]);
 
   // ── Thêm message vào danh sách ────────────────────────────────────────────
   const addMsg = useCallback((sender, text, extra = {}) =>
@@ -78,7 +148,7 @@ export default function useChatAI(documentId) {
     setMessages(prev => prev.filter(m => m.id !== id));
   }, []);
 
-  // ── Load lịch sử chat khi mở tài liệu ─────────────────────────────────────
+  // Load lịch sử chat khi mở tài liệu
   useEffect(() => {
     const load = async () => {
       if (!documentId) {
@@ -89,6 +159,13 @@ export default function useChatAI(documentId) {
           "• Tóm tắt nội dung bài học\n" +
           "• Giải thích bất kỳ khái niệm nào trong tài liệu"
         );
+        return;
+      }
+
+      // Nếu đã có messages từ phiên hiện tại thì không fetch lại
+      const existing = loadSession(documentId, currentSid);
+      if (existing.length > 0) {
+        setMessages(existing);
         return;
       }
 
@@ -133,9 +210,8 @@ export default function useChatAI(documentId) {
   }, [messages, isTyping]);
 
   // ── Xử lý confirm số lượng flashcard/quiz ─────────────────────────────────
-  // Nhận object: { count, title, timeLimit }
   const handleConfirmCount = async ({ count, title, timeLimit }, { onDone, onError } = {}) => {
-    const action = pendingAction; // "flashcard" | "quiz"
+    const action = pendingAction;
     setPendingAction(null);
 
     const displayTitle = title || (action === "flashcard" ? "Flashcard mới" : "Quiz ôn tập");
@@ -166,12 +242,11 @@ export default function useChatAI(documentId) {
           throw new Error(res.data?.error || "Tạo flashcard thất bại");
         }
       } else {
-        // quiz
         const res = await api.post("/ai/generate-quiz", {
           documentId,
           numQuestions: count,
           title: displayTitle,
-          timeLimit,          // phút — backend lưu để hiển thị sau
+          timeLimit,
         });
         if (res.data?.success) {
           const total = res.data.data?.totalQuestions ?? count;
@@ -299,10 +374,28 @@ export default function useChatAI(documentId) {
     }
   };
 
-  // ── Chat mới ───────────────────────────────────────────────────────────────
+  // Tạo phiên chat mới
   const handleNewChat = () => {
+    const sid = newSessionId();
+    setCurrentSid(sid);
     setMessages([]);
     addMsg("ai", "Phiên chat mới. Hãy đặt câu hỏi hoặc chọn một hành động!");
+  };
+
+  // Chuyển sang phiên cũ
+  const handleSwitchSession = (sid) => {
+    if (sid === currentSid) return;
+    const msgs = loadSession(documentId, sid);
+    setCurrentSid(sid);
+    setMessages(msgs);
+    setActiveSide("chat");
+  };
+
+  // Xóa phiên
+  const handleDeleteSession = (sid) => {
+    deleteSession(documentId, sid);
+    setSessionList(getSessions(documentId));
+    if (sid === currentSid) handleNewChat();
   };
 
   const handleKey = (e) => {
@@ -320,5 +413,7 @@ export default function useChatAI(documentId) {
     handleSend, handleNewChat, handleKey,
     handleConfirmCount,
     handleConfirmConcept,
+    sessionList, currentSid,
+    handleSwitchSession, handleDeleteSession,
   };
 }

@@ -69,6 +69,7 @@ create: async (data, thumbnailFile) => {
   if (data.documentId) formData.append("documentId", data.documentId);
   formData.append("questions",   JSON.stringify(data.questions));
   if (thumbnailFile) formData.append("thumbnail", thumbnailFile);
+  formData.append("timeLimit", data.timeLimit || 30);
 
   // Thêm chữ /manual vào endpoint
   const res = await api.post("/quizzes/manual", formData); 

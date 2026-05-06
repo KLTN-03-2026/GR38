@@ -1,6 +1,7 @@
 import Quiz from "#models/Quiz.js";
 import QuizResult from "#models/QuizResult.js";
 import { USER_ROLES } from "#models/User.js";
+import mongoose from "mongoose";
 
 //@desc Nộp bài quiz và tự động chấm điểm
 //@route POST /api/v1/quizzes/:quizId/submit

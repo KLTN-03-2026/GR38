@@ -90,22 +90,26 @@ const Flashcards = () => {
   };
 
   const handleDeleteConfirm = async () => {
-    const item = deleteTarget;
-    try {
+  const item = deleteTarget;
+  try {
+    if (item.source === "custom") {
+      // Chỉ xóa local, không gọi API
+    } else {
       await api.delete(`/flashcards/${item.id}`);
-    } catch (err) {
-      const status = err.response?.status;
-      alert(status === 403 ? "Bạn không có quyền xóa bộ thẻ này."
-        : status === 404 ? "Không tìm thấy bộ thẻ."
-        : "Lỗi xóa, vui lòng thử lại.");
-      setDeleteTarget(null);
-      return;
     }
-    const local = JSON.parse(localStorage.getItem("flashcards") || "[]");
-    localStorage.setItem("flashcards", JSON.stringify(local.filter((i) => String(i.id) !== String(item.id))));
-    setAllData((prev) => prev.filter((i) => String(i.id) !== String(item.id)));
+  } catch (err) {
+    const status = err.response?.status;
+    alert(status === 403 ? "Bạn không có quyền xóa bộ thẻ này."
+      : status === 404 ? "Không tìm thấy bộ thẻ."
+      : "Lỗi xóa, vui lòng thử lại.");
     setDeleteTarget(null);
-  };
+    return;
+  }
+  const local = JSON.parse(localStorage.getItem("flashcards") || "[]");
+  localStorage.setItem("flashcards", JSON.stringify(local.filter((i) => String(i.id) !== String(item.id))));
+  setAllData((prev) => prev.filter((i) => String(i.id) !== String(item.id)));
+  setDeleteTarget(null);
+};
 
   const tabPool = React.useMemo(() => {
     if (activeTab === "tai-lieu") return allData.filter((i) => i.source === "ai");

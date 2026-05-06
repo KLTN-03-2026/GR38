@@ -23,15 +23,28 @@ export default function ChatAI({ documentId, documentTitle }) {
     handleSend, handleNewChat, handleKey,
     handleConfirmCount,
     handleConfirmConcept,
+    sessionList, currentSid,
+    handleSwitchSession, handleDeleteSession,
   } = useChatAI(documentId);
 
   const T = dark ? THEME.dark : THEME.light;
+
+  // Format thời gian ngắn gọn
+  const formatTime = (ts) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / 86400000);
+    if (diffDays === 0) return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    if (diffDays === 1) return "Hôm qua";
+    if (diffDays < 7)  return `${diffDays} ngày trước`;
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  };
 
   return (
     <>
       <style>{GLOBAL_CSS}</style>
 
-      {/* Dialog chọn số lượng Flashcard / Quiz */}
       {(pendingAction === "flashcard" || pendingAction === "quiz") && (
         <CountPickerDialog
           action={pendingAction}
@@ -41,6 +54,7 @@ export default function ChatAI({ documentId, documentTitle }) {
           T={T}
         />
       )}
+
       <div style={{
         display: "flex", width: "100%", height: "calc(100vh - 220px)",
         fontFamily: "'DM Sans',system-ui,sans-serif", borderRadius: 20, overflow: "hidden",
@@ -68,7 +82,7 @@ export default function ChatAI({ documentId, documentTitle }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 500, color: T.sbBright, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-{documentTitle ?? (documentId ? `Tài liệu #${documentId.slice(-6)}` : "Chọn tài liệu")}
+                  {documentTitle ?? (documentId ? `Tài liệu #${documentId.slice(-6)}` : "Chọn tài liệu")}
                 </div>
                 <div style={{ fontSize: 9.5, color: T.sbMuted, marginTop: 1 }}>
                   {isLoadingHistory ? "Đang tải lịch sử..." : "Đang hoạt động"}
@@ -80,17 +94,57 @@ export default function ChatAI({ documentId, documentTitle }) {
 
           {/* Nav */}
           <div className="chatai-sb-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 1 }}>
+
+            {/* Phiên chat */}
             <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sbMuted, padding: "8px 6px 4px" }}>Phiên chat</div>
 
-            <SidebarItem Icon={IconMessageSquare} label="Chat hiện tại"
-              sub={documentId ? `doc-${documentId.slice(-6)}` : "Chưa chọn"}
-              active={activeSide === "chat"} onClick={() => setActiveSide("chat")} T={T}/>
-
+            {/* Nút chat mới */}
             <button onClick={handleNewChat} className="chatai-hbtn"
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", transition: "background 0.15s" }}>
               <IconRotateCcw size={13} style={{ color: T.sbMuted }}/>
               <span style={{ fontSize: 11.5, color: T.sbDim }}>Chat mới</span>
             </button>
+
+            {/* Danh sách phiên */}
+            {sessionList.length === 0 ? (
+              <div style={{ fontSize: 10.5, color: T.sbMuted, padding: "6px 8px", fontStyle: "italic" }}>
+                Chưa có phiên nào
+              </div>
+            ) : sessionList.map((s) => {
+              const isActive = s.id === currentSid;
+              return (
+                <div key={s.id}
+                  onClick={() => handleSwitchSession(s.id)}
+                  className="chatai-hbtn"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    padding: "7px 8px", borderRadius: 8, cursor: "pointer",
+                    background: isActive ? T.sbHover : "transparent",
+                    border: isActive ? `0.5px solid ${T.sbBorder}` : "0.5px solid transparent",
+                    transition: "background 0.15s",
+                    position: "relative", group: true,
+                  }}>
+                  <IconMessageSquare size={13} style={{ color: isActive ? T.sbBright : T.sbMuted, flexShrink: 0 }}/>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: isActive ? 600 : 400, color: isActive ? T.sbBright : T.sbDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {s.preview || "Phiên chat"}
+                    </div>
+                    <div style={{ fontSize: 9.5, color: T.sbMuted, marginTop: 1 }}>
+                      {formatTime(s.updatedAt)}
+                    </div>
+                  </div>
+                  {isActive && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", flexShrink: 0 }}/>}
+                  {/* Nút xóa */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+                    title="Xóa phiên"
+                    style={{ fontSize: 11, lineHeight: 1, padding: "1px 4px", borderRadius: 4, border: "none", background: "transparent", color: T.sbMuted, cursor: "pointer", opacity: 0, transition: "opacity 0.15s" }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                    onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                  >✕</button>
+                </div>
+              );
+            })}
 
             <div style={{ height: "0.5px", background: T.sbBorder, margin: "6px 4px" }}/>
             <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sbMuted, padding: "4px 6px" }}>Công cụ</div>
@@ -158,7 +212,6 @@ export default function ChatAI({ documentId, documentTitle }) {
           <div ref={scrollRef} className="chatai-scroll"
             style={{ "--scroll-thumb": dark ? "#2a2a3a" : "#e5e7eb", flex: 1, overflowY: "auto", padding: "20px 18px", display: "flex", flexDirection: "column", gap: 16, background: T.surface, transition: "background 0.3s" }}>
 
-            {/* Loading history skeleton */}
             {isLoadingHistory && messages.length === 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, opacity: 0.5 }}>
                 {[80, 60, 90].map((w, i) => (

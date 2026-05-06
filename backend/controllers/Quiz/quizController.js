@@ -75,7 +75,7 @@ export const getQuizById = async (req, res, next) => {
 //@access Private (Teacher, Admin)
 export const createQuizManual = async (req, res, next) => {
   try {
-    const { title, documentId, description } = req.body;
+    const { title, documentId, description, timeLimit } = req.body;
     let { questions } = req.body;
 
     // Do gửi qua FormData (để đính kèm ảnh), questions có thể bị biến thành String
@@ -124,6 +124,7 @@ export const createQuizManual = async (req, res, next) => {
       teacherId: req.user._id,
       questions: formattedQuestions,
       isAiGenerated: false, // Đánh dấu đây là quiz làm bằng tay
+      timeLimit: timeLimit || 30,
     });
 
     res.status(201).json({

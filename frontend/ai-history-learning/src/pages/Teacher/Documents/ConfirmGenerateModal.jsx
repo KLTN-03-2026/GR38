@@ -135,7 +135,7 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
                 Đang tạo...
               </>
             ) : (
-              "✨ Tạo ngay"
+              " Tạo ngay"
             )}
           </button>
         </div>

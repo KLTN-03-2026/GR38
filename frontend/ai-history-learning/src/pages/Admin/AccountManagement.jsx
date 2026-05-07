@@ -216,6 +216,27 @@ const AccountManagement = () => {
     });
   };
 
+  // Hàm tạo danh sách các số trang để hiển thị
+  const renderPageNumbers = () => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`w-8 h-8 flex items-center justify-center rounded-md text-sm font-medium transition-colors ${
+            currentPage === i
+              ? "bg-[#F26739] text-white"
+              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          {i}
+        </button>,
+      );
+    }
+    return pages;
+  };
+
   if (viewingAccount) {
     return (
       <AccountDetail
@@ -405,20 +426,25 @@ const AccountManagement = () => {
           {totalPages > 1 && (
             <div className="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
               <p className="text-sm text-slate-500">
-                Trang {currentPage} / {totalPages}
+                Hiển thị {currentTableData.length} / {filteredAccounts.length}{" "}
+                kết quả
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((p) => p - 1)}
-                  className="p-2 border border-slate-200 rounded-md bg-white disabled:opacity-50"
+                  className="p-2 border border-slate-200 rounded-md bg-white disabled:opacity-50 hover:bg-slate-50 transition-colors"
                 >
                   <ChevronLeft size={16} />
                 </button>
+
+                {/* Phần chọn số trang trực tiếp */}
+                <div className="flex gap-1">{renderPageNumbers()}</div>
+
                 <button
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((p) => p + 1)}
-                  className="p-2 border border-slate-200 rounded-md bg-white disabled:opacity-50"
+                  className="p-2 border border-slate-200 rounded-md bg-white disabled:opacity-50 hover:bg-slate-50 transition-colors"
                 >
                   <ChevronRight size={16} />
                 </button>

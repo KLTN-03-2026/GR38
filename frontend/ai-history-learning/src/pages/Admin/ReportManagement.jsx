@@ -21,11 +21,13 @@ const ReportManagement = () => {
   const [error, setError] = useState(null);
   const [viewingReport, setViewingReport] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("Loại sự cố");
+  const [filterType, setFilterType] = useState("Loại báo cáo");
   const [filterStatus, setFilterStatus] = useState("Trạng thái");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalReports, setTotalReports] = useState(0);
+
+  const itemsPerPage = 5;
 
   const STATUS_LABELS = {
     pending: "Chưa xử lý",
@@ -40,34 +42,37 @@ const ReportManagement = () => {
     "Đã xử lý": "resolved",
   };
 
-  const getReportCategory = (report) => {
-    const targetType = report.targetType?.toLowerCase() || "";
-    const issueType = report.issueType?.toLowerCase() || "";
-    const description = report.description?.toLowerCase() || "";
+  const REPORT_CATEGORIES = [
+    "Loại báo cáo",
+    "Sai thông tin lịch sử",
+    "Sai thời gian",
+    "Hành vi không chuẩn mực",
+    "Spam",
+    "Lỗi tài liệu",
+    "Khác",
+  ];
 
-    if (
-      targetType.includes("ai") ||
-      issueType.includes("ai") ||
-      description.includes("ai") ||
-      description.includes("chat ai") ||
-      description.includes("trí tuệ nhân tạo")
-    ) {
-      return "Lỗi AI";
+  const parseReportContent = (description = "") => {
+    const match = description.match(/\[(.*?)\](.*)/);
+    if (match) {
+      return {
+        title: match[1].trim(),
+        content: match[2].trim(),
+      };
     }
-
-    return "Lỗi Website";
+    return { title: "Khác", content: description };
   };
 
   const fetchReports = async (page = 1, statusFilter = "") => {
     try {
       setLoading(true);
       setError(null);
-      const params = new URLSearchParams({ page, limit: 10 });
+      // Sửa lỗi lặp URL bằng cách không thêm /api/v1 nếu axios instance đã có baseURL
+      const params = new URLSearchParams({ page, limit: itemsPerPage });
+
       if (statusFilter && statusFilter !== "Trạng thái") {
         const statusValue = STATUS_FILTER_VALUES[statusFilter];
-        if (statusValue) {
-          params.append("status", statusValue);
-        }
+        if (statusValue) params.append("status", statusValue);
       }
 
       const response = await api.get(`/reports?${params}`);
@@ -79,87 +84,99 @@ const ReportManagement = () => {
       }
     } catch (err) {
       setError("Không thể tải danh sách báo cáo");
-      console.error("Lỗi fetch reports:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReports();
-  }, []);
+    fetchReports(1, filterStatus);
+  }, [filterStatus]);
 
-  // --- LOGIC XỬ LÝ DỮ LIỆU ---
   const filteredReports = useMemo(() => {
     return reports.filter((item) => {
+      const { title, content } = parseReportContent(item.description);
       const matchSearch =
         item.reporterId?.fullName
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchType =
-        filterType === "Loại sự cố" || getReportCategory(item) === filterType;
-      const statusValue =
-        STATUS_FILTER_VALUES[filterStatus] || filterStatus.toLowerCase();
-      const matchStatus =
-        filterStatus === "Trạng thái" || item.status === statusValue;
-      return matchSearch && matchType && matchStatus;
+        title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchType = filterType === "Loại báo cáo" || title === filterType;
+      return matchSearch && matchType;
     });
-  }, [reports, searchQuery, filterType, filterStatus]);
+  }, [reports, searchQuery, filterType]);
 
-  // --- CÁC HÀM THAO TÁC ---
   const handleDelete = (id) => {
     Swal.fire({
-      title: "Xác nhận xóa?",
-      text: "Báo cáo này sẽ bị xóa vĩnh viễn!",
+      title: "Xác nhận từ chối?",
+      text: "Báo cáo này sẽ được chuyển sang trạng thái Từ chối!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#F26739",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Xóa ngay",
+      confirmButtonText: "Xác nhận",
       cancelButtonText: "Hủy",
     }).then((result) => {
       if (result.isConfirmed) {
-        // Note: API không có endpoint DELETE, nên chỉ update status thành rejected
         handleUpdateStatus(id, "rejected");
-        Swal.fire("Đã xóa!", "Báo cáo đã được loại bỏ.", "success");
       }
     });
   };
 
   const handleUpdateStatus = async (reportId, newStatus) => {
     try {
+      // Sử dụng patch và xóa tiền tố dư thừa trong URL
       await api.patch(`/reports/${reportId}/status`, {
         status: newStatus,
-        adminNotes: "Cập nhật từ ReportManagement",
+        adminNotes: "Cập nhật từ hệ thống quản lý",
       });
-      // Refresh data với bộ lọc trạng thái hiện tại
+      Swal.fire("Thành công!", "Đã cập nhật trạng thái báo cáo.", "success");
       fetchReports(currentPage, filterStatus);
     } catch (error) {
-      Swal.fire("Lỗi!", "Không thể cập nhật trạng thái.", "error");
+      Swal.fire(
+        "Lỗi!",
+        "Không thể cập nhật trạng thái. Vui lòng kiểm tra cấu hình CORS PATCH.",
+        "error",
+      );
     }
   };
 
-  const handleViewDetail = (report) => {
-    setViewingReport(report);
+  const renderPageNumbers = () => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => fetchReports(i, filterStatus)}
+          className={`w-8 h-8 flex items-center justify-center rounded-md text-sm font-medium transition-all ${
+            currentPage === i
+              ? "bg-[#F26739] text-white shadow-sm"
+              : "bg-white border border-gray-200 text-gray-600 hover:bg-orange-50 hover:text-[#F26739]"
+          }`}
+        >
+          {i}
+        </button>,
+      );
+    }
+    return pages;
   };
 
-  // --- GIAO DIỆN ---
   if (viewingReport) {
     return (
       <ReportDetail
         report={viewingReport}
         onBack={() => setViewingReport(null)}
-        onRefresh={() => fetchReports(currentPage)} // Đảm bảo truyền function này vào
+        onRefresh={() => fetchReports(currentPage, filterStatus)}
       />
     );
   }
 
   return (
     <div className="p-8 bg-white min-h-screen font-['Inter']">
-      <h1 className="text-2xl font-bold mb-6">Quản lý báo cáo</h1>
+      <h1 className="text-2xl font-bold mb-6 text-slate-900">
+        Quản lý báo cáo
+      </h1>
 
-      {/* Tìm kiếm và Lọc */}
       <div className="border border-gray-200 rounded-2xl p-6 mb-8 shadow-sm">
         <h2 className="text-lg font-semibold mb-4 text-slate-800">
           Tìm kiếm và lọc
@@ -173,21 +190,15 @@ const ReportManagement = () => {
             <input
               type="text"
               placeholder="Lọc theo tên người gửi hoặc nội dung..."
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-100 transition-all"
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-100"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button
-            onClick={() => fetchReports(1, filterStatus)}
-            className="bg-[#F26739] text-white px-8 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
-          >
-            Tìm
-          </button>
 
           <FilterDropdown
             label={filterType}
-            options={["Loại sự cố", "Lỗi Website", "Lỗi AI"]}
+            options={REPORT_CATEGORIES}
             onSelect={setFilterType}
           />
           <FilterDropdown
@@ -197,7 +208,7 @@ const ReportManagement = () => {
           />
         </div>
 
-        {/* Thống kê từ dữ liệu thật */}
+        {/* THỐNG KÊ CẬP NHẬT THEO YÊU CẦU */}
         <div className="grid grid-cols-4 gap-4">
           <StatCard
             label="Tổng sự cố"
@@ -205,8 +216,8 @@ const ReportManagement = () => {
             icon={<Info size={16} />}
           />
           <StatCard
-            label="Đang xử lý"
-            value={reports.filter((r) => r.status === "in_progress").length}
+            label="Đã xử lý"
+            value={reports.filter((r) => r.status === "resolved").length}
             icon={<Wrench size={16} />}
           />
           <StatCard
@@ -215,15 +226,14 @@ const ReportManagement = () => {
             icon={<ClipboardList size={16} />}
           />
           <StatCard
-            label="Sự cố nghiêm trọng"
-            value="0"
+            label="Từ chối"
+            value={reports.filter((r) => r.status === "rejected").length}
             icon={<AlertCircle size={16} />}
             isAlert
           />
         </div>
       </div>
 
-      {/* Danh sách yêu cầu */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-slate-900">
           Danh sách yêu cầu báo cáo
@@ -233,19 +243,19 @@ const ReportManagement = () => {
             <thead className="bg-slate-50 border-b border-gray-300 font-bold text-slate-700">
               <tr>
                 <th className="px-4 py-4 border-r border-gray-200 w-24 text-center">
-                  Mã yêu cầu
+                  Mã
                 </th>
                 <th className="px-4 py-4 border-r border-gray-200 text-center">
-                  Tên tài khoản
+                  Người gửi
                 </th>
                 <th className="px-4 py-4 border-r border-gray-200 text-center">
                   Ngày gửi
                 </th>
                 <th className="px-4 py-4 border-r border-gray-200 text-center">
-                  Nội dung yêu cầu
+                  Tiêu đề
                 </th>
                 <th className="px-4 py-4 border-r border-gray-200 text-center">
-                  Loại sự cố
+                  Nội dung mô tả
                 </th>
                 <th className="px-4 py-4 border-r border-gray-200 text-center">
                   Trạng thái
@@ -263,114 +273,100 @@ const ReportManagement = () => {
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : error ? (
-                <tr>
-                  <td
-                    colSpan="7"
-                    className="px-4 py-8 text-center text-red-500"
-                  >
-                    {error}
-                  </td>
-                </tr>
               ) : filteredReports.length === 0 ? (
                 <tr>
                   <td
                     colSpan="7"
                     className="px-4 py-8 text-center text-slate-400"
                   >
-                    Không tìm thấy báo cáo nào phù hợp.
+                    Không tìm thấy dữ liệu.
                   </td>
                 </tr>
               ) : (
-                filteredReports.map((report) => (
-                  <tr
-                    key={report._id}
-                    className="hover:bg-slate-50/50 transition-colors"
-                  >
-                    <td className="px-4 py-4 font-bold border-r border-gray-200 text-center">
-                      {report._id.slice(-6)}
-                    </td>
-                    <td className="px-4 py-4 border-r border-gray-200 text-center font-medium">
-                      {report.reporterId?.fullName || "Ẩn danh"}
-                    </td>
-                    <td className="px-4 py-4 border-r border-gray-200 text-center text-slate-500">
-                      {new Date(report.createdAt).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-4 border-r border-gray-200 text-center italic text-slate-600">
-                      "{report.description}"
-                    </td>
-                    <td className="px-4 py-4 border-r border-gray-200 text-center">
-                      <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                        {getReportCategory(report)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 border-r border-gray-200 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-md text-[10px] font-bold inline-block w-24 uppercase shadow-sm ${
-                          report.status === "pending"
-                            ? "bg-red-100 text-red-700"
-                            : report.status === "resolved"
-                              ? "bg-green-100 text-green-700"
-                              : report.status === "in_progress"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {STATUS_LABELS[report.status] || report.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleViewDetail(report)}
-                          className="p-1.5 border border-gray-300 rounded hover:bg-orange-50 hover:border-[#F26739] text-slate-600 hover:text-[#F26739] transition-all shadow-sm"
-                          title="Xem chi tiết"
+                filteredReports.map((report) => {
+                  const { title, content } = parseReportContent(
+                    report.description,
+                  );
+                  return (
+                    <tr
+                      key={report._id}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="px-4 py-4 font-bold border-r border-gray-200 text-center">
+                        {report._id.slice(-6)}
+                      </td>
+                      <td className="px-4 py-4 border-r border-gray-200 text-center font-medium">
+                        {report.reporterId?.fullName || "Ẩn danh"}
+                      </td>
+                      <td className="px-4 py-4 border-r border-gray-200 text-center text-slate-500">
+                        {new Date(report.createdAt).toLocaleDateString("vi-VN")}
+                      </td>
+                      <td className="px-4 py-4 border-r border-gray-200 text-center">
+                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-bold uppercase border border-blue-100">
+                          {title}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 border-r border-gray-200 text-center italic text-slate-600 truncate max-w-[250px]">
+                        "{content}"
+                      </td>
+                      <td className="px-4 py-4 border-r border-gray-200 text-center">
+                        <span
+                          className={`px-3 py-1 rounded-md text-[10px] font-bold inline-block w-24 uppercase shadow-sm ${
+                            report.status === "pending"
+                              ? "bg-red-100 text-red-700"
+                              : report.status === "resolved"
+                                ? "bg-green-100 text-green-700"
+                                : report.status === "rejected"
+                                  ? "bg-gray-100 text-gray-500"
+                                  : "bg-amber-100 text-amber-700"
+                          }`}
                         >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(report._id)}
-                          className="p-1.5 border border-gray-300 rounded hover:bg-red-50 hover:border-red-500 text-slate-600 hover:text-red-500 transition-all shadow-sm"
-                          title="Xóa"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {STATUS_LABELS[report.status] || report.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => setViewingReport(report)}
+                            className="p-1.5 border border-gray-300 rounded hover:border-[#F26739] hover:text-[#F26739] transition-all shadow-sm"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(report._id)}
+                            className="p-1.5 border border-gray-300 rounded hover:border-red-500 hover:text-red-500 transition-all shadow-sm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
-          {filteredReports.length === 0 && (
-            <div className="p-10 text-center text-slate-400">
-              Không tìm thấy báo cáo nào phù hợp.
-            </div>
-          )}
         </div>
 
-        {/* Phân trang */}
         <div className="flex justify-between items-center py-4 text-sm text-gray-500 font-medium">
           <span>
-            {filteredReports.length} / {totalReports} kết quả
+            Hiển thị {filteredReports.length} / {totalReports} báo cáo
           </span>
           <div className="flex items-center gap-2">
             <button
               disabled={currentPage === 1}
               onClick={() => fetchReports(currentPage - 1, filterStatus)}
-              className="flex items-center hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 border border-gray-200 rounded-md bg-white disabled:opacity-50 hover:bg-gray-50 transition-all"
             >
-              <ChevronLeft size={16} /> Previous
+              <ChevronLeft size={16} />
             </button>
-            <span className="px-2">
-              Trang {currentPage} / {totalPages}
-            </span>
+            <div className="flex gap-1">{renderPageNumbers()}</div>
             <button
               disabled={currentPage === totalPages}
               onClick={() => fetchReports(currentPage + 1, filterStatus)}
-              className="flex items-center hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 border border-gray-200 rounded-md bg-white disabled:opacity-50 hover:bg-gray-50 transition-all"
             >
-              Next <ChevronRight size={16} />
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
@@ -379,12 +375,10 @@ const ReportManagement = () => {
   );
 };
 
-// --- COMPONENT CON (Helper Components) ---
-
 const StatCard = ({ label, value, icon, isAlert }) => (
-  <div className="border border-gray-200 p-5 rounded-2xl relative bg-white hover:shadow-md transition-shadow">
+  <div className="border border-gray-200 p-5 rounded-2xl relative bg-white hover:shadow-md transition-all">
     <div
-      className={`absolute top-4 right-4 ${isAlert ? "text-yellow-400" : "text-gray-300"}`}
+      className={`absolute top-4 right-4 ${isAlert ? "text-red-400" : "text-gray-300"}`}
     >
       {icon}
     </div>
@@ -395,12 +389,11 @@ const StatCard = ({ label, value, icon, isAlert }) => (
 
 const FilterDropdown = ({ label, options, onSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div className="relative">
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm min-w-[140px] text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm min-w-[160px] text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
       >
         <span>{label}</span>
         <ChevronDown
@@ -408,9 +401,8 @@ const FilterDropdown = ({ label, options, onSelect }) => {
           className={`text-gray-400 ml-2 transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </div>
-
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden max-h-60 overflow-y-auto">
           {options.map((opt) => (
             <div
               key={opt}

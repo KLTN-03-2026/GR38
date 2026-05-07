@@ -33,17 +33,19 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
-  customSiteTitle: "API Docs - AI History Learning",
-}));
+app.use(
+  "/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocs, {
+    customSiteTitle: "API Docs - AI History Learning",
+  }),
+);
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
@@ -68,7 +70,9 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
-  console.log(`Server is running on ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(
+    `Server is running on ${process.env.NODE_ENV} mode on port ${PORT}`,
+  );
   console.log(`📚 Swagger Docs: http://localhost:${PORT}/docs`);
 });
 

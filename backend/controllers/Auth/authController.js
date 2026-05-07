@@ -117,15 +117,6 @@ export const googleAuth = async (req, res, next) => {
       }
 
       // Kiểm tra trạng thái tài khoản
-      if (!user.isActive) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            error: "Tài khoản của bạn đã bị vô hiệu hóa.",
-          });
-      }
-
       if (
         user.role === USER_ROLES.TEACHER &&
         user.teacherApprovalStatus !== TEACHER_APPROVAL_STATUS.APPROVED
@@ -135,6 +126,15 @@ export const googleAuth = async (req, res, next) => {
           .json({
             success: false,
             error: "Tài khoản Giáo viên của bạn đang chờ duyệt từ Admin.",
+          });
+      }
+
+      if (!user.isActive) {
+        return res
+          .status(403)
+          .json({
+            success: false,
+            error: "Tài khoản của bạn đã bị vô hiệu hóa.",
           });
       }
 
@@ -270,13 +270,25 @@ export const login = async (req, res, next) => {
     }
 
     if (!user.isActive) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          error: "Tài khoản của bạn đã bị vô hiệu hóa.",
+    // Trường hợp 1: Là giáo viên và ĐANG CHỜ DUYỆT
+    if (user.role === 'TEACHER' && user.teacherApprovalStatus === 'pending') {
+        return res.status(403).json({ 
+            message: "Tài khoản Giáo viên của bạn đang chờ Quản trị viên phê duyệt. Vui lòng quay lại sau!" 
         });
     }
+    
+    // Trường hợp 2: Là giáo viên nhưng BỊ TỪ CHỐI
+    if (user.role === 'TEACHER' && user.teacherApprovalStatus === 'rejected') {
+        return res.status(403).json({ 
+            message: "Yêu cầu đăng ký Giáo viên của bạn đã bị từ chối." 
+        });
+    }
+
+    // Trường hợp 3: Thực sự bị Admin vô hiệu hóa (banned/locked)
+    return res.status(403).json({ 
+        message: "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ Admin." 
+    });
+}
 
     if (
       user.role === USER_ROLES.TEACHER &&

@@ -4,6 +4,13 @@ import Swal from "sweetalert2";
 import { authService } from "@/services/authService"; 
 import { useAuth } from "@/context/AuthContext"; 
 
+// Bê cấu hình chuyển trang từ Login sang để dùng chung
+const ROLE_CONFIG = {
+  ADMIN:   { path: "/admin",   label: "Quản trị viên" },
+  TEACHER: { path: "/teacher", label: "Giáo viên" },
+  LEARNER: { path: "/learner", label: "Người học" },
+};
+
 export const useRegister = () => {
   const { setAuthUser } = useAuth(); 
   const [input, setInput] = useState({ hoTen: "", email: "", pass: "", passwordConfirm: "" });
@@ -23,7 +30,6 @@ export const useRegister = () => {
     setErrors((prev) => ({ ...prev, role: "" }));
   };
 
-
   // XỬ LÝ GOOGLE LOGIN/REGISTER 
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
@@ -32,7 +38,6 @@ export const useRegister = () => {
       let resData = await authService.googleAuth({
         token: credentialResponse.credential, 
       });
-
 
       if (resData.requireRole) {
         setLoading(false); 
@@ -67,8 +72,6 @@ export const useRegister = () => {
       }
 
       // 4. XỬ LÝ KẾT QUẢ CUỐI CÙNG 
-
-      
       if (resData.isPendingApproval) {
         await Swal.fire({
           icon: "info",
@@ -76,12 +79,11 @@ export const useRegister = () => {
           text: resData.message,
           confirmButtonColor: "#f97316"
         });
-        navigate("/login"); 
+        navigate("/login"); // Chờ duyệt thì về login là đúng
         return; 
       }
 
       const user = resData.data || resData.user || resData;
-
       const isNewUser = resData.isNewUser;
       const titleMsg = isNewUser ? "ĐĂNG KÝ THÀNH CÔNG" : "ĐĂNG NHẬP THÀNH CÔNG";
       const textMsg = isNewUser 
@@ -99,12 +101,24 @@ export const useRegister = () => {
       });
       
       setAuthUser(user);
-      navigate("/login");
+      // Đã đăng nhập thì cho vào thẳng Dashboard tương ứng
+      const path = ROLE_CONFIG[user.role]?.path || "/";
+      navigate(path);
 
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi xác thực Google";
+      const msg = error.response?.data?.error || error.response?.data?.message || "Lỗi server khi xác thực Google";
+      
+      // LOGIC ĐỔI ICON (Đồng bộ với bên Login)
+      let alertIcon = "error";
+      let alertTitle = "Thất bại";
+
+      if (msg.toLowerCase().includes("chờ")) {
+        alertIcon = "warning";
+        alertTitle = "Thông báo";
+      }
+
       Swal.fire({
-        icon: "error", title: "Thất bại", text: errorMsg, confirmButtonColor: "#f97316"
+        icon: alertIcon, title: alertTitle, text: msg, confirmButtonColor: "#f97316"
       });
     } finally {
       setLoading(false);
@@ -162,7 +176,10 @@ export const useRegister = () => {
       });
       
       setAuthUser(user);
-      navigate("/login");
+      // Đã đăng ký thành công và có User -> Chuyển hướng vào trong luôn
+      const path = ROLE_CONFIG[user.role]?.path || "/";
+      navigate(path);
+
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || "Lỗi server";
       Swal.fire({ icon: "error", title: "Đăng ký thất bại", text: msg, confirmButtonColor: "#f97316" });

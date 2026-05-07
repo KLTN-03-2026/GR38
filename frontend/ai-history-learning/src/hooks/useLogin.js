@@ -55,16 +55,23 @@ export const useLogin = () => {
       const path = ROLE_CONFIG[user.role]?.path || "/login";
       navigate(path);
     } catch (error) {
-      const status = error.response?.status;
-      const serverMsg = error.response?.data?.message || error.response?.data?.error || "";
+      // SỬA LỖI Ở ĐÂY: Ưu tiên lấy message từ server trả về
+      const msg = error.response?.data?.error || error.response?.data?.message || "Tài khoản hoặc mật khẩu không chính xác";
 
-      const isAuthError = [400, 401, 403, 404].includes(status);
-      const msg = isAuthError
-        ? "Tài khoản hoặc mật khẩu không chính xác"
-        : serverMsg || "Lỗi server, vui lòng thử lại sau";
+      // LOGIC ĐỔI ICON: Nếu thông báo chứa chữ "chờ", dùng icon "warning" (!)
+      let alertIcon = "error";
+      let alertTitle = "Đăng nhập thất bại";
+
+      if (msg.toLowerCase().includes("chờ")) {
+        alertIcon = "warning";
+        alertTitle = "Thông báo";
+      }
 
       Swal.fire({
-        icon: "error", title: isAuthError ? "Đăng nhập thất bại" : "Có lỗi xảy ra", text: msg, confirmButtonColor: "#f97316",
+        icon: alertIcon, 
+        title: alertTitle, 
+        text: msg, 
+        confirmButtonColor: "#f97316",
       });
       setErrors({ pass: msg });
     } finally {
@@ -80,9 +87,19 @@ export const useLogin = () => {
       });
 
       const user = resData.data || resData;
+
+      if (!user || !user.role) {
+        Swal.fire({
+          icon: "warning",
+          title: "Tài khoản chưa đăng ký",
+          text: "Tài khoản Google này chưa được liên kết với hệ thống. Vui lòng đăng ký trước!",
+          confirmButtonColor: "#f97316"
+        });
+        return; 
+      }
+
       const roleLabel = ROLE_CONFIG[user.role]?.label ?? user.role;
 
-      // 1. Hiện thông báo và CHỜ tắt
       await Swal.fire({
         icon: "success",
         title: "ĐĂNG NHẬP THÀNH CÔNG",
@@ -93,16 +110,42 @@ export const useLogin = () => {
         showConfirmButton: false
       });
 
-      // 2. Chờ xong mới set user và chuyển trang
       setAuthUser(user);
-      navigate("/login");
+      
+      const path = ROLE_CONFIG[user.role]?.path || "/";
+      navigate(path);
+
     } catch (error) {
       const msg = error.response?.data?.error || error.response?.data?.message || "Đăng nhập Google thất bại";
-      Swal.fire({ icon: "error", title: "Lỗi đăng nhập", text: msg, confirmButtonColor: "#f97316" });
+      
+      // LOGIC ĐỔI ICON CHO GOOGLE AUTH
+      let alertIcon = "error";
+      let alertTitle = "Lỗi đăng nhập";
+
+      if (msg.toLowerCase().includes("chờ")) {
+        alertIcon = "warning";
+        alertTitle = "Thông báo";
+      }
+
+      Swal.fire({ 
+        icon: alertIcon, 
+        title: alertTitle, 
+        text: msg, 
+        confirmButtonColor: "#f97316" 
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  return { input, errors, loading, showPass, setShowPass, handleChange, handleLogin, handleGoogleSuccess };
+  return { 
+    input, 
+    errors, 
+    loading, 
+    showPass, 
+    setShowPass, 
+    handleChange, 
+    handleLogin, 
+    handleGoogleSuccess 
+  };
 };

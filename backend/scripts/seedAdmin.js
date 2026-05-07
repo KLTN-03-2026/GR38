@@ -27,7 +27,7 @@ const seedAdmin = async () => {
         const adminUser = new User({
             fullName: 'Admin',
             email: 'admin@gmail.com', 
-            password: 'admin123',   
+            password: 'Admin@123',   
             role: USER_ROLES.ADMIN,
             teacherApprovalStatus: 'approved', 
             isActive: true

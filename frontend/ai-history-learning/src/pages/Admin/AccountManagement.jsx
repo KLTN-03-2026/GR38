@@ -18,26 +18,42 @@ const AccountManagement = () => {
   const [viewingAccount, setViewingAccount] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  // --- Helpers ---
   const normalizeRole = (role) => (role || "").toString().toUpperCase();
+
   const getRoleLabel = (role) => {
     const normalized = normalizeRole(role);
     if (normalized === "TEACHER") return "Giáo viên";
     if (normalized === "LEARNER") return "Người học";
     return role || "";
   };
+
+  /**
+   * LOGIC TRẠNG THÁI (Đã cập nhật):
+   * 1. Ưu tiên 1: Nếu bị Admin khóa (isDisabledByAdmin) -> "Đã vô hiệu hóa"
+   * 2. Ưu tiên 2: Nếu đã kích hoạt (isActive) -> "Đang hoạt động"
+   * 3. Ưu tiên 3: Nếu là Giáo viên (Chưa active) -> "Chờ xử lý"
+   * 4. Mặc định: (Người học chưa active) -> "Đã vô hiệu hóa"
+   */
+  const getStatusText = (acc) => {
+    if (acc.isDisabledByAdmin) return "Đã vô hiệu hóa";
+    if (acc.isActive) return "Đang hoạt động";
+    if (normalizeRole(acc.role) === "TEACHER") return "Chờ xử lý";
+    return "Đã vô hiệu hóa";
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("Trạng thái");
   const [filterRole, setFilterRole] = useState("Chức vụ");
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // --- API Calls ---
   const fetchAccounts = async () => {
     try {
       setLoading(true);
       const response = await api.get("/admin/users");
       if (response.data.success) {
-        // Loại bỏ Admin khỏi danh sách quản lý
         const filteredData = response.data.data.filter(
           (a) => normalizeRole(a.role) !== "ADMIN",
         );
@@ -59,70 +75,7 @@ const AccountManagement = () => {
     setCurrentPage(1);
   }, [searchQuery, filterStatus, filterRole]);
 
-  // Logic nhận diện trạng thái
-  const getStatusText = (acc) => {
-    if (acc.isDisabledByAdmin) return "Đã vô hiệu hóa";
-    if (acc.isActive) return "Đang hoạt động";
-    return "Chờ xử lý";
-  };
-
-  const getStatusClass = (acc) => {
-    const status = getStatusText(acc);
-    if (status === "Đang hoạt động") return "bg-green-500";
-    if (status === "Chờ xử lý") return "bg-amber-500";
-    return "bg-red-500";
-  };
-
-  const accountStats = useMemo(
-    () => [
-      { label: "Tổng tài khoản", value: accounts.length.toString() },
-      {
-        label: "Chờ xử lý",
-        value: accounts
-          .filter((a) => !a.isActive && !a.isDisabledByAdmin)
-          .length.toString(),
-      },
-      {
-        label: "Đang hoạt động",
-        value: accounts
-          .filter((a) => a.isActive && !a.isDisabledByAdmin)
-          .length.toString(),
-      },
-      {
-        label: "Vô hiệu hóa",
-        value: accounts.filter((a) => a.isDisabledByAdmin).length.toString(),
-      },
-    ],
-    [accounts],
-  );
-
-  const filteredAccounts = useMemo(() => {
-    return accounts.filter((acc) => {
-      const name = acc.fullName || acc.name || "";
-      const matchSearch =
-        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        acc.email.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const currentStatusText = getStatusText(acc);
-      const matchStatus =
-        filterStatus === "Trạng thái" || currentStatusText === filterStatus;
-      const matchRole =
-        filterRole === "Chức vụ" ||
-        normalizeRole(acc.role) === normalizeRole(filterRole);
-
-      return matchSearch && matchStatus && matchRole;
-    });
-  }, [accounts, searchQuery, filterStatus, filterRole]);
-
-  const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
-  const currentTableData = useMemo(() => {
-    const firstPageIndex = (currentPage - 1) * itemsPerPage;
-    return filteredAccounts.slice(
-      firstPageIndex,
-      firstPageIndex + itemsPerPage,
-    );
-  }, [currentPage, filteredAccounts]);
-
+  // --- Logic Xử lý cập nhật (Đã sửa lỗi phân loại Người học) ---
   const handleUpdate = async (updatedData) => {
     try {
       const id = updatedData._id || updatedData.id;
@@ -133,10 +86,17 @@ const AccountManagement = () => {
       };
 
       if (normalizedRole === "TEACHER") {
+        // Giáo viên cần quy trình xét duyệt (pending)
         if (updatedData.isActive && !updatedData.isDisabledByAdmin) {
           payload.teacherApprovalStatus = "approved";
         } else if (!updatedData.isActive && !updatedData.isDisabledByAdmin) {
           payload.teacherApprovalStatus = "pending";
+        }
+      } else {
+        // Đối với Người học: Nếu chưa active, đảm bảo isDisabledByAdmin được xử lý đúng để không hiện "Chờ xử lý"
+        if (!updatedData.isActive) {
+          // Có thể ép isDisabledByAdmin = true ở đây tùy vào logic Backend của bạn
+          // Hoặc đơn giản là để isActive = false, hàm getStatusText sẽ tự hiện "Vô hiệu hóa"
         }
       }
 
@@ -144,11 +104,7 @@ const AccountManagement = () => {
       if (response.data.success) {
         await fetchAccounts();
         setViewingAccount(null);
-        Swal.fire(
-          "Thành công!",
-          "Thông tin tài khoản đã được cập nhật.",
-          "success",
-        );
+        Swal.fire("Thành công!", "Cập nhật thành công.", "success");
       }
     } catch (err) {
       Swal.fire("Lỗi!", "Cập nhật thất bại.", "error");
@@ -161,14 +117,11 @@ const AccountManagement = () => {
       const response = await api.post("/admin/users", payload);
       if (response.data.success) {
         await fetchAccounts();
+        setIsAddModalOpen(false);
         Swal.fire("Thành công!", "Tạo tài khoản mới thành công.", "success");
       }
     } catch (err) {
-      Swal.fire(
-        "Lỗi!",
-        err.response?.data?.error || "Không thể tạo tài khoản.",
-        "error",
-      );
+      Swal.fire("Lỗi!", err.response?.data?.error || "Không thể tạo.", "error");
     } finally {
       setLoading(false);
     }
@@ -177,11 +130,11 @@ const AccountManagement = () => {
   const handleApprove = (acc) => {
     Swal.fire({
       title: "Phê duyệt tài khoản?",
-      text: `Kích hoạt quyền hoạt động cho ${acc.fullName || acc.name}?`,
+      text: `Kích hoạt cho ${acc.fullName || acc.name}?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
-      confirmButtonText: "Đồng ý duyệt",
+      confirmButtonText: "Đồng ý",
       cancelButtonText: "Hủy",
     }).then((result) => {
       if (result.isConfirmed) {
@@ -216,7 +169,68 @@ const AccountManagement = () => {
     });
   };
 
-  // Hàm tạo danh sách các số trang để hiển thị
+  // --- Memoized Stats (Đã cập nhật logic đếm) ---
+  const accountStats = useMemo(
+    () => [
+      { label: "Tổng tài khoản", value: accounts.length.toString() },
+      {
+        label: "Chờ xử lý",
+        value: accounts
+          .filter(
+            (a) =>
+              normalizeRole(a.role) === "TEACHER" &&
+              !a.isActive &&
+              !a.isDisabledByAdmin,
+          )
+          .length.toString(),
+      },
+      {
+        label: "Đang hoạt động",
+        value: accounts
+          .filter((a) => a.isActive && !a.isDisabledByAdmin)
+          .length.toString(),
+      },
+      {
+        label: "Vô hiệu hóa",
+        value: accounts
+          .filter(
+            (a) =>
+              a.isDisabledByAdmin ||
+              (normalizeRole(a.role) === "LEARNER" && !a.isActive),
+          )
+          .length.toString(),
+      },
+    ],
+    [accounts],
+  );
+
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter((acc) => {
+      const name = acc.fullName || acc.name || "";
+      const matchSearch =
+        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        acc.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const currentStatusText = getStatusText(acc);
+      const matchStatus =
+        filterStatus === "Trạng thái" || currentStatusText === filterStatus;
+      const matchRole =
+        filterRole === "Chức vụ" ||
+        normalizeRole(acc.role) === normalizeRole(filterRole);
+
+      return matchSearch && matchStatus && matchRole;
+    });
+  }, [accounts, searchQuery, filterStatus, filterRole]);
+
+  const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
+  const currentTableData = useMemo(() => {
+    const firstPageIndex = (currentPage - 1) * itemsPerPage;
+    return filteredAccounts.slice(
+      firstPageIndex,
+      firstPageIndex + itemsPerPage,
+    );
+  }, [currentPage, filteredAccounts]);
+
   const renderPageNumbers = () => {
     const pages = [];
     for (let i = 1; i <= totalPages; i++) {
@@ -249,7 +263,7 @@ const AccountManagement = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col font-['Inter']">
+    <div className="flex-1 flex flex-col font-['Inter'] bg-slate-50 min-h-screen">
       <main className="p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-slate-900">
@@ -282,7 +296,7 @@ const AccountManagement = () => {
               />
             </div>
             <select
-              className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-600 outline-none"
+              className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-600 outline-none cursor-pointer"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
@@ -292,7 +306,7 @@ const AccountManagement = () => {
               <option>Đã vô hiệu hóa</option>
             </select>
             <select
-              className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-600 outline-none"
+              className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-600 outline-none cursor-pointer"
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
             >
@@ -303,7 +317,7 @@ const AccountManagement = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {accountStats.map((stat) => (
             <div
               key={stat.label}
@@ -346,79 +360,82 @@ const AccountManagement = () => {
               </thead>
               <tbody>
                 {!loading &&
-                  currentTableData.map((acc) => (
-                    <tr
-                      key={acc._id || acc.id}
-                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
-                    >
-                      <td className="p-4 text-sm text-slate-400 text-center">
-                        {(acc._id || acc.id).substring(0, 5)}
-                      </td>
-                      <td className="p-4 text-sm font-semibold text-slate-900">
-                        <button
-                          onClick={() => setViewingAccount(acc)}
-                          className="hover:text-[#F26739] hover:underline"
-                        >
-                          {acc.fullName || acc.name}
-                        </button>
-                      </td>
-                      <td className="p-4 text-sm text-slate-600">
-                        {acc.email}
-                      </td>
-                      <td className="p-4 text-center">
-                        <span
-                          className={`px-3 py-1 rounded-md text-[10px] font-bold text-white ${normalizeRole(acc.role) === "TEACHER" ? "bg-blue-600" : "bg-indigo-500"}`}
-                        >
-                          {getRoleLabel(acc.role)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase ${
-                            getStatusText(acc) === "Đang hoạt động"
-                              ? "bg-green-500"
-                              : getStatusText(acc) === "Chờ xử lý"
-                                ? "bg-amber-500"
-                                : "bg-red-500"
-                          }`}
-                        >
-                          {getStatusText(acc)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          {getStatusText(acc) === "Chờ xử lý" && (
-                            <button
-                              onClick={() => handleApprove(acc)}
-                              className="p-1.5 border border-green-200 rounded-md text-green-600 hover:bg-green-50"
-                              title="Phê duyệt"
-                            >
-                              <UserCheck size={14} />
-                            </button>
-                          )}
+                  currentTableData.map((acc) => {
+                    const status = getStatusText(acc);
+                    return (
+                      <tr
+                        key={acc._id || acc.id}
+                        className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
+                      >
+                        <td className="p-4 text-sm text-slate-400 text-center">
+                          {(acc._id || acc.id).substring(0, 5)}
+                        </td>
+                        <td className="p-4 text-sm font-semibold text-slate-900">
                           <button
                             onClick={() => setViewingAccount(acc)}
-                            className="p-1.5 border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100"
-                            title="Chỉnh sửa"
+                            className="hover:text-[#F26739] hover:underline"
                           >
-                            <Edit2 size={14} />
+                            {acc.fullName || acc.name}
                           </button>
-                          <button
-                            onClick={() =>
-                              handleDelete(
-                                acc._id || acc.id,
-                                acc.fullName || acc.name,
-                              )
-                            }
-                            className="p-1.5 border border-slate-200 rounded-md text-red-500 hover:bg-red-50"
-                            title="Xóa"
+                        </td>
+                        <td className="p-4 text-sm text-slate-600">
+                          {acc.email}
+                        </td>
+                        <td className="p-4 text-center">
+                          <span
+                            className={`px-3 py-1 rounded-md text-[10px] font-bold text-white ${normalizeRole(acc.role) === "TEACHER" ? "bg-blue-600" : "bg-indigo-500"}`}
                           >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {getRoleLabel(acc.role)}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase ${
+                              status === "Đang hoạt động"
+                                ? "bg-green-500"
+                                : status === "Chờ xử lý"
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex justify-center gap-2">
+                            {status === "Chờ xử lý" && (
+                              <button
+                                onClick={() => handleApprove(acc)}
+                                className="p-1.5 border border-green-200 rounded-md text-green-600 hover:bg-green-50"
+                                title="Phê duyệt"
+                              >
+                                <UserCheck size={14} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setViewingAccount(acc)}
+                              className="p-1.5 border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDelete(
+                                  acc._id || acc.id,
+                                  acc.fullName || acc.name,
+                                )
+                              }
+                              className="p-1.5 border border-slate-200 rounded-md text-red-500 hover:bg-red-50"
+                              title="Xóa"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -437,10 +454,7 @@ const AccountManagement = () => {
                 >
                   <ChevronLeft size={16} />
                 </button>
-
-                {/* Phần chọn số trang trực tiếp */}
                 <div className="flex gap-1">{renderPageNumbers()}</div>
-
                 <button
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((p) => p + 1)}
@@ -453,6 +467,7 @@ const AccountManagement = () => {
           )}
         </div>
       </main>
+
       <AddAccountModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

@@ -6,14 +6,15 @@ import {
   ChevronRight,
   AlertCircle,
   Trash2,
+  Edit,
+  Plus, // Thêm icon Plus nếu cần
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import api from "../../lib/api";
 import Swal from "sweetalert2";
 
-const PLACEHOLDER =
-  "https://placehold.co/400x200/FFF5F1/F26739?text=Flashcard&font=montserrat";
+const PLACEHOLDER = "https://placehold.co/400x200/FFF5F1/F26739?text=Flashcard";
 
 const Flashcards = () => {
   const navigate = useNavigate();
@@ -23,30 +24,18 @@ const Flashcards = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+
+  // Tăng số lượng item mỗi trang vì card đã nhỏ hơn (8 hoặc 12 là con số đẹp cho grid 4 cột)
+  const itemsPerPage = 8;
 
   const fetchFlashcards = async () => {
     try {
       setLoading(true);
-      setError(null);
       const res = await api.get("/flashcards");
-      let data = [];
-      if (res?.data?.success && Array.isArray(res.data.data)) {
-        data = res.data.data;
-      } else if (res?.success && Array.isArray(res.data)) {
-        data = res.data;
-      } else if (Array.isArray(res)) {
-        data = res;
-      } else if (res?.data && Array.isArray(res.data)) {
-        data = res.data;
-      }
-      setFlashcardSets(data);
+      const data = res?.data?.data || res?.data || res || [];
+      setFlashcardSets(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(
-        err.response?.status === 401
-          ? "Phiên đăng nhập đã hết hạn."
-          : "Không thể tải danh sách Flashcards.",
-      );
+      setError("Không thể tải danh sách Flashcards.");
     } finally {
       setLoading(false);
     }
@@ -59,22 +48,21 @@ const Flashcards = () => {
   const handleDeleteFlashcard = (e, id) => {
     e.stopPropagation();
     Swal.fire({
-      title: "Xác nhận xóa bộ thẻ?",
-      text: "Dữ liệu bộ thẻ này sẽ biến mất vĩnh viễn!",
+      title: "Xóa bộ thẻ?",
+      text: "Dữ liệu sẽ biến mất vĩnh viễn!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#F26739",
-      cancelButtonColor: "#d33",
       confirmButtonText: "Xóa ngay",
       cancelButtonText: "Hủy",
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
           await api.delete(`/flashcards/${id}`);
-          Swal.fire("Đã xóa!", "Bộ thẻ học đã được gỡ bỏ.", "success");
+          Swal.fire("Đã xóa!", "Bộ thẻ đã được gỡ bỏ.", "success");
           fetchFlashcards();
         } catch (error) {
-          Swal.fire("Lỗi!", "Không thể xóa bộ thẻ này.", "error");
+          Swal.fire("Lỗi!", "Không thể xóa bộ thẻ.", "error");
         }
       }
     });
@@ -90,59 +78,16 @@ const Flashcards = () => {
     currentPage * itemsPerPage,
   );
 
-  const renderPageNumbers = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-      if (
-        i === 1 ||
-        i === totalPages ||
-        (i >= currentPage - 1 && i <= currentPage + 1)
-      ) {
-        pages.push(
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i)}
-            className={`w-9 h-9 flex items-center justify-center rounded-lg text-[13px] font-medium transition-all ${currentPage === i ? "border border-[#E4E4E7] text-[#18181B] bg-white shadow-sm" : "text-[#18181B] hover:bg-gray-100"}`}
-          >
-            {i}
-          </button>,
-        );
-      } else if (i === currentPage - 2 || i === currentPage + 2) {
-        pages.push(
-          <span key={i} className="px-1 text-gray-400">
-            ...
-          </span>,
-        );
-      }
-    }
-    return pages;
-  };
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] p-10">
-        <AlertCircle className="text-red-500 w-12 h-12 mb-4" />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Thông báo</h2>
-        <p className="text-gray-600 mb-6 text-sm">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="bg-[#F26739] text-white px-8 py-2 rounded-lg font-bold hover:bg-orange-600 transition"
-        >
-          Thử lại
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex-1 bg-[#FDFDFD] min-h-screen p-6 font-sans">
-      <div className="max-w-6xl mx-auto flex flex-col min-h-[calc(100vh-80px)]">
-        <div className="w-full h-[50px] bg-white border border-gray-200 rounded-xl mb-8 flex items-center px-4 shadow-sm">
-          <div className="flex items-center bg-[#F9F9F9] border border-gray-100 rounded-lg px-3 h-[34px] w-full max-w-[400px] gap-2">
+    <div className="flex-1 bg-[#FDFDFD] min-h-screen p-4 md:p-6 font-sans">
+      <div className="max-w-7xl mx-auto flex flex-col h-full">
+        {/* Thanh công cụ nhỏ gọn hơn */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+          <div className="flex items-center bg-[#F4F4F5] rounded-lg px-3 h-9 w-full max-w-sm gap-2">
             <Search size={14} className="text-gray-400" />
             <input
               type="text"
-              placeholder="Tìm kiếm bộ thẻ học..."
+              placeholder="Tìm tên bộ thẻ..."
               className="bg-transparent border-none outline-none text-[13px] w-full text-gray-700"
               value={searchTerm}
               onChange={(e) => {
@@ -151,46 +96,48 @@ const Flashcards = () => {
               }}
             />
           </div>
-          <button className="hidden md:block bg-[#F26739] text-white text-[13px] font-semibold rounded-lg px-6 h-[32px] ml-auto hover:bg-orange-600 transition-colors shadow-sm">
-            Tìm kiếm
-          </button>
+
+          {role === "ADMIN" && (
+            <button
+              onClick={() => navigate("/admin/flashcards/create")}
+              className="bg-[#F26739] text-white text-[12px] font-bold rounded-lg px-4 h-9 flex items-center gap-2 hover:bg-orange-600 transition-all shadow-sm"
+            >
+              <Plus size={16} /> Tạo bộ thẻ mới
+            </button>
+          )}
         </div>
 
-        <h1 className="text-center text-3xl font-black mb-10 uppercase tracking-tight text-[#18181B]">
-          Thư viện FlashCards
-        </h1>
+        <h2 className="text-xl font-black mb-6 text-[#18181B] border-l-4 border-[#F26739] pl-3">
+          THƯ VIỆN FLASHCARDS
+        </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        {/* Grid 4 cột trên màn hình lớn, card nhỏ hơn */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
           {loading ? (
-            <div className="col-span-full text-center py-20 flex flex-col items-center gap-2">
-              <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
-              <p className="text-gray-400 text-sm">Đang tải bộ thẻ học...</p>
+            <div className="col-span-full py-20 flex flex-col items-center gap-2">
+              <Loader2 className="animate-spin text-orange-500 w-6 h-6" />
+              <p className="text-gray-400 text-xs">Đang tải dữ liệu...</p>
             </div>
           ) : currentItems.length === 0 ? (
-            <div className="col-span-full text-center py-16 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200 text-sm">
-              Không tìm thấy bộ thẻ học nào.
+            <div className="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200 text-xs uppercase font-medium">
+              Trống
             </div>
           ) : (
-            currentItems.map((item) => {
-              const thumb = item.thumbnail || item.image || PLACEHOLDER;
-              return (
-                <div
-                  key={item._id}
-                  className="relative flex flex-col bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden"
-                >
-                  {/* ADMIN: LUÔN HIỆN XÓA */}
-                  {role === "ADMIN" && (
+            currentItems.map((item) => (
+              <div
+                key={item._id}
+                className="group relative flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
+              >
+                {/* Nút chức năng nhỏ gọn */}
+                <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {role === "ADMIN" ? (
                     <button
                       onClick={(e) => handleDeleteFlashcard(e, item._id)}
-                      className="absolute top-6 left-6 z-10 p-2 bg-white/90 rounded-full text-red-500 hover:bg-red-500 hover:text-white shadow-md border border-red-100 transition-all opacity-100"
-                      title="Xóa bộ thẻ này"
+                      className="p-1.5 bg-white text-red-500 rounded-lg shadow-sm border border-red-50 hover:bg-red-50"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={14} />
                     </button>
-                  )}
-
-                  {/* LEARNER: HIỆN BÁO CÁO */}
-                  {role !== "ADMIN" && (
+                  ) : (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -201,82 +148,118 @@ const Flashcards = () => {
                           },
                         });
                       }}
-                      className="absolute top-6 right-6 z-10 p-2 bg-white/90 rounded-full text-gray-400 hover:text-red-500 shadow-sm border border-gray-100 transition-colors"
-                      title="Báo cáo lỗi bộ thẻ này"
+                      className="p-1.5 bg-white text-gray-400 rounded-lg shadow-sm border border-gray-50 hover:text-red-500"
                     >
-                      <AlertCircle size={18} />
+                      <AlertCircle size={14} />
                     </button>
                   )}
+                </div>
 
-                  <div className="w-full h-[160px] overflow-hidden rounded-[14px] mb-4 bg-gray-50 transition-transform group-hover:scale-[1.02]">
-                    <img
-                      src={thumb}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = PLACEHOLDER;
-                      }}
-                    />
+                {/* Thumbnail nhỏ lại */}
+                <div className="w-full h-[120px] overflow-hidden rounded-xl mb-3 bg-gray-50">
+                  <img
+                    src={item.thumbnail || item.image || PLACEHOLDER}
+                    alt={item.title}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    onError={(e) => (e.target.src = PLACEHOLDER)}
+                  />
+                </div>
+
+                <div className="flex flex-col flex-1">
+                  <h3 className="text-[14px] font-bold mb-2 line-clamp-2 text-[#18181B] h-10 leading-tight">
+                    {item.title}
+                  </h3>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] font-bold text-[#1473E6] bg-blue-50 px-2 py-0.5 rounded">
+                      {item.cards?.length || 0} thẻ
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      Tiến độ: {item.progress || 0}%
+                    </span>
                   </div>
 
-                  <div className="px-1">
-                    <h3 className="text-[17px] font-bold mb-3 h-[48px] line-clamp-2 text-[#18181B] group-hover:text-[#F26739] transition-colors leading-snug">
-                      {item.title}
-                    </h3>
-                    <div className="flex items-center gap-3 mb-5">
-                      <span className="bg-[#1473E6] text-white text-[11px] px-2.5 py-0.5 rounded-full font-bold">
-                        {item.cards?.length || 0} Thẻ
-                      </span>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#1473E6]"
-                          style={{ width: `${item.progress || 0}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                  {role === "ADMIN" ? (
+                    <button
+                      onClick={() =>
+                        navigate(`/admin/flashcards/edit/${item._id}`)
+                      }
+                      className="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold text-[12px] hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Edit size={14} /> Chỉnh sửa
+                    </button>
+                  ) : (
                     <button
                       onClick={() =>
                         navigate(`/learner/flashcards/${item._id}`)
                       }
-                      className="w-full bg-[#F26739] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#d9562d] shadow-sm transition-colors active:scale-[0.98]"
+                      className="w-full bg-[#F26739] text-white py-2 rounded-lg font-bold text-[12px] hover:bg-[#d9562d] transition-all active:scale-95"
                     >
-                      Bắt đầu học ngay
+                      Học ngay
                     </button>
-                  </div>
+                  )}
                 </div>
-              );
-            })
+              </div>
+            ))
           )}
         </div>
 
-        {!loading && totalPages > 0 && (
-          <div className="mt-auto flex justify-between items-center w-full px-2 mb-8">
-            <div className="text-[14px] font-medium text-gray-500">
-              {currentPage}/{totalPages} trang
-            </div>
-            <div className="flex items-center gap-1">
+        {/* Phân trang tinh gọn */}
+        {!loading && totalPages > 1 && (
+          <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 gap-4">
+            <span className="text-[12px] text-gray-500 font-medium">
+              Hiển thị {currentItems.length}/{filteredData.length} bộ thẻ
+            </span>
+
+            <div className="flex items-center gap-2">
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
-                className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
               >
-                <ChevronLeft size={14} className="text-[#09090B]" />
-                <span className="text-[13px] font-medium text-[#18181B]">
-                  Trước
-                </span>
+                <ChevronLeft size={16} />
               </button>
-              <div className="flex items-center gap-1 mx-1">
-                {renderPageNumbers()}
+
+              <div className="flex gap-1">
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  // Chỉ hiển thị trang đầu, cuối và quanh trang hiện tại
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all ${
+                          currentPage === page
+                            ? "bg-[#F26739] text-white shadow-md shadow-orange-200"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  }
+                  if (page === currentPage - 2 || page === currentPage + 2) {
+                    return (
+                      <span key={page} className="text-gray-300">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
               </div>
+
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
-                className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
               >
-                <span className="text-[13px] font-medium text-[#18181B]">
-                  Sau
-                </span>
-                <ChevronRight size={14} className="text-[#09090B]" />
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>

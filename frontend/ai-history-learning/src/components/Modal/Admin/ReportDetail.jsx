@@ -31,12 +31,7 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
         rejected: "Từ chối",
       };
 
-      /**
-       * THAY ĐỔI QUAN TRỌNG:
-       * 1. Dùng api.put để tránh lỗi CORS của PATCH.
-       * 2. Bỏ tiền tố /api/v1/ dư thừa trong chuỗi URL.
-       */
-      const response = await api.put(`reports/${report._id}/status`, {
+      const response = await api.patch(`reports/${report._id}/status`, {
         status: statusMapping[newStatus],
         adminNotes: `Quản trị viên đã cập nhật trạng thái: ${displayLabel[newStatus]}`,
       });

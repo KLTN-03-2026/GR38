@@ -106,7 +106,6 @@ export default function AppRouter() {
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="content" element={<ReportManagement />} />
           <Route path="profile" element={<ProfilePage />} />
-          
           <Route path="documents" element={<DocumentsLearner />} />
           <Route path="documents/:id" element={<BaiGiang />} />{" "}
           <Route path="flashcards" element={<FlashcardsLearner />} />

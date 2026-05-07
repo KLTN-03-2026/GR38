@@ -158,18 +158,22 @@ function QuizGrid({ quizzes, isTeacher, onStart, onEdit, onDelete, docThumbnail,
 // ─── Tab: Theo tài liệu ───────────────────────────────────────────────────────
 function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal }) {
   const navigate = useNavigate();
-  const [documents,       setDocuments]       = useState([]);
-  const [docsLoading,     setDocsLoading]     = useState(true);
-  const [selectedDocId,   setSelectedDocId]   = useState("");
-  const [selectedDocTitle,setSelectedDocTitle]= useState("");
-  const [selectedDocThumb,setSelectedDocThumb]= useState("");
-  const [docSearch,       setDocSearch]       = useState("");
-  const [quizzes,         setQuizzes]         = useState([]);
-  const [quizLoading,     setQuizLoading]     = useState(false);
-  const [quizError,       setQuizError]       = useState("");
-  const [quizSearch,      setQuizSearch]      = useState("");
-  const [deleteTarget,    setDeleteTarget]    = useState(null);
-  const [deleting,        setDeleting]        = useState(false);
+  const [documents,        setDocuments]        = useState([]);
+  const [docsLoading,      setDocsLoading]      = useState(true);
+  const [selectedDocId,    setSelectedDocId]    = useState("");
+  const [selectedDocTitle, setSelectedDocTitle] = useState("");
+  const [selectedDocThumb, setSelectedDocThumb] = useState("");
+  const [docSearch,        setDocSearch]        = useState("");
+  const [quizzes,          setQuizzes]          = useState([]);
+  const [quizLoading,      setQuizLoading]      = useState(false);
+  const [quizError,        setQuizError]        = useState("");
+  const [quizSearch,       setQuizSearch]       = useState("");
+  const [deleteTarget,     setDeleteTarget]     = useState(null);
+  const [deleting,         setDeleting]         = useState(false);
+  const [docPage,          setDocPage]          = useState(1);   
+  const DOCS_PER_PAGE = 4;                                     
+
+  useEffect(() => { setDocPage(1); }, [docSearch]); 
 
   useEffect(() => {
     (async () => {
@@ -209,13 +213,15 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
     finally { setDeleting(false); }
   };
 
-  const filteredDocs   = documents.filter(d => (d.title ?? d.fileName ?? "").toLowerCase().includes(docSearch.toLowerCase()));
+  const filteredDocs    = documents.filter(d => (d.title ?? d.fileName ?? "").toLowerCase().includes(docSearch.toLowerCase()));
   const filteredQuizzes = quizzes.filter(q => (q.title ?? "").toLowerCase().includes(quizSearch.toLowerCase()));
+  const totalDocPages   = Math.ceil(filteredDocs.length / DOCS_PER_PAGE);         
+  const pagedDocs       = filteredDocs.slice((docPage - 1) * DOCS_PER_PAGE, docPage * DOCS_PER_PAGE); 
 
   return (
-    <div className="flex gap-5">
+    <div className="flex gap-5 items-start">
       {/* Sidebar tài liệu */}
-      <div className="w-64 shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      <div className="w-64 shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col sticky top-6 overflow-hidden" style={{ maxHeight: "calc(100vh - 160px)" }}>
         <div className="px-4 pt-4 pb-3 border-b border-gray-100">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Chọn tài liệu</p>
           <div className="flex items-center bg-gray-50 border border-gray-100 rounded-lg px-2.5 h-8 gap-2">
@@ -225,6 +231,7 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
               className="bg-transparent border-none outline-none text-xs w-full text-gray-700" />
           </div>
         </div>
+
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {docsLoading ? (
             <div className="flex items-center justify-center py-8 gap-2 text-xs text-gray-400">
@@ -235,29 +242,49 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
               <p className="text-xs text-gray-400">Chưa có tài liệu</p>
               <button onClick={() => navigate("/teacher/documents")} className="mt-2 text-xs text-orange-500 underline">Tạo tài liệu →</button>
             </div>
-          ) : filteredDocs.map(doc => {
-            const id = doc._id ?? doc.id;
-            const title = doc.title ?? doc.fileName ?? "Không có tên";
-            const isSel = selectedDocId === id;
-            return (
-              <button key={id} onClick={() => handleSelectDoc(id, title, doc.thumbnail ?? "")}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left mb-1 transition ${isSel ? "bg-orange-50 border border-orange-200" : "hover:bg-gray-50 border border-transparent"}`}>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSel ? "bg-orange-100" : "bg-gray-100"}`}>
-                  <svg width="13" height="13" fill="none" stroke={isSel ? "#F26739" : "#9ca3af"} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-medium truncate ${isSel ? "text-orange-600" : "text-gray-700"}`}>{title}</p>
-                  {doc.createdAt && <p className="text-[10px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString("vi-VN")}</p>}
-                </div>
-                {isSel && <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"/>}
-              </button>
-            );
-          })}
+          ) : (
+            <>
+              {pagedDocs.map(doc => {                              
+                const id = doc._id ?? doc.id;
+                const title = doc.title ?? doc.fileName ?? "Không có tên";
+                const isSel = selectedDocId === id;
+                return (
+                  <button key={id} onClick={() => handleSelectDoc(id, title, doc.thumbnail ?? "")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left mb-1 transition ${isSel ? "bg-orange-50 border border-orange-200" : "hover:bg-gray-50 border border-transparent"}`}>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isSel ? "bg-orange-100" : "bg-gray-100"}`}>
+                      <svg width="13" height="13" fill="none" stroke={isSel ? "#F26739" : "#9ca3af"} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-medium truncate ${isSel ? "text-orange-600" : "text-gray-700"}`}>{title}</p>
+                      {doc.createdAt && <p className="text-[10px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString("vi-VN")}</p>}
+                    </div>
+                    {isSel && <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"/>}
+                  </button>
+                );
+              })}
+
+              {/* Pagination nhỏ gọn */}
+             {totalDocPages > 1 && (
+          <div className="flex items-center justify-between px-2 pt-2 pb-1 border-t border-gray-100 mt-1">
+          <button onClick={() => setDocPage(p => Math.max(1, p - 1))} disabled={docPage === 1}
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+         <ChevronLeft size={14}/>
+            </button>
+            <span className="text-[11px] font-semibold text-gray-500">
+          <span className="text-[#F26739]">{docPage}</span> / {totalDocPages}
+     </span>
+             <button onClick={() => setDocPage(p => Math.min(totalDocPages, p + 1))} disabled={docPage === totalDocPages}
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+             <ChevronRight size={14}/>
+    </button>
+  </div>
+)}
+            </>
+          )}
         </div>
       </div>
-
       {/* Panel phải */}
       <div className="flex-1 min-w-0">
         {!selectedDocId ? (
@@ -291,14 +318,12 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
                 )}
               </div>
             </div>
-
             {quizError && (
               <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-600 flex items-center gap-2">
                 {quizError}
                 <button onClick={() => fetchQuizzes(selectedDocId)} className="ml-auto underline">Thử lại</button>
               </div>
             )}
-
             {quizLoading ? <QuizSkeleton/> : (
               <QuizGrid quizzes={filteredQuizzes} isTeacher={isTeacher}
                 onStart={onStartQuiz} onEdit={onOpenEditModal} onDelete={q => setDeleteTarget(q)}
@@ -314,7 +339,6 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
           </>
         )}
       </div>
-
       {deleteTarget && (
         <ConfirmDeleteModal title={deleteTarget.title} onConfirm={handleDeleteConfirm}
           onCancel={() => !deleting && setDeleteTarget(null)} deleting={deleting}/>
@@ -322,7 +346,6 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
     </div>
   );
 }
-
 // ─── Tab: Thủ công ────────────────────────────────────────────────────────────
 function ManualTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal, quizzes, loading, onDeleteQuiz }) {
   const [deleteTarget, setDeleteTarget] = useState(null);

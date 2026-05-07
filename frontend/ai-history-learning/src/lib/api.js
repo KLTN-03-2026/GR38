@@ -3,7 +3,7 @@ import axios from "axios";
 const baseURL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({ baseURL });
-const refreshClient = axios.create({ baseURL }); 
+const refreshClient = axios.create({ baseURL });
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -39,7 +39,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response Interceptor
@@ -91,44 +91,44 @@ api.interceptors.response.use(
       });
 
       const newAccessToken = data.access_token;
-      
+
       // Lưu token mới vào localStorage
       localStorage.setItem(
         "token",
         JSON.stringify({
           access_token: newAccessToken,
           refresh_token: data.refresh_token ?? refreshToken,
-        })
+        }),
       );
 
       // Cập nhật lại header cho request bị lỗi và gọi lại
       api.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      
+
       processQueue(null, newAccessToken);
-      
+
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      // 2. Chỉnh sửa logic điều hướng: 
+      // 2. Chỉnh sửa logic điều hướng:
       // Do hệ thống không có khách vãng lai, trang chủ "/" cũng cần xác thực
-      const isOnAuthPage = 
-        window.location.pathname === "/login" || 
+      const isOnAuthPage =
+        window.location.pathname === "/login" ||
         window.location.pathname === "/register";
 
       if (!isOnAuthPage) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         localStorage.removeItem("role");
-        window.location.href = "/login"; 
+        window.location.href = "/login";
       }
 
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
 export default api;

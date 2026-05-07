@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import api from "../../../lib/api";
 
-const STATUS_CONFIG = {
-  "Đã làm bài": { bg: "#F0FDF4", color: "#16A34A", dot: "#22C55E" },
-};
+const PAGE_SIZE = 8;
 
 function CustomSelect({ value, onChange, options, placeholder }) {
   const [open, setOpen] = useState(false);
@@ -65,11 +63,26 @@ function SkeletonRow() {
   );
 }
 
+// Generate page numbers with ellipsis
+function getPageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [];
+  if (current <= 4) {
+    pages.push(1, 2, 3, 4, 5, "...", total);
+  } else if (current >= total - 3) {
+    pages.push(1, "...", total - 4, total - 3, total - 2, total - 1, total);
+  } else {
+    pages.push(1, "...", current - 1, current, current + 1, "...", total);
+  }
+  return pages;
+}
+
 export default function AssignmentStatistics() {
   const [data, setData]               = useState([]);
   const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState("");
   const [filterScore, setFilterScore] = useState("");
+  const [page, setPage]               = useState(1);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -77,12 +90,12 @@ export default function AssignmentStatistics() {
       const res = await api.get("/quizzes/statistics");
       const raw = res.data?.data ?? [];
       const rows = raw.map((q) => ({
-        ma:          q._id,
-        ten:         q.quizTitle    ?? "Không có tên",
-        nguoiLam:    q.learnerName  ?? q.learnerEmail ?? "—",
-        ngay:        q.createdAt ? new Date(q.createdAt).toLocaleDateString("vi-VN") : "—",
-        sl:          q.totalQuestions ?? "—",
-        diem:        q.score != null ? String(q.score) : "—",
+        ma:       q._id,
+        ten:      q.quizTitle    ?? "Không có tên",
+        nguoiLam: q.learnerName  ?? q.learnerEmail ?? "—",
+        ngay:     q.createdAt ? new Date(q.createdAt).toLocaleDateString("vi-VN") : "—",
+        sl:       q.totalQuestions ?? "—",
+        diem:     q.score != null ? String(q.score) : "—",
       }));
       setData(rows);
     } catch (err) {
@@ -93,6 +106,9 @@ export default function AssignmentStatistics() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [search, filterScore]);
 
   const filtered = data.filter((row) => {
     const matchSearch = row.ten.toLowerCase().includes(search.toLowerCase()) ||
@@ -105,6 +121,15 @@ export default function AssignmentStatistics() {
     return matchSearch && matchScore;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageRows   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageNums   = getPageNumbers(safePage, totalPages);
+
+  const goTo = (p) => {
+    if (typeof p === "number" && p >= 1 && p <= totalPages) setPage(p);
+  };
+
   return (
     <>
       <style>{`
@@ -114,7 +139,7 @@ export default function AssignmentStatistics() {
         .filter-bar { background: #fff; border: 1px solid #F3F4F6; border-radius: 14px; padding: 16px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; position: relative; z-index: 10; }
         .search-wrap { position: relative; flex: 1; min-width: 200px; }
         .search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none; }
-        .search-input { width: 100%; height: 38px; padding: 0 12px 0 36px; border: 1px solid #E5E7EB; border-radius: 9px; font-size: 13px; color: #374151; outline: none; transition: border-color 0.15s; background: #FAFAFA; }
+        .search-input { width: 100%; height: 38px; padding: 0 12px 0 36px; border: 1px solid #E5E7EB; border-radius: 9px; font-size: 13px; color: #374151; outline: none; transition: border-color 0.15s; background: #FAFAFA; box-sizing: border-box; }
         .search-input:focus { border-color: #F26739; background: #fff; }
         .custom-select-btn { height: 38px; padding: 0 12px; border: 1px solid #E5E7EB; border-radius: 9px; font-size: 13px; color: #374151; background: #FAFAFA; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; min-width: 148px; transition: border-color 0.18s, box-shadow 0.18s, background 0.18s; white-space: nowrap; }
         .custom-select-btn:hover { border-color: #D1D5DB; background: #fff; }
@@ -144,9 +169,11 @@ export default function AssignmentStatistics() {
         .empty-state svg { color: #E5E7EB; }
         .empty-state p { font-size: 13px; color: #9CA3AF; margin: 0; }
         .empty-state span { font-size: 12px; color: #D1D5DB; }
-        .pagination-btn { height: 30px; min-width: 30px; padding: 0 8px; border: 1px solid #E5E7EB; border-radius: 7px; font-size: 12px; background: #fff; color: #6B7280; cursor: pointer; transition: all 0.13s; }
-        .pagination-btn:hover { background: #F9FAFB; color: #111827; }
-        .pagination-btn.active { background: #F26739; color: #fff; border-color: #F26739; font-weight: 600; }
+        .pg-btn { height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 12.5px; font-weight: 500; background: #fff; color: #6B7280; cursor: pointer; transition: all 0.13s; display: inline-flex; align-items: center; justify-content: center; }
+        .pg-btn:hover:not(:disabled) { background: #F9FAFB; border-color: #D1D5DB; color: #111827; }
+        .pg-btn.active { background: #F26739; color: #fff; border-color: #F26739; font-weight: 700; box-shadow: 0 2px 8px rgba(242,103,57,0.25); }
+        .pg-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+        .pg-dots { height: 32px; min-width: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; color: #9CA3AF; }
       `}</style>
 
       <div className="stats-page">
@@ -212,11 +239,11 @@ export default function AssignmentStatistics() {
               </tr>
             </thead>
             <tbody>
-              {loading && [1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
+              {loading && [1,2,3,4,5,6,7,8].map((i) => <SkeletonRow key={i} />)}
 
-              {!loading && filtered.map((row) => {
-                const scoreNum = parseFloat(row.diem);
-                const scorePct = isNaN(scoreNum) ? 0 : (scoreNum / 10) * 100;
+              {!loading && pageRows.map((row) => {
+                const scoreNum  = parseFloat(row.diem);
+                const scorePct  = isNaN(scoreNum) ? 0 : (scoreNum / 10) * 100;
                 const scoreColor = scoreNum >= 8 ? "#16A34A" : scoreNum >= 5 ? "#D97706" : "#DC2626";
                 const barColor   = scoreNum >= 8 ? "#22C55E" : scoreNum >= 5 ? "#F59E0B" : "#EF4444";
                 return (
@@ -271,15 +298,46 @@ export default function AssignmentStatistics() {
             </tbody>
           </table>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid #F3F4F6" }}>
+          {/* Pagination */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid #F3F4F6", flexWrap: "wrap", gap: 8 }}>
             <span style={{ fontSize: 12, color: "#9CA3AF" }}>
-              Hiển thị {loading ? "..." : filtered.length} / {loading ? "..." : data.length} bài làm
+              {loading ? "..." : (
+                filtered.length === 0
+                  ? "Không có bài làm nào"
+                  : `Hiển thị ${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} / ${filtered.length} bài làm`
+              )}
             </span>
-            <div style={{ display: "flex", gap: 4 }}>
-              {["‹", "1", "2", "3", "…", "›"].map((p, i) => (
-                <button key={i} className={`pagination-btn${p === "1" ? " active" : ""}`}>{p}</button>
-              ))}
-            </div>
+
+            {!loading && totalPages > 1 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {/* Prev */}
+                <button className="pg-btn" disabled={safePage === 1} onClick={() => goTo(safePage - 1)}
+                  title="Trang trước">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 18l-6-6 6-6"/>
+                  </svg>
+                </button>
+
+                {pageNums.map((p, i) =>
+                  p === "..." ? (
+                    <span key={`dots-${i}`} className="pg-dots">…</span>
+                  ) : (
+                    <button key={p} className={`pg-btn${p === safePage ? " active" : ""}`}
+                      onClick={() => goTo(p)}>
+                      {p}
+                    </button>
+                  )
+                )}
+
+                {/* Next */}
+                <button className="pg-btn" disabled={safePage === totalPages} onClick={() => goTo(safePage + 1)}
+                  title="Trang sau">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 18l6-6-6-6"/>
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

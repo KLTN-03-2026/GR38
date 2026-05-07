@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Search, Trash2, BookOpen, Sparkles, PenLine, Library, Plus, RefreshCw, AlertTriangle, FileText } from "lucide-react";
+import { Search, Trash2, BookOpen, Sparkles, PenLine, Library, Plus, RefreshCw, AlertTriangle, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { flashcardService } from "@/services/flashcardSevice";
 import imagesList from "../../../images";
+
+const ITEMS_PER_PAGE = 8;
+
+function getPageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3) return [1, "...", total-4, total-3, total-2, total-1, total];
+  return [1, "...", current-1, current, current+1, "...", total];
+}
 
 function ConfirmDeleteModal({ title, onConfirm, onCancel }) {
   return (
@@ -35,17 +44,17 @@ const Flashcards = () => {
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [rightSearch, setRightSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { loadAll(); }, []);
-  useEffect(() => { setSelectedDoc(null); }, [activeTab]);
+  useEffect(() => { setSelectedDoc(null); setCurrentPage(1); }, [activeTab]);
+  useEffect(() => { setCurrentPage(1); }, [rightSearch, selectedDoc]);
 
   const getCurrentUserId = () => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       return user?._id || user?.id || null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   };
 
   const loadAll = async () => {
@@ -55,16 +64,13 @@ const Flashcards = () => {
         const res = await flashcardService.getMyFlashcards();
         const raw = res?.data ?? res ?? [];
         const list = Array.isArray(raw) ? raw : [];
-
         const currentUserId = getCurrentUserId();
         const ownedSets = list.filter((item) => {
           const teacherId = typeof item.teacherId === "object" && item.teacherId !== null
-            ? item.teacherId?._id
-            : item.teacherId;
+            ? item.teacherId?._id : item.teacherId;
           return !currentUserId || String(teacherId) === String(currentUserId);
         });
-
-        const mappedSets = ownedSets.map((item) => {
+        setAllData(ownedSets.map((item) => {
           const docId = typeof item.documentId === "object" && item.documentId !== null
             ? item.documentId?._id : item.documentId;
           const cardArr = Array.isArray(item.cards) ? item.cards : [];
@@ -80,19 +86,12 @@ const Flashcards = () => {
             documentTitle: item.documentTitle ?? item.title ?? "Tài liệu AI",
             createdAt: item.createdAt,
           };
-        });
-
-        setAllData(mappedSets);
+        }));
       } catch { /* API unavailable */ }
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const handleDeleteClick = (e, item) => {
-    e.stopPropagation();
-    setDeleteTarget(item);
-  };
+  const handleDeleteClick = (e, item) => { e.stopPropagation(); setDeleteTarget(item); };
 
   const handleDeleteConfirm = async () => {
     const item = deleteTarget;
@@ -108,8 +107,7 @@ const Flashcards = () => {
     }
     setAllData((prev) => prev.filter((i) => String(i.id) !== String(item.id)));
     setDeleteTarget(null);
-    return;
-  }
+  };
 
   const tabPool = React.useMemo(() => {
     if (activeTab === "tai-lieu") return allData.filter((i) => i.source === "ai");
@@ -135,12 +133,22 @@ const Flashcards = () => {
 
   const rightCards = React.useMemo(() => {
     let cards = tabPool;
-    if (selectedDoc) {
-      cards = tabPool.filter((i) => i.documentTitle === selectedDoc.title && i.source === "ai");
-    }
+    if (selectedDoc) cards = tabPool.filter((i) => i.documentTitle === selectedDoc.title && i.source === "ai");
     if (rightSearch) cards = cards.filter((i) => i.title.toLowerCase().includes(rightSearch.toLowerCase()));
     return cards;
   }, [tabPool, selectedDoc, rightSearch]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(rightCards.length / ITEMS_PER_PAGE));
+  const safePage   = Math.min(currentPage, totalPages);
+  const pageNums   = getPageNumbers(safePage, totalPages);
+  const pagedCards = rightCards.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
+  const handlePageChange = (p) => {
+    if (typeof p !== "number" || p < 1 || p > totalPages) return;
+    setCurrentPage(p);
+    window.scrollTo(0, 0);
+  };
 
   const rightHeading = selectedDoc ? selectedDoc.title
     : activeTab === "tai-lieu" ? "Theo tài liệu"
@@ -244,52 +252,87 @@ const Flashcards = () => {
               <p className="text-sm text-gray-400">Không có bộ thẻ nào</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {rightCards.map((item) => (
-                <div key={`${item.source}-${item.id}`}
-                  className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col">
-                  <div className="relative w-full h-[160px] bg-gray-100 overflow-hidden">
-                    {item.image ? (
-                      <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#F26739] to-[#f9a87e]">
-                        <span className="text-white text-[36px] font-black">{item.title?.charAt(0).toUpperCase()}</span>
-                      </div>
-                    )}
-                    {item.source === "ai" && (
-                      <span className="absolute top-2 left-2 flex items-center gap-1 bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
-                        <Sparkles size={9} strokeWidth={2.5} /> AI
-                      </span>
-                    )}
-                    {item.source === "custom" && (
-                      <span className="absolute top-2 left-2 flex items-center gap-1 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
-                        <PenLine size={9} strokeWidth={2.5} /> Tự tạo
-                      </span>
-                    )}
-                    <button onClick={(e) => handleDeleteClick(e, item)}
-                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <div className="flex flex-col flex-1 p-4">
-                    <h3 className="text-[14px] font-bold text-[#18181B] line-clamp-2 leading-snug mb-2 min-h-[40px]">{item.title}</h3>
-                    <p className="text-[12px] font-bold text-[#1473E6] mb-4">
-                      Số thẻ: <span className="text-[#F26739]">{item.cardCount ?? 0} thẻ</span>
-                    </p>
-                    <div className="mt-auto flex flex-col gap-2">
-                      <button onClick={() => navigate(`/teacher/flashcards/${item.id}`, { state: { fromApi: item.source === "ai", documentId: item.documentId } })}
-                        className="w-full bg-[#F26739] text-white py-2 rounded-xl font-bold text-[13px] hover:bg-[#d9562d] transition-colors">
-                        Học ngay
-                      </button>
-                      <button onClick={() => navigate(`/teacher/flashcards/edit/${item.id}`, { state: { item } })}
-                        className="w-full py-2 rounded-xl border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-1.5 font-medium">
-                        <PenLine size={12} /> Chỉnh sửa
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {pagedCards.map((item) => (
+                  <div key={`${item.source}-${item.id}`}
+                    className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col">
+                    <div className="relative w-full h-[160px] bg-gray-100 overflow-hidden">
+                      {item.image ? (
+                        <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#F26739] to-[#f9a87e]">
+                          <span className="text-white text-[36px] font-black">{item.title?.charAt(0).toUpperCase()}</span>
+                        </div>
+                      )}
+                      {item.source === "ai" && (
+                        <span className="absolute top-2 left-2 flex items-center gap-1 bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
+                          <Sparkles size={9} strokeWidth={2.5} /> AI
+                        </span>
+                      )}
+                      {item.source === "custom" && (
+                        <span className="absolute top-2 left-2 flex items-center gap-1 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
+                          <PenLine size={9} strokeWidth={2.5} /> Tự tạo
+                        </span>
+                      )}
+                      <button onClick={(e) => handleDeleteClick(e, item)}
+                        className="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100">
+                        <Trash2 size={13} />
                       </button>
                     </div>
+                    <div className="flex flex-col flex-1 p-4">
+                      <h3 className="text-[14px] font-bold text-[#18181B] line-clamp-2 leading-snug mb-2 min-h-[40px]">{item.title}</h3>
+                      <p className="text-[12px] font-bold text-[#1473E6] mb-4">
+                        Số thẻ: <span className="text-[#F26739]">{item.cardCount ?? 0} thẻ</span>
+                      </p>
+                      <div className="mt-auto flex flex-col gap-2">
+                        <button onClick={() => navigate(`/teacher/flashcards/${item.id}`, { state: { fromApi: item.source === "ai", documentId: item.documentId } })}
+                          className="w-full bg-[#F26739] text-white py-2 rounded-xl font-bold text-[13px] hover:bg-[#d9562d] transition-colors">
+                          Học ngay
+                        </button>
+                        <button onClick={() => navigate(`/teacher/flashcards/edit/${item.id}`, { state: { item } })}
+                          className="w-full py-2 rounded-xl border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-1.5 font-medium">
+                          <PenLine size={12} /> Chỉnh sửa
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-8">
+                  <span className="text-xs text-gray-500">
+                    Hiển thị {(safePage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(safePage * ITEMS_PER_PAGE, rightCards.length)} / {rightCards.length} bộ thẻ
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handlePageChange(safePage - 1)} disabled={safePage === 1}
+                      className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                      <ChevronLeft size={14} />
+                    </button>
+
+                    {pageNums.map((p, i) =>
+                      p === "..." ? (
+                        <span key={`d${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">…</span>
+                      ) : (
+                        <button key={p} onClick={() => handlePageChange(p)}
+                          className={`w-8 h-8 text-xs rounded-lg border font-medium transition ${
+                            safePage === p
+                              ? "bg-[#F26739] text-white border-[#F26739] shadow-sm"
+                              : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}>{p}</button>
+                      )
+                    )}
+
+                    <button onClick={() => handlePageChange(safePage + 1)} disabled={safePage === totalPages}
+                      className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                      <ChevronRight size={14} />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -298,4 +341,5 @@ const Flashcards = () => {
     </div>
   );
 };
+
 export default Flashcards;

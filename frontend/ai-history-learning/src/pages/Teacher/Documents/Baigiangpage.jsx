@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../lib/api";
-import DocumentViewer from "../../../components/documents/DocumentViewer";
+import DocumentViewer from "../../../components/features/documents/DocumentViewer";
 import {
   ChevronLeft,
   Clock,

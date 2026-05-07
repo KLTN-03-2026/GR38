@@ -35,7 +35,6 @@ const AdminDashboard = () => {
   const [allReports, setAllReports] = useState([]);
   const [monthlyUserChart, setMonthlyUserChart] = useState(Array(12).fill(0));
 
-  // Logic tính toán trục Y biểu đồ
   const maxVal = Math.max(...monthlyUserChart, 5);
   const yAxisMax = Math.ceil(maxVal / 5) * 5;
 
@@ -51,7 +50,6 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        // Gọi đồng thời các API cần thiết
         const [usersRes, docsRes, reportsRes, quizzesRes] = await Promise.all([
           api.get("/admin/users"),
           api.get("/documents"),
@@ -59,7 +57,6 @@ const AdminDashboard = () => {
           api.get("/quizzes/admin/all"),
         ]);
 
-        // 1. Phân loại và đếm User
         const allUsers = usersRes.data.data || [];
         const totalTeachers = allUsers.filter(
           (u) => u.role === "TEACHER",
@@ -68,7 +65,6 @@ const AdminDashboard = () => {
           (u) => u.role === "LEARNER",
         ).length;
 
-        // 2. Xử lý dữ liệu biểu đồ tăng trưởng User
         const thisYear = new Date().getFullYear();
         const countsByMonth = Array(12).fill(0);
         allUsers.forEach((user) => {
@@ -78,8 +74,6 @@ const AdminDashboard = () => {
           }
         });
 
-        // 3. Lấy tổng số bài Quiz từ tất cả mọi người
-        // Lấy từ trường count (nếu có) hoặc độ dài mảng data
         const totalQuizzesCount =
           quizzesRes.data?.count ?? quizzesRes.data?.data?.length ?? 0;
 
@@ -105,7 +99,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-slate-50 gap-4">
+      <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-4">
         <Loader2 className="w-10 h-10 text-[#F26739] animate-spin" />
         <p className="text-slate-500 font-medium">
           Đang kết nối dữ liệu hệ thống...
@@ -113,10 +107,15 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+    // ✅ Dùng calc(100vh - 56px) để khớp với mt-14 của <main> trong AppLayout
+    <div
+      className="overflow-hidden bg-slate-50 flex flex-col p-8 gap-6"
+      style={{ height: "calc(100vh - 56px)" }}
+    >
+      {/* Header — shrink-0 để không bị co lại */}
+      <div className="flex justify-between items-center shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             Trang chủ thống kê
@@ -137,8 +136,8 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
+      {/* Stats Grid — shrink-0 để giữ nguyên kích thước */}
+      <div className="flex gap-4 shrink-0 overflow-x-auto pb-1">
         <StatCard
           label="Tổng tài khoản"
           value={stats.totalUsers.toLocaleString()}
@@ -166,10 +165,11 @@ const AdminDashboard = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Biểu đồ - Thêm h-[500px] để cố định chiều cao */}
-        <div className="lg:col-span-6 p-6 border border-slate-200 shadow-sm rounded-xl bg-white h-[500px] flex flex-col">
-          <div className="mb-8">
+      {/* Khu vực dưới chiếm hết phần còn lại, không tràn ra ngoài */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
+        {/* Biểu đồ */}
+        <div className="lg:col-span-6 p-6 border border-slate-200 shadow-sm rounded-xl bg-white flex flex-col min-h-0">
+          <div className="mb-4 shrink-0">
             <p className="text-base font-semibold text-slate-900">
               Tăng trưởng tài khoản {new Date().getFullYear()}
             </p>
@@ -177,9 +177,8 @@ const AdminDashboard = () => {
               Dữ liệu người dùng mới theo từng tháng
             </p>
           </div>
-          <div className="relative flex-1 w-full mt-4">
-            {" "}
-            {/* flex-1 để chiếm nốt khoảng trống */}
+
+          <div className="relative flex-1 min-h-0 w-full mt-4">
             {yAxisLabels.map((y) => (
               <span
                 key={y.val}
@@ -199,7 +198,7 @@ const AdminDashboard = () => {
                     style={{ height: `${Math.max(height, 2)}%` }}
                   >
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
-                      T{i + 1}: {count} User
+                      T{i + 1}: {count} Người đăng ký
                     </div>
                   </div>
                 );
@@ -228,8 +227,8 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Báo cáo sự cố - Thêm h-[500px] và overflow ẩn */}
-        <div className="lg:col-span-6 border border-slate-200 rounded-xl bg-white shadow-sm h-[500px] flex flex-col overflow-hidden">
+        {/* Báo cáo sự cố */}
+        <div className="lg:col-span-6 border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col min-h-0">
           <div className="p-6 border-b border-slate-100 shrink-0">
             <p className="text-base font-semibold text-slate-900">
               Báo cáo sự cố hệ thống
@@ -239,8 +238,7 @@ const AdminDashboard = () => {
             </p>
           </div>
 
-          {/* Container danh sách: Tự động cuộn, chiếm nốt chiều cao còn lại */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
             {allReports.length === 0 ? (
               <div className="flex flex-col items-center py-10 opacity-30">
                 <FileText size={40} />
@@ -277,7 +275,6 @@ const AdminDashboard = () => {
                       {new Date(report.createdAt).toLocaleDateString("vi-VN")}
                     </span>
                   </div>
-
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <p className="text-sm text-slate-600 leading-relaxed break-words">
                       {report.description || "Không có mô tả chi tiết."}

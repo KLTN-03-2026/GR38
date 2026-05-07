@@ -6,8 +6,8 @@ import {
   ChevronRight,
   BookOpen,
   AlertCircle,
-  MoreHorizontal,
   Trash2,
+  Edit3, // Thêm icon Edit
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -100,7 +100,9 @@ const Quizzes = () => {
               HỆ THỐNG TRẮC NGHIỆM
             </h1>
             <p className="text-sm text-gray-500 font-medium">
-              Chọn bài thi để bắt đầu ôn tập
+              {role === "ADMIN"
+                ? "Quản lý danh sách bài trắc nghiệm"
+                : "Chọn bài thi để bắt đầu ôn tập"}
             </p>
           </div>
           <div className="relative w-full md:w-[320px]">
@@ -190,14 +192,28 @@ const Quizzes = () => {
                             {quiz.questionCount ?? 0} câu
                           </span>
                         </div>
-                        <button
-                          onClick={() =>
-                            navigate(`/learner/quizzes/${quiz._id}`)
-                          }
-                          className="bg-[#F26739] text-white px-5 py-2.5 rounded-lg font-bold text-xs hover:bg-[#d8562c] shadow-sm transition-all active:scale-95"
-                        >
-                          Làm bài ngay
-                        </button>
+
+                        {/* PHÂN QUYỀN NÚT BẤM TẠI ĐÂY */}
+                        {role === "ADMIN" ? (
+                          <button
+                            onClick={() =>
+                              navigate(`/admin/quizzes/edit/${quiz._id}`)
+                            }
+                            className="bg-slate-800 text-white px-4 py-2.5 rounded-lg font-bold text-xs hover:bg-slate-900 shadow-sm transition-all active:scale-95 flex items-center gap-2"
+                          >
+                            <Edit3 size={14} />
+                            Chỉnh sửa
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              navigate(`/learner/quizzes/${quiz._id}`)
+                            }
+                            className="bg-[#F26739] text-white px-5 py-2.5 rounded-lg font-bold text-xs hover:bg-[#d8562c] shadow-sm transition-all active:scale-95"
+                          >
+                            Làm bài ngay
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -221,14 +237,18 @@ const Quizzes = () => {
                   }
                   className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors"
                 >
-                  <ChevronLeft size={14} /> <span>Previous</span>
+                  <ChevronLeft size={14} /> <span>Trước</span>
                 </button>
                 <div className="flex gap-1">
                   {[...Array(totalPages)].map((_, i) => (
                     <button
                       key={i + 1}
                       onClick={() => setCurrentPage(i + 1)}
-                      className={`w-10 h-10 rounded-md text-sm font-medium transition-all ${currentPage === i + 1 ? "border border-[#E4E4E7] bg-white shadow-sm" : "hover:bg-gray-100"}`}
+                      className={`w-10 h-10 rounded-md text-sm font-medium transition-all ${
+                        currentPage === i + 1
+                          ? "border border-[#E4E4E7] bg-white shadow-sm"
+                          : "hover:bg-gray-100"
+                      }`}
                     >
                       {i + 1}
                     </button>
@@ -241,7 +261,7 @@ const Quizzes = () => {
                   }
                   className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors"
                 >
-                  <span>Next</span> <ChevronRight size={14} />
+                  <span>Sau</span> <ChevronRight size={14} />
                 </button>
               </div>
             </div>

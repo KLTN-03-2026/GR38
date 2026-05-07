@@ -43,6 +43,9 @@ import QuizzesLearner from "./pages/Learner/Quizzes";
 import SuCo from "./pages/Learner/SuCo";
 import TienDo from "./pages/Learner/TienDo";
 
+//Shared
+import KetQuaQuizz from "./components/features/quizResults/QuizResultDetail";
+
 // PrivateRoute logic
 function PrivateRoute({ allowedRole }) {
   const { user, role, loading } = useAuth();
@@ -126,6 +129,7 @@ export default function AppRouter() {
           <Route path="documents/:id" element={<DocumentsDetailPage />} />
           <Route path="baigiang/:id" element={<Baigiangpage />} />
           <Route path="baikiemtra/:id" element={<Baikiemtra />} />
+          <Route path="quizzes/result/:resultId" element={<KetQuaQuizz />} />
           <Route path="stats" element={<AssignmentStatistics />} />
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="flashcards/add" element={<AddFlashcards />} />
@@ -135,7 +139,7 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-
+      {/* LEARNER ROUTES */}
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
@@ -146,6 +150,7 @@ export default function AppRouter() {
           <Route path="flashcards/:id" element={<FlashcardDetailLearner />} />
           <Route path="quizzes" element={<QuizzesLearner />} />
           <Route path="quizzes/:id" element={<HocQuiz />} />
+          <Route path="quizzes/result/:resultId" element={<KetQuaQuizz />} />
           <Route path="suco" element={<SuCo />} />
           <Route path="tiendo" element={<TienDo />} />
           <Route path="profile" element={<ProfilePage />} />

@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import ChatAI from "./ChatAI"; 
 import Quizz from "./Quizz"; 
 import FlashCard from "./FlashCard"; 
-import DocumentViewer from "@/components/documents/DocumentViewer";
+import DocumentViewer from "@/components/features/documents/DocumentViewer";
 
 const BaiGiang = () => {
   const navigate = useNavigate();

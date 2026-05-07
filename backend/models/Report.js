@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 export const REPORT_STATUS = Object.freeze({
     PENDING: 'pending',     // Đang xử lý
     RESOLVED: 'resolved',   // Đã xử lý
-    REJECTED: 'rejected'    // Vô hiệu (Báo cáo không chính xác)
+    REJECTED: 'rejected'    // Vô hiệu 
 });
 
 export const REPORT_ISSUE_TYPE = Object.freeze({

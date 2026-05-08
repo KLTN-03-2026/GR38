@@ -5,6 +5,7 @@ import { flashcardService } from "@/services/flashcardSevice";
 import imagesList from "../../../images";
 
 const ITEMS_PER_PAGE = 8;
+const SIDEBAR_PER_PAGE = 4;
 
 function getPageNumbers(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -42,13 +43,15 @@ const Flashcards = () => {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [sidebarSearch, setSidebarSearch] = useState("");
+  const [sidebarPage, setSidebarPage] = useState(1);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [rightSearch, setRightSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { loadAll(); }, []);
-  useEffect(() => { setSelectedDoc(null); setCurrentPage(1); }, [activeTab]);
+  useEffect(() => { setSelectedDoc(null); setCurrentPage(1); setSidebarPage(1); }, [activeTab]);
   useEffect(() => { setCurrentPage(1); }, [rightSearch, selectedDoc]);
+  useEffect(() => { setSidebarPage(1); }, [sidebarSearch]);
 
   const getCurrentUserId = () => {
     try {
@@ -131,6 +134,9 @@ const Flashcards = () => {
     d.title.toLowerCase().includes(sidebarSearch.toLowerCase())
   );
 
+  const totalSidebarPages = Math.max(1, Math.ceil(filteredSidebarDocs.length / SIDEBAR_PER_PAGE));
+  const pagedSidebarDocs  = filteredSidebarDocs.slice((sidebarPage - 1) * SIDEBAR_PER_PAGE, sidebarPage * SIDEBAR_PER_PAGE);
+
   const rightCards = React.useMemo(() => {
     let cards = tabPool;
     if (selectedDoc) cards = tabPool.filter((i) => i.documentTitle === selectedDoc.title && i.source === "ai");
@@ -138,7 +144,6 @@ const Flashcards = () => {
     return cards;
   }, [tabPool, selectedDoc, rightSearch]);
 
-  // Pagination
   const totalPages = Math.max(1, Math.ceil(rightCards.length / ITEMS_PER_PAGE));
   const safePage   = Math.min(currentPage, totalPages);
   const pageNums   = getPageNumbers(safePage, totalPages);
@@ -182,36 +187,60 @@ const Flashcards = () => {
       <div className="flex gap-5 flex-1">
         {/* Sidebar */}
         {showSidebar && (
-          <div className="w-[260px] shrink-0 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm h-fit">
+          <div className="w-[260px] shrink-0 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm h-fit sticky top-6">
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Chọn tài liệu</p>
-            <div className="flex items-center bg-[#F9F9F9] border border-gray-200 rounded-lg px-3 h-9 gap-2 mb-4">
+            <div className="flex items-center bg-[#F9F9F9] border border-gray-200 rounded-lg px-3 h-9 gap-2 mb-3">
               <Search size={13} className="text-gray-400" />
               <input type="text" placeholder="Tìm tài liệu..." value={sidebarSearch}
                 onChange={(e) => setSidebarSearch(e.target.value)}
                 className="bg-transparent border-none outline-none text-[13px] w-full text-gray-700" />
             </div>
+
             {loading ? (
               <div className="flex justify-center py-6">
                 <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : filteredSidebarDocs.map((doc) => {
-              const isSelected = selectedDoc?.documentId === doc.documentId;
-              return (
-                <button key={doc.documentId} onClick={() => setSelectedDoc(isSelected ? null : doc)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-left transition-all ${
-                    isSelected ? "bg-orange-50 border border-orange-200" : "hover:bg-gray-50"
-                  }`}>
-                  <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${isSelected ? "bg-[#F26739]" : "bg-gray-100"}`}>
-                    <BookOpen size={13} className={isSelected ? "text-white" : "text-gray-400"} />
+            ) : filteredSidebarDocs.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-6">Chưa có tài liệu</p>
+            ) : (
+              <>
+                {pagedSidebarDocs.map((doc) => {
+                  const isSelected = selectedDoc?.documentId === doc.documentId;
+                  return (
+                    <button key={doc.documentId} onClick={() => setSelectedDoc(isSelected ? null : doc)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-left transition-all ${
+                        isSelected ? "bg-orange-50 border border-orange-200" : "hover:bg-gray-50"
+                      }`}>
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${isSelected ? "bg-[#F26739]" : "bg-gray-100"}`}>
+                        <BookOpen size={13} className={isSelected ? "text-white" : "text-gray-400"} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[13px] font-semibold truncate ${isSelected ? "text-[#F26739]" : "text-gray-700"}`}>{doc.title}</p>
+                        {doc.createdAt && <p className="text-[11px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString("vi-VN")}</p>}
+                      </div>
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-[#F26739] shrink-0" />}
+                    </button>
+                  );
+                })}
+
+                {/* Sidebar pagination */}
+                {totalSidebarPages > 1 && (
+                  <div className="flex items-center justify-between px-1 pt-3 border-t border-gray-100 mt-2">
+                    <button onClick={() => setSidebarPage(p => Math.max(1, p - 1))} disabled={sidebarPage === 1}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                      <ChevronLeft size={14}/>
+                    </button>
+                    <span className="text-[11px] font-semibold text-gray-500">
+                      <span className="text-[#F26739]">{sidebarPage}</span> / {totalSidebarPages}
+                    </span>
+                    <button onClick={() => setSidebarPage(p => Math.min(totalSidebarPages, p + 1))} disabled={sidebarPage === totalSidebarPages}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                      <ChevronRight size={14}/>
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] font-semibold truncate ${isSelected ? "text-[#F26739]" : "text-gray-700"}`}>{doc.title}</p>
-                    {doc.createdAt && <p className="text-[11px] text-gray-400">{new Date(doc.createdAt).toLocaleDateString("vi-VN")}</p>}
-                  </div>
-                  {isSelected && <div className="w-2 h-2 rounded-full bg-[#F26739] shrink-0" />}
-                </button>
-              );
-            })}
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -311,20 +340,16 @@ const Flashcards = () => {
                       className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
                       <ChevronLeft size={14} />
                     </button>
-
                     {pageNums.map((p, i) =>
                       p === "..." ? (
                         <span key={`d${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">…</span>
                       ) : (
                         <button key={p} onClick={() => handlePageChange(p)}
                           className={`w-8 h-8 text-xs rounded-lg border font-medium transition ${
-                            safePage === p
-                              ? "bg-[#F26739] text-white border-[#F26739] shadow-sm"
-                              : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                            safePage === p ? "bg-[#F26739] text-white border-[#F26739] shadow-sm" : "border-gray-200 text-gray-600 hover:bg-gray-50"
                           }`}>{p}</button>
                       )
                     )}
-
                     <button onClick={() => handlePageChange(safePage + 1)} disabled={safePage === totalPages}
                       className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
                       <ChevronRight size={14} />
@@ -341,5 +366,4 @@ const Flashcards = () => {
     </div>
   );
 };
-
 export default Flashcards;

@@ -19,10 +19,9 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
-  // State Phân trang (Vì API trả về 1 set, nhưng bạn muốn giao diện giống Quiz - thường có nhiều set)
-  // Ở đây ta xử lý flashcardSet như một mảng chứa 1 phần tử để giữ đúng layout 2 cột
+  // State Phân trang
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 2;
+  const itemsPerPage = 5; // Tăng số lượng item mỗi trang vì giao diện list tốn ít diện tích hơn
 
   useEffect(() => {
     const fetchFlashcardSet = async () => {
@@ -56,92 +55,96 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
       </div>
     );
 
-  // GIAO DIỆN DANH SÁCH (GIỐNG HÌNH QUỐC)
+  // GIAO DIỆN 1: DANH SÁCH BỘ THẺ (Sửa thành dạng List nhỏ gọn)
   if (!isStudying) {
-    // Giả lập danh sách để test layout (Nếu sau này API trả về mảng thì thay flashcardSet bằng mảng đó)
     const listToShow = flashcardSet ? [flashcardSet] : []; 
     const totalPages = Math.ceil(listToShow.length / itemsPerPage) || 1;
 
     return (
       <div className="p-4 w-full max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h2 className="text-2xl font-black text-[#001d3d] uppercase tracking-tight mb-1">
+        <div className="mb-6">
+          <h2 className="text-xl font-black text-[#001d3d] uppercase tracking-tight mb-1">
             BÀI TẬP ÔN TẬP
           </h2>
-          <p className="text-sm text-gray-400 italic">
-            {lectureTitle || "Các triều đại Việt Nam"}
+          <p className="text-xs text-gray-400 italic">
+            {lectureTitle || "Danh sách học tập"}
           </p>
         </div>
 
-        {/* Grid 2 cột giống trong hình */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        {/* Chuyển từ Grid sang Flex Column để tạo danh sách dọc */}
+        <div className="flex flex-col gap-3 mb-10">
           {listToShow.length > 0 ? (
             listToShow.map((set, index) => (
               <div 
                 key={index}
-                className="bg-white border border-gray-100 rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all flex flex-col"
+                className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
               >
-                {/* Thumbnail Area */}
-                <div className="aspect-[16/10] bg-[#fff8f1] rounded-2xl mb-5 flex items-center justify-center overflow-hidden border border-orange-50">
-                  {set.thumbnail || defaultThumbnail ? (
-                    <img
-                      src={set.thumbnail || defaultThumbnail}
-                      alt={set.title}
-                      className="w-full h-full object-cover opacity-80"
-                    />
-                  ) : (
-                    <BookOpen size={48} className="text-[#f2d8c3]" strokeWidth={1.5} />
-                  )}
+                <div className="flex items-center gap-4">
+                  {/* Thumbnail nhỏ xinh */}
+                  <div className="w-16 h-16 bg-[#fff8f1] rounded-xl flex items-center justify-center overflow-hidden border border-orange-50 shrink-0">
+                    {set.thumbnail || defaultThumbnail ? (
+                      <img
+                        src={set.thumbnail || defaultThumbnail}
+                        alt={set.title}
+                        className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform"
+                      />
+                    ) : (
+                      <BookOpen size={24} className="text-[#f2d8c3]" />
+                    )}
+                  </div>
+
+                  {/* Thông tin text */}
+                  <div>
+                    <h3 className="font-bold text-[#001d3d] text-sm uppercase tracking-tight">
+                      {set.title || "FLASHCARD ÔN TẬP"}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">
+                        {set.cards?.length || 0} CÂU
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Info Area */}
-                <h3 className="font-bold text-[#001d3d] text-lg uppercase mb-4 px-1">
-                  {set.title || "FLASHCARD ÔN TẬP"}
-                </h3>
-                
-                <div className="flex justify-between items-center mt-auto px-1">
-                  <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wider">
-                    {set.cards?.length || 0} CÂU
-                  </span>
-                  <button
-                    onClick={handleStartStudy}
-                    className="bg-[#f26739] text-white text-xs font-bold px-6 py-2.5 rounded-xl hover:bg-[#e0562b] shadow-lg shadow-orange-100 transition-all active:scale-95"
-                  >
-                    Làm bài ngay
-                  </button>
-                </div>
+                {/* Nút hành động */}
+                <button
+                  onClick={handleStartStudy}
+                  className="bg-[#f26739] text-white text-[11px] font-bold px-5 py-2 rounded-xl hover:bg-[#e0562b] transition-all active:scale-95 shadow-md shadow-orange-100"
+                >
+                  Làm bài ngay
+                </button>
               </div>
             ))
           ) : (
-            <div className="col-span-2 text-center py-20 bg-gray-50 rounded-[32px] border-2 border-dashed border-gray-200">
-               <AlertCircle size={40} className="mx-auto text-gray-300 mb-3" />
-               <p className="text-gray-400 font-bold uppercase text-sm">Chưa có dữ liệu flashcard</p>
+            <div className="text-center py-16 bg-gray-50 rounded-[32px] border-2 border-dashed border-gray-200">
+               <AlertCircle size={32} className="mx-auto text-gray-300 mb-3" />
+               <p className="text-gray-400 font-bold uppercase text-xs">Chưa có dữ liệu flashcard</p>
             </div>
           )}
         </div>
 
-        {/* Thanh phân trang bên dưới */}
+        {/* Thanh phân trang (Giữ nguyên logic) */}
         <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-          <span className="text-sm font-bold text-gray-500">
+          <span className="text-xs font-bold text-gray-500">
             Trang {currentPage} / {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button 
-              className="p-2 border rounded-lg text-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              className="p-1.5 border rounded-lg text-gray-300 hover:bg-gray-50 disabled:opacity-50"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => prev - 1)}
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={16} />
             </button>
-            <div className="w-10 h-10 flex items-center justify-center border-2 border-orange-100 rounded-lg text-[#f26739] font-bold">
+            <div className="w-8 h-8 flex items-center justify-center border border-orange-100 rounded-lg text-[#f26739] text-xs font-bold">
               {currentPage}
             </div>
             <button 
-              className="p-2 border rounded-lg text-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              className="p-1.5 border rounded-lg text-gray-300 hover:bg-gray-50 disabled:opacity-50"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(prev => prev + 1)}
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
@@ -149,7 +152,7 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
     );
   }
 
-  // GIAO DIỆN 2: CHẾ ĐỘ HỌC (GIỮ NGUYÊN HOẶC TÙY CHỈNH THÊM)
+  // GIAO DIỆN 2: CHẾ ĐỘ HỌC (GIỮ NGUYÊN TUYỆT ĐỐI THEO YÊU CẦU)
   const cards = flashcardSet.cards || [];
   const currentCard = cards[currentCardIndex];
 

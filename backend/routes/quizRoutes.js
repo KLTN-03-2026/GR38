@@ -41,7 +41,11 @@ router.get(
 );
 
 // 3. Xem lịch sử làm bài
-router.get("/my-history", authorize(USER_ROLES.LEARNER), getMyHistory);
+router.get(
+  "/my-history",
+  authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER),
+  getMyHistory,
+);
 
 // 4. Thống kê
 router.get(

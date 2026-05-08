@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, FileText, PenLine, Library, Search, RefreshCw, Plus } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, FileText, PenLine, Library,
+  Search, RefreshCw, Plus, Clock, CheckCircle, XCircle, RotateCcw,
+} from "lucide-react";
 import { quizService } from "../../../services/quizService";
 import { documentService } from "../../../services/documentService";
 import { GlobalStyles } from "./GlobalStyles";
@@ -34,8 +37,8 @@ function getUserRole() {
 function getPageNumbers(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
-  if (current >= total - 3) return [1, "...", total-4, total-3, total-2, total-1, total];
-  return [1, "...", current-1, current, current+1, "...", total];
+  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
 function normalizeQuiz(q) {
@@ -82,7 +85,11 @@ function PaginationBar({ page, total, onChange }) {
 // ─── Quiz Card ────────────────────────────────────────────────────────────────
 function QuizCard({ quiz, isTeacher, onStart, onEdit, onDelete, docThumbnail }) {
   const cover = quiz.coverImage || docThumbnail || null;
-  const DIFF = { EASY: { label: "Dễ", cls: "bg-green-500" }, MEDIUM: { label: "Trung bình", cls: "bg-yellow-500" }, HARD: { label: "Khó", cls: "bg-red-500" } };
+  const DIFF = {
+    EASY:   { label: "Dễ",         cls: "bg-green-500"  },
+    MEDIUM: { label: "Trung bình", cls: "bg-yellow-500" },
+    HARD:   { label: "Khó",        cls: "bg-red-500"    },
+  };
   const diff = DIFF[quiz.difficulty];
 
   return (
@@ -150,8 +157,59 @@ function QuizGrid({ quizzes, isTeacher, onStart, onEdit, onDelete, docThumbnail,
             onStart={onStart} onEdit={onEdit} onDelete={onDelete} docThumbnail={docThumbnail} />
         ))}
       </div>
-      <PaginationBar page={safe} total={total} onChange={(p) => { setPage(p); window.scrollTo(0,0); }} />
+      <PaginationBar page={safe} total={total} onChange={(p) => { setPage(p); window.scrollTo(0, 0); }} />
     </>
+  );
+}
+
+// ─── Tab: Tất cả ──────────────────────────────────────────────────────────────
+function AllTab({ isTeacher, onStartQuiz, onOpenEditModal, allQuizzes, loading, onDeleteQuiz }) {
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting,     setDeleting]     = useState(false);
+  const [search,       setSearch]       = useState("");
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setDeleting(true);
+      await quizService.delete(deleteTarget.id ?? deleteTarget._id);
+      onDeleteQuiz(deleteTarget.id ?? deleteTarget._id);
+      setDeleteTarget(null);
+    } catch { alert("Xoá quiz thất bại."); }
+    finally { setDeleting(false); }
+  };
+
+  const filtered = allQuizzes.filter(q => (q.title ?? "").toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+        <div>
+          <p className="text-sm font-bold text-gray-800">Tất cả Quiz</p>
+          <p className="text-xs text-gray-400">{allQuizzes.length} quiz</p>
+        </div>
+        {allQuizzes.length > 0 && (
+          <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 h-9 gap-2 shadow-sm">
+            <Search size={12} className="text-gray-400 shrink-0"/>
+            <input type="text" placeholder="Tìm quiz..." value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-transparent border-none outline-none text-xs w-32 text-gray-700"/>
+          </div>
+        )}
+      </div>
+
+      {loading ? <QuizSkeleton/> : (
+        <QuizGrid quizzes={filtered} isTeacher={isTeacher}
+          onStart={onStartQuiz} onEdit={onOpenEditModal} onDelete={q => setDeleteTarget(q)}
+          emptyMsg="Chưa có quiz nào"
+          emptyAction={null}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal title={deleteTarget.title} onConfirm={handleDeleteConfirm}
+          onCancel={() => !deleting && setDeleteTarget(null)} deleting={deleting}/>
+      )}
+    </div>
   );
 }
 
@@ -170,10 +228,10 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
   const [quizSearch,       setQuizSearch]       = useState("");
   const [deleteTarget,     setDeleteTarget]     = useState(null);
   const [deleting,         setDeleting]         = useState(false);
-  const [docPage,          setDocPage]          = useState(1);   
-  const DOCS_PER_PAGE = 4;                                     
+  const [docPage,          setDocPage]          = useState(1);
+  const DOCS_PER_PAGE = 4;
 
-  useEffect(() => { setDocPage(1); }, [docSearch]); 
+  useEffect(() => { setDocPage(1); }, [docSearch]);
 
   useEffect(() => {
     (async () => {
@@ -215,8 +273,8 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
 
   const filteredDocs    = documents.filter(d => (d.title ?? d.fileName ?? "").toLowerCase().includes(docSearch.toLowerCase()));
   const filteredQuizzes = quizzes.filter(q => (q.title ?? "").toLowerCase().includes(quizSearch.toLowerCase()));
-  const totalDocPages   = Math.ceil(filteredDocs.length / DOCS_PER_PAGE);         
-  const pagedDocs       = filteredDocs.slice((docPage - 1) * DOCS_PER_PAGE, docPage * DOCS_PER_PAGE); 
+  const totalDocPages   = Math.ceil(filteredDocs.length / DOCS_PER_PAGE);
+  const pagedDocs       = filteredDocs.slice((docPage - 1) * DOCS_PER_PAGE, docPage * DOCS_PER_PAGE);
 
   return (
     <div className="flex gap-5 items-start">
@@ -244,8 +302,8 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
             </div>
           ) : (
             <>
-              {pagedDocs.map(doc => {                              
-                const id = doc._id ?? doc.id;
+              {pagedDocs.map(doc => {
+                const id    = doc._id ?? doc.id;
                 const title = doc.title ?? doc.fileName ?? "Không có tên";
                 const isSel = selectedDocId === id;
                 return (
@@ -265,26 +323,26 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
                 );
               })}
 
-              {/* Pagination nhỏ gọn */}
-             {totalDocPages > 1 && (
-          <div className="flex items-center justify-between px-2 pt-2 pb-1 border-t border-gray-100 mt-1">
-          <button onClick={() => setDocPage(p => Math.max(1, p - 1))} disabled={docPage === 1}
-          className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
-         <ChevronLeft size={14}/>
-            </button>
-            <span className="text-[11px] font-semibold text-gray-500">
-          <span className="text-[#F26739]">{docPage}</span> / {totalDocPages}
-     </span>
-             <button onClick={() => setDocPage(p => Math.min(totalDocPages, p + 1))} disabled={docPage === totalDocPages}
-          className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
-             <ChevronRight size={14}/>
-    </button>
-  </div>
-)}
+              {totalDocPages > 1 && (
+                <div className="flex items-center justify-between px-2 pt-2 pb-1 border-t border-gray-100 mt-1">
+                  <button onClick={() => setDocPage(p => Math.max(1, p - 1))} disabled={docPage === 1}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                    <ChevronLeft size={14}/>
+                  </button>
+                  <span className="text-[11px] font-semibold text-gray-500">
+                    <span className="text-[#F26739]">{docPage}</span> / {totalDocPages}
+                  </span>
+                  <button onClick={() => setDocPage(p => Math.min(totalDocPages, p + 1))} disabled={docPage === totalDocPages}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-50 text-orange-400 hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                    <ChevronRight size={14}/>
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
+
       {/* Panel phải */}
       <div className="flex-1 min-w-0">
         {!selectedDocId ? (
@@ -339,6 +397,7 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
           </>
         )}
       </div>
+
       {deleteTarget && (
         <ConfirmDeleteModal title={deleteTarget.title} onConfirm={handleDeleteConfirm}
           onCancel={() => !deleting && setDeleteTarget(null)} deleting={deleting}/>
@@ -346,6 +405,7 @@ function ByDocumentTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal
     </div>
   );
 }
+
 // ─── Tab: Thủ công ────────────────────────────────────────────────────────────
 function ManualTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal, quizzes, loading, onDeleteQuiz }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -409,18 +469,321 @@ function ManualTab({ isTeacher, onStartQuiz, onOpenAddModal, onOpenEditModal, qu
   );
 }
 
+// ─── Tab: Lịch sử làm bài ─────────────────────────────────────────────────────
+function HistoryTab({ onStartQuiz, allQuizzes }) {
+  const [history,       setHistory]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [activeAttempt, setActiveAttempt] = useState(null);
+  const [detail,        setDetail]        = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [search,        setSearch]        = useState("");
+
+useEffect(() => {
+  setLoading(true);
+  quizService.getMyHistory()
+    .then(res => {
+      const raw = res.data?.data ?? res.data ?? [];
+      const sorted = [...raw].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setHistory(sorted);
+    })
+    .catch(err => console.error(err))
+    .finally(() => setLoading(false));
+}, []);
+
+  const handleViewDetail = async (attempt) => {
+    setActiveAttempt(attempt);
+    setDetailLoading(true);
+    try {
+      const res = await quizService.getResultDetail(attempt._id);
+      const raw = res.data?.data ?? res.data;
+      const fullQuestions = raw?.quizId?.questions || [];
+
+      const qs = fullQuestions.map(q => {
+        let correctIdx = q.options.findIndex(opt => opt === q.correctAnswer);
+        if (correctIdx === -1) correctIdx = Number(q.correctAnswer ?? q.answer);
+        let userIdx = null;
+        if (raw?.answers) {
+          const ansInfo = raw.answers.find(a => String(a.questionId) === String(q._id));
+          if (ansInfo && ansInfo.selectedAnswer !== null) {
+            userIdx = q.options.findIndex(opt => opt === ansInfo.selectedAnswer);
+            if (userIdx === -1) userIdx = Number(ansInfo.selectedAnswer);
+          }
+        }
+        return { ...q, answer: correctIdx, userAnswer: userIdx };
+      });
+
+      setDetail({
+        quizTitle: raw?.quizId?.title || "Bài Kiểm Tra",
+        score:     raw?.correctAnswersCount ?? raw?.score ?? 0,
+        total:     raw?.totalQuestions ?? fullQuestions.length ?? 10,
+        answered:  raw?.answers?.length ?? 0,
+        questions: qs,
+        createdAt: raw?.createdAt ?? attempt.createdAt,
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Không thể tải chi tiết bài làm.");
+      setActiveAttempt(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleBack = () => { setActiveAttempt(null); setDetail(null); };
+
+  // ── Màn hình chi tiết ──
+  if (activeAttempt) {
+    if (detailLoading || !detail) return (
+      <div className="flex items-center justify-center py-24 gap-2 text-sm text-gray-400">
+        <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"/>
+        Đang tải chi tiết...
+      </div>
+    );
+
+    const pct        = detail.total > 0 ? Math.round((detail.score / detail.total) * 100) : 0;
+    const scoreColor = pct >= 80 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
+
+    // Tìm quiz tương ứng để nút "Làm lại"
+    const quizToRetry = allQuizzes.find(q =>
+      (q.title ?? "").toLowerCase() === (detail.quizTitle ?? "").toLowerCase()
+    );
+
+    return (
+      <div>
+        {/* Nút quay lại */}
+        <button onClick={handleBack}
+          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-orange-500 mb-5 transition">
+          <ChevronLeft size={14}/> Quay lại lịch sử
+        </button>
+
+        {/* Score card */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-5 flex items-center gap-6"
+          style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          {/* Vòng tròn điểm */}
+          <div className="relative w-20 h-20 shrink-0">
+            <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#f3f4f6" strokeWidth="8"/>
+              <circle cx="40" cy="40" r="34" fill="none" stroke={scoreColor} strokeWidth="8"
+                strokeDasharray={`${2 * Math.PI * 34}`}
+                strokeDashoffset={`${2 * Math.PI * 34 * (1 - pct / 100)}`}
+                strokeLinecap="round"/>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-base font-black" style={{ color: scoreColor }}>{pct}%</span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-black text-gray-800 mb-1 truncate">{detail.quizTitle}</p>
+            <p className="text-xs text-gray-400 mb-3">
+              {new Date(detail.createdAt).toLocaleString("vi-VN")}
+            </p>
+            <div className="flex gap-4 text-xs">
+              <span className="flex items-center gap-1 text-green-600 font-semibold">
+                <CheckCircle size={12}/> Đúng: {detail.score}
+              </span>
+              <span className="flex items-center gap-1 text-red-500 font-semibold">
+                <XCircle size={12}/> Sai: {detail.total - detail.score}
+              </span>
+              <span className="text-gray-400">Tổng: {detail.total} câu</span>
+            </div>
+          </div>
+
+          {/* Nút làm lại */}
+          {quizToRetry && (
+            <button
+              onClick={() => { handleBack(); onStartQuiz(quizToRetry); }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-semibold transition shrink-0"
+              style={{ background: "#F26739" }}>
+              <RotateCcw size={13}/> Làm lại
+            </button>
+          )}
+        </div>
+
+        {/* Chi tiết từng câu */}
+        {detail.questions?.length > 0 ? (
+          <div className="space-y-3">
+            {detail.questions.map((q, idx) => {
+              const isCorrect = q.userAnswer === q.answer;
+              const isSkipped = q.userAnswer === null || q.userAnswer === undefined;
+              return (
+                <div key={q._id ?? idx}
+                  className={`bg-white rounded-2xl border p-4 ${
+                    isSkipped ? "border-gray-200"
+                      : isCorrect ? "border-green-200"
+                      : "border-red-200"
+                  }`} style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                  <div className="flex items-start gap-3 mb-3">
+                    <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      isSkipped ? "bg-gray-100 text-gray-400"
+                        : isCorrect ? "bg-green-100 text-green-600"
+                        : "bg-red-100 text-red-500"
+                    }`}>Câu {idx + 1}</span>
+                    <p className="text-sm font-medium text-gray-800 flex-1">{q.question}</p>
+                    {isSkipped
+                      ? <span className="text-[11px] text-gray-400 shrink-0">Bỏ qua</span>
+                      : isCorrect
+                        ? <CheckCircle size={16} className="text-green-500 shrink-0"/>
+                        : <XCircle size={16} className="text-red-400 shrink-0"/>
+                    }
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {q.options?.map((opt, oIdx) => {
+                      const isAnswer = oIdx === q.answer;
+                      const isUser   = oIdx === q.userAnswer;
+                      let cls = "border-gray-100 text-gray-600 bg-gray-50";
+                      if (isAnswer) cls = "border-green-300 bg-green-50 text-green-700 font-semibold";
+                      else if (isUser && !isCorrect) cls = "border-red-300 bg-red-50 text-red-600";
+                      return (
+                        <div key={oIdx}
+                          className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2 ${cls}`}>
+                          <span className="shrink-0 text-[10px] font-bold opacity-60">
+                            {["A", "B", "C", "D"][oIdx]}
+                          </span>
+                          <span className="flex-1">{opt}</span>
+                          {isAnswer && <CheckCircle size={11} className="text-green-500 shrink-0"/>}
+                          {isUser && !isCorrect && <XCircle size={11} className="text-red-400 shrink-0"/>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 gap-2 border-2 border-dashed border-gray-200 rounded-2xl">
+            <p className="text-sm text-gray-400">Không có dữ liệu chi tiết câu hỏi</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Màn hình danh sách ──
+  const DIFF_LABEL = { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" };
+  const filtered = history.filter(h =>
+    (h.quizId?.title ?? h.quizTitle ?? "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+        <div>
+          <p className="text-sm font-bold text-gray-800">Lịch sử làm bài</p>
+          <p className="text-xs text-gray-400">{history.length} lần làm bài</p>
+        </div>
+        {history.length > 0 && (
+          <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 h-9 gap-2 shadow-sm">
+            <Search size={12} className="text-gray-400 shrink-0"/>
+            <input type="text" placeholder="Tìm theo tên quiz..." value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-transparent border-none outline-none text-xs w-40 text-gray-700"/>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20 gap-2 text-sm text-gray-400">
+          <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"/> Đang tải...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 border-2 border-dashed border-gray-200 rounded-2xl">
+          <Clock size={32} className="text-gray-300"/>
+          <p className="text-sm font-medium text-gray-500">
+            {history.length === 0 ? "Chưa có lịch sử làm bài" : "Không tìm thấy kết quả"}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((attempt, idx) => {
+            const title      = attempt.quizId?.title ?? attempt.quizTitle ?? "Bài kiểm tra";
+            const score      = attempt.correctAnswersCount ?? attempt.score ?? 0;
+            const total      = attempt.totalQuestions ?? 0;
+            const pct        = total > 0 ? Math.round((score / total) * 100) : 0;
+            const scoreColor = pct >= 80 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
+            const date       = attempt.createdAt ? new Date(attempt.createdAt).toLocaleString("vi-VN") : "";
+            const diff       = attempt.quizId?.difficulty;
+
+            return (
+              <div key={attempt._id ?? idx}
+                className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-4 hover:border-orange-200 hover:shadow-sm transition cursor-pointer"
+                onClick={() => handleViewDetail(attempt)}>
+
+                {/* Vòng tròn điểm */}
+                <div className="relative w-12 h-12 shrink-0">
+                  <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
+                    <circle cx="24" cy="24" r="20" fill="none" stroke={scoreColor} strokeWidth="5"
+                      strokeDasharray={`${2 * Math.PI * 20}`}
+                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - pct / 100)}`}
+                      strokeLinecap="round"/>
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[10px] font-black" style={{ color: scoreColor }}>{pct}%</span>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <p className="text-sm font-bold text-gray-800 truncate">{title}</p>
+                    {diff && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                        diff === "EASY"   ? "bg-green-100 text-green-600"
+                          : diff === "MEDIUM" ? "bg-yellow-100 text-yellow-600"
+                          : "bg-red-100 text-red-500"
+                      }`}>{DIFF_LABEL[diff] ?? diff}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">{date}</p>
+                </div>
+
+                {/* Score */}
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-black" style={{ color: scoreColor }}>{score}/{total}</p>
+                  <p className="text-[10px] text-gray-400">câu đúng</p>
+                </div>
+
+                <ChevronRight size={14} className="text-gray-300 shrink-0"/>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function QuizPage() {
   const navigate  = useNavigate();
   const isTeacher = getUserRole() === "TEACHER";
 
-  const [activeTab,     setActiveTab]     = useState("document");
+  const [activeTab,     setActiveTab]     = useState("all");
   const [quizView,      setQuizView]      = useState(null);
   const [showAddModal,  setShowAddModal]  = useState(false);
   const [addDocumentId, setAddDocumentId] = useState(null);
   const [editTarget,    setEditTarget]    = useState(null);
+
+  // ── All quizzes ──
+  const [allQuizzes,    setAllQuizzes]    = useState([]);
+  const [allLoading,    setAllLoading]    = useState(false);
+
+  // ── Manual quizzes ──
   const [manualQuizzes, setManualQuizzes] = useState([]);
   const [manualLoading, setManualLoading] = useState(false);
+
+  const fetchAllQuizzes = useCallback(async () => {
+    setAllLoading(true);
+    try {
+      const res = await quizService.getTeacherQuizzes();
+      const raw = res.data?.data ?? res.data ?? [];
+      const list = Array.isArray(raw) ? raw : (raw.quizzes ?? []);
+      setAllQuizzes(list.map(normalizeQuiz));
+    } catch(err) { console.error("fetchAllQuizzes error:", err); }
+    finally { setAllLoading(false); }
+  }, []);
 
   const fetchManualQuizzes = useCallback(async () => {
     setManualLoading(true);
@@ -433,7 +796,10 @@ export default function QuizPage() {
     finally { setManualLoading(false); }
   }, []);
 
-  useEffect(() => { fetchManualQuizzes(); }, [fetchManualQuizzes]);
+  useEffect(() => {
+    fetchAllQuizzes();
+    fetchManualQuizzes();
+  }, [fetchAllQuizzes, fetchManualQuizzes]);
 
   const handleStartQuiz = async (quiz) => {
     try {
@@ -452,13 +818,18 @@ export default function QuizPage() {
         return;
       }
 
-      const res = await quizService.getQuizForPlay(id);
+      const res    = await quizService.getQuizForPlay(id);
       const detail = res.data?.data ?? res.data ?? res;
       const rawQs  = detail.questions ?? [];
       if (!rawQs.length) { alert("Quiz này chưa có câu hỏi!"); return; }
       setQuizView({
         quiz: detail,
-        questions: shuffleArray(rawQs.map(q => ({ _id: q._id ?? q.id, question: q.question ?? q.q, options: q.options, answer: q.correctAnswerIndex ?? q.answer ?? null }))).map(shuffleOptions),
+        questions: shuffleArray(rawQs.map(q => ({
+          _id: q._id ?? q.id,
+          question: q.question ?? q.q,
+          options: q.options,
+          answer: q.correctAnswerIndex ?? q.answer ?? null,
+        }))).map(shuffleOptions),
       });
     } catch(err) {
       console.error("Start quiz error:", err);
@@ -473,15 +844,24 @@ export default function QuizPage() {
 
   const handleSaveQuiz = () => {
     setShowAddModal(false); setEditTarget(null);
+    fetchAllQuizzes();
     fetchManualQuizzes();
     if (!addDocumentId) setActiveTab("manual");
   };
 
-  const TABS = [
-    { key: "document", icon: <FileText size={14}/>, label: "Theo tài liệu" },
-    { key: "manual",   icon: <PenLine size={14}/>,  label: "Thủ công",
-      badge: manualQuizzes.length > 0 ? manualQuizzes.length : null },
-  ];
+  const handleDeleteFromAll = (id) => {
+    setAllQuizzes(p => p.filter(q => (q.id ?? q._id) !== id));
+    setManualQuizzes(p => p.filter(q => (q.id ?? q._id) !== id));
+  };
+
+ const TABS = [
+  { key: "all",      icon: <Library size={14}/>,  label: "Tất cả",
+    badge: allQuizzes.length > 0 ? allQuizzes.length : null },
+  { key: "document", icon: <FileText size={14}/>, label: "Theo tài liệu" },
+  { key: "manual",   icon: <PenLine size={14}/>,  label: "Thủ công",
+    badge: manualQuizzes.length > 0 ? manualQuizzes.length : null },
+  { key: "history",  icon: <Clock size={14}/>,    label: "Lịch sử làm bài" },
+];
 
   if (quizView) return (
     <>
@@ -497,8 +877,8 @@ export default function QuizPage() {
         {/* Header */}
         <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-4">Hệ thống trắc nghiệm</h1>
 
-        {/* Tab bar — giống Flashcards */}
-        <div className="flex items-center gap-2 mb-6">
+        {/* Tab bar */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
           {TABS.map(({ key, icon, label, badge }) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] font-bold transition-all ${
@@ -515,6 +895,12 @@ export default function QuizPage() {
         </div>
 
         {/* Tab content */}
+        {activeTab === "all" && (
+          <AllTab isTeacher={isTeacher} onStartQuiz={handleStartQuiz}
+            onOpenEditModal={setEditTarget}
+            allQuizzes={allQuizzes} loading={allLoading}
+            onDeleteQuiz={handleDeleteFromAll}/>
+        )}
         {activeTab === "document" && (
           <ByDocumentTab isTeacher={isTeacher} onStartQuiz={handleStartQuiz}
             onOpenAddModal={(id) => { setAddDocumentId(id ?? null); setShowAddModal(true); }}
@@ -526,6 +912,9 @@ export default function QuizPage() {
             onOpenEditModal={setEditTarget}
             quizzes={manualQuizzes} loading={manualLoading}
             onDeleteQuiz={id => setManualQuizzes(p => p.filter(q => (q.id ?? q._id) !== id))}/>
+        )}
+        {activeTab === "history" && (
+          <HistoryTab onStartQuiz={handleStartQuiz} allQuizzes={allQuizzes}/>
         )}
 
         {showAddModal && (

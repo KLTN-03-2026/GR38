@@ -38,7 +38,11 @@ export const quizService = {
     const res = await api.get(`/quizzes/my-history`);
     return res;
   },
-
+  // Lấy lịch sử tất cả các bài quiz của teacher
+getTeacherHistory: async () => {
+  const res = await api.get(`/quizzes/teacher-history`);
+  return res;
+},
   // Xem chi tiết lại 1 bài thi đã nộp (để xem câu đúng/sai)
   getResultDetail: async (resultId) => {
     const res = await api.get(`/quizzes/detail/${resultId}`);

@@ -135,7 +135,6 @@ export default function TeacherDashboard() {
       Icon: ClipboardList,
       color: "#F26739",
       bg: "#FFF3EE",
-      trend: "+12%",
     },
     {
       label: "Tổng tài liệu đã tạo",
@@ -143,7 +142,6 @@ export default function TeacherDashboard() {
       Icon: BookOpen,
       color: "#1473E6",
       bg: "#EEF4FF",
-      trend: "+5%",
     },
     {
       label: "Tổng FlashCard đã tạo",
@@ -151,12 +149,11 @@ export default function TeacherDashboard() {
       Icon: LayoutGrid,
       color: "#0EA472",
       bg: "#EEFAF5",
-      trend: "+8%",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] font-sans">
+    <div className="min-h-screen bg-[#F5F6FA] font-sans px-8 pt-6"> 
       <style>{`
         .stat-card:hover  { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.10) !important; }
         .act-row:hover    { background: #F5F6FA; }
@@ -165,7 +162,7 @@ export default function TeacherDashboard() {
       `}</style>
 
       {/* HEADER */}
-      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 pl-6">
         <div>
           <p className="text-xs text-gray-400 font-medium tracking-wide mb-1">
             {new Date().toLocaleDateString("vi-VN", {

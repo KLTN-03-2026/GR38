@@ -177,10 +177,10 @@ function QuizGrid({ quizzes, isTeacher, onStart, onEdit, onDelete, onHistory, do
 
 // ─── History Modal ────────────────────────────────────────────────────────────
 function HistoryModal({ quiz, onClose, onStartQuiz }) {
-  const [history,      setHistory]      = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [detail,       setDetail]       = useState(null);
-  const [detailLoad,   setDetailLoad]   = useState(false);
+  const [history,    setHistory]    = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [detail,     setDetail]     = useState(null);
+  const [detailLoad, setDetailLoad] = useState(false);
   const quizId = quiz._id ?? quiz.id;
 
   useEffect(() => {
@@ -213,7 +213,12 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
             if (userIdx === -1) userIdx = Number(ans.selectedAnswer);
           }
         }
-        return { ...q, answer: correctIdx, userAnswer: userIdx };
+        return {
+          ...q,
+          answer: correctIdx,
+          userAnswer: userIdx,
+          explanation: q.explanation ?? q.explain ?? "",
+        };
       });
       setDetail({
         score: raw?.correctAnswersCount ?? raw?.score ?? 0,
@@ -226,158 +231,251 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
   };
 
   const pct = detail && detail.total > 0 ? Math.round((detail.score / detail.total) * 100) : 0;
-  const col  = scoreColor(pct);
+  const col = scoreColor(pct);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-gray-50 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="bg-white rounded-2xl w-full flex flex-col"
+        style={{
+          maxWidth: "860px",
+          height: "90vh",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+        }}
+      >
+        {/* ── Sticky Header ── */}
+        <div className="shrink-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-2">
             {detail && (
-              <button onClick={() => setDetail(null)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition mr-1">
-                <ChevronLeft size={14}/> Quay lại
+              <button
+                onClick={() => setDetail(null)}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition mr-1"
+              >
+                <ChevronLeft size={14} /> Quay lại
               </button>
             )}
-            <Clock size={15} className="text-orange-500"/>
-            <p className="text-sm font-black text-gray-800">Lịch sử — <span className="text-orange-500">{quiz.title}</span></p>
+            <Clock size={15} className="text-orange-500" />
+            <p className="text-sm font-black text-gray-800">
+              Lịch sử —{" "}
+              <span className="text-orange-500">{quiz.title}</span>
+            </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 transition text-gray-400"><X size={16}/></button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-gray-100 transition text-gray-400"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        <div className="p-6">
-          {/* Detail view */}
-          {detail ? (
-            detailLoad ? (
-              <div className="flex items-center justify-center py-16 gap-2 text-sm text-gray-400">
-                <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"/> Đang tải...
-              </div>
-            ) : (
-              <>
-                {/* Score card */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-5 flex items-center gap-5" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+        {/* ── Body ── */}
+        {detail ? (
+          detailLoad ? (
+            <div className="flex-1 flex items-center justify-center gap-2 text-sm text-gray-400">
+              <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+              Đang tải...
+            </div>
+          ) : (
+            <>
+              {/* ── Sticky Score Card ── */}
+              <div className="shrink-0 bg-gray-50 border-b border-gray-100 px-6 py-4">
+                <div
+                  className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-5"
+                  style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                >
+                  {/* Circle */}
                   <div className="relative w-16 h-16 shrink-0">
                     <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="26" fill="none" stroke="#f3f4f6" strokeWidth="6"/>
-                      <circle cx="32" cy="32" r="26" fill="none" stroke={col} strokeWidth="6"
+                      <circle cx="32" cy="32" r="26" fill="none" stroke="#f3f4f6" strokeWidth="6" />
+                      <circle
+                        cx="32" cy="32" r="26" fill="none" stroke={col} strokeWidth="6"
                         strokeDasharray={`${2 * Math.PI * 26}`}
-                        strokeDashoffset={`${2 * Math.PI * 26 * (1 - pct / 100)}`} strokeLinecap="round"/>
+                        strokeDashoffset={`${2 * Math.PI * 26 * (1 - pct / 100)}`}
+                        strokeLinecap="round"
+                      />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-sm font-black" style={{ color: col }}>{pct}%</span>
                     </div>
                   </div>
+
+                  {/* Stats */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400 mb-2">{new Date(detail.createdAt).toLocaleString("vi-VN")}</p>
-                    <div className="flex gap-4 text-xs">
-                      <span className="flex items-center gap-1 text-green-600 font-semibold"><CheckCircle size={12}/> Đúng: {detail.score}</span>
-                      <span className="flex items-center gap-1 text-red-500 font-semibold"><XCircle size={12}/> Sai: {detail.total - detail.score}</span>
+                    <p className="text-xs text-gray-400 mb-2">
+                      {new Date(detail.createdAt).toLocaleString("vi-VN")}
+                    </p>
+                    <div className="flex gap-5 text-xs flex-wrap">
+                      <span className="flex items-center gap-1.5 text-green-600 font-bold">
+                        <CheckCircle size={13} /> Đúng: {detail.score}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-red-500 font-bold">
+                        <XCircle size={13} /> Sai: {detail.total - detail.score}
+                      </span>
                       <span className="text-gray-400">Tổng: {detail.total} câu</span>
                     </div>
                   </div>
-                  <button onClick={() => { onClose(); onStartQuiz(quiz); }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-semibold shrink-0" style={{ background: "#F26739" }}>
-                    <RotateCcw size={13}/> Làm lại
+
+                  <button
+                    onClick={() => { onClose(); onStartQuiz(quiz); }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-semibold shrink-0"
+                    style={{ background: "#F26739" }}
+                  >
+                    <RotateCcw size={13} /> Làm lại
                   </button>
                 </div>
+              </div>
 
-                {/* Questions */}
-                <div className="space-y-3">
-                  {detail.questions.map((q, idx) => {
-                    const isCorrect = q.userAnswer === q.answer;
-                    const isSkipped = q.userAnswer === null || q.userAnswer === undefined;
-                    return (
-                      <div key={q._id ?? idx} className={`bg-white rounded-2xl border p-4 ${isSkipped ? "border-gray-200" : isCorrect ? "border-green-200" : "border-red-200"}`}>
-                        <div className="flex items-start gap-3 mb-3">
-                          <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${isSkipped ? "bg-gray-100 text-gray-400" : isCorrect ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}>Câu {idx + 1}</span>
-                          <p className="text-sm font-medium text-gray-800 flex-1">{q.question}</p>
-                          {isSkipped ? <span className="text-[11px] text-gray-400 shrink-0">Bỏ qua</span>
-                            : isCorrect ? <CheckCircle size={16} className="text-green-500 shrink-0"/>
-                            : <XCircle size={16} className="text-red-400 shrink-0"/>}
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                          {q.options?.map((opt, oIdx) => {
-                            const isAns = oIdx === q.answer, isUser = oIdx === q.userAnswer;
-                            let cls = "border-gray-100 text-gray-600 bg-gray-50";
-                            if (isAns) cls = "border-green-300 bg-green-50 text-green-700 font-semibold";
-                            else if (isUser && !isCorrect) cls = "border-red-300 bg-red-50 text-red-600";
-                            return (
-                              <div key={oIdx} className={`text-xs px-3 py-2 rounded-xl border flex items-center gap-2 ${cls}`}>
-                                <span className="shrink-0 text-[10px] font-bold opacity-60">{["A","B","C","D"][oIdx]}</span>
-                                <span className="flex-1">{opt}</span>
-                                {isAns && <CheckCircle size={11} className="text-green-500 shrink-0"/>}
-                                {isUser && !isCorrect && <XCircle size={11} className="text-red-400 shrink-0"/>}
-                              </div>
-                            );
-                          })}
-                        </div>
+              {/* ── Scrollable Questions ── */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 bg-gray-50 space-y-4">
+                {detail.questions.map((q, idx) => {
+                  const isCorrect = q.userAnswer === q.answer;
+                  const isSkipped = q.userAnswer === null || q.userAnswer === undefined;
+                  return (
+                    <div
+                      key={q._id ?? idx}
+                      className={`bg-white rounded-2xl border p-5 ${
+                        isSkipped ? "border-gray-200" : isCorrect ? "border-green-200" : "border-red-200"
+                      }`}
+                      style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
+                    >
+                      {/* Question header */}
+                      <div className="flex items-start gap-3 mb-4">
+                        <span
+                          className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                            isSkipped
+                              ? "bg-gray-100 text-gray-400"
+                              : isCorrect
+                              ? "bg-green-100 text-green-600"
+                              : "bg-red-100 text-red-500"
+                          }`}
+                        >
+                          Câu {idx + 1}
+                        </span>
+                        <p className="text-sm font-semibold text-gray-800 flex-1 leading-relaxed">
+                          {q.question}
+                        </p>
+                        {isSkipped ? (
+                          <span className="text-[11px] text-gray-400 shrink-0">Bỏ qua</span>
+                        ) : isCorrect ? (
+                          <CheckCircle size={17} className="text-green-500 shrink-0" />
+                        ) : (
+                          <XCircle size={17} className="text-red-400 shrink-0" />
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              </>
-            )
-          ) : loading ? (
-            <div className="flex items-center justify-center py-16 gap-2 text-sm text-gray-400">
-              <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"/> Đang tải...
-            </div>
-          ) : history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-gray-200 rounded-2xl">
-              <Clock size={32} className="text-gray-300"/>
-              <p className="text-sm text-gray-500">Chưa có lịch sử làm bài</p>
-              <button onClick={() => { onClose(); onStartQuiz(quiz); }}
-                className="px-5 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "#F26739" }}>
-                Làm bài ngay
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {history.map((attempt, idx) => {
-                const score = attempt.correctAnswersCount ?? attempt.score ?? 0;
-                const total = attempt.totalQuestions ?? 0;
-                const pct   = total > 0 ? Math.round((score / total) * 100) : 0;
-                const col   = scoreColor(pct);
-                return (
-                  <div key={attempt._id ?? idx}
-                    className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-4 hover:border-orange-200 hover:shadow-sm transition cursor-pointer"
-                    onClick={() => handleViewDetail(attempt)}>
-                    <div className="relative w-12 h-12 shrink-0">
-                      <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                        <circle cx="24" cy="24" r="20" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
-                        <circle cx="24" cy="24" r="20" fill="none" stroke={col} strokeWidth="5"
-                          strokeDasharray={`${2 * Math.PI * 20}`}
-                          strokeDashoffset={`${2 * Math.PI * 20 * (1 - pct / 100)}`} strokeLinecap="round"/>
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[10px] font-black" style={{ color: col }}>{pct}%</span>
+
+                      {/* Options 2×2 grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                        {q.options?.map((opt, oIdx) => {
+                          const isAns = oIdx === q.answer;
+                          const isUser = oIdx === q.userAnswer;
+                          let cls = "border-gray-100 text-gray-600 bg-gray-50";
+                          if (isAns) cls = "border-green-300 bg-green-50 text-green-700 font-semibold";
+                          else if (isUser && !isCorrect) cls = "border-red-300 bg-red-50 text-red-600";
+                          return (
+                            <div
+                              key={oIdx}
+                              className={`text-xs px-3.5 py-2.5 rounded-xl border flex items-center gap-2.5 ${cls}`}
+                            >
+                              <span className="shrink-0 w-5 h-5 rounded-full bg-white/70 flex items-center justify-center text-[10px] font-bold opacity-70 border border-current">
+                                {["A", "B", "C", "D"][oIdx]}
+                              </span>
+                              <span className="flex-1">{opt}</span>
+                              {isAns && <CheckCircle size={12} className="text-green-500 shrink-0" />}
+                              {isUser && !isCorrect && <XCircle size={12} className="text-red-400 shrink-0" />}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-400">{attempt.createdAt ? new Date(attempt.createdAt).toLocaleString("vi-VN") : ""}</p>
-                      {attempt.quizId?.difficulty && (
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          attempt.quizId.difficulty === "EASY" ? "bg-green-100 text-green-600"
-                            : attempt.quizId.difficulty === "MEDIUM" ? "bg-yellow-100 text-yellow-600"
-                            : "bg-red-100 text-red-500"
-                        }`}>{DIFF_LABEL[attempt.quizId.difficulty] ?? attempt.quizId.difficulty}</span>
+
+                      {/* Explanation */}
+                      {q.explanation && (
+                        <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                          <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            <span className="font-bold text-amber-700">Giải thích: </span>
+                            {q.explanation}
+                          </p>
+                        </div>
                       )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-black" style={{ color: col }}>{score}/{total}</p>
-                      <p className="text-[10px] text-gray-400">câu đúng</p>
+                  );
+                })}
+              </div>
+            </>
+          )
+        ) : loading ? (
+          <div className="flex-1 flex items-center justify-center gap-2 text-sm text-gray-400">
+            <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+            Đang tải...
+          </div>
+        ) : history.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 m-6 border-2 border-dashed border-gray-200 rounded-2xl">
+            <Clock size={32} className="text-gray-300" />
+            <p className="text-sm text-gray-500">Chưa có lịch sử làm bài</p>
+            <button
+              onClick={() => { onClose(); onStartQuiz(quiz); }}
+              className="px-5 py-2 rounded-xl text-white text-sm font-semibold"
+              style={{ background: "#F26739" }}
+            >
+              Làm bài ngay
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
+            {history.map((attempt, idx) => {
+              const score = attempt.correctAnswersCount ?? attempt.score ?? 0;
+              const total = attempt.totalQuestions ?? 0;
+              const p     = total > 0 ? Math.round((score / total) * 100) : 0;
+              const c     = scoreColor(p);
+              return (
+                <div
+                  key={attempt._id ?? idx}
+                  className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-4 hover:border-orange-200 hover:shadow-sm transition cursor-pointer"
+                  onClick={() => handleViewDetail(attempt)}
+                >
+                  <div className="relative w-12 h-12 shrink-0">
+                    <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="20" fill="none" stroke="#f3f4f6" strokeWidth="5" />
+                      <circle cx="24" cy="24" r="20" fill="none" stroke={c} strokeWidth="5"
+                        strokeDasharray={`${2 * Math.PI * 20}`}
+                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - p / 100)}`}
+                        strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[10px] font-black" style={{ color: c }}>{p}%</span>
                     </div>
-                    <ChevronRight size={14} className="text-gray-300 shrink-0"/>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-400">
+                      {attempt.createdAt ? new Date(attempt.createdAt).toLocaleString("vi-VN") : ""}
+                    </p>
+                    {attempt.quizId?.difficulty && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        attempt.quizId.difficulty === "EASY" ? "bg-green-100 text-green-600"
+                          : attempt.quizId.difficulty === "MEDIUM" ? "bg-yellow-100 text-yellow-600"
+                          : "bg-red-100 text-red-500"
+                      }`}>{DIFF_LABEL[attempt.quizId.difficulty] ?? attempt.quizId.difficulty}</span>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black" style={{ color: c }}>{score}/{total}</p>
+                    <p className="text-[10px] text-gray-400">câu đúng</p>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-300 shrink-0" />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
 // ─── Tab: Tất cả ──────────────────────────────────────────────────────────────
 function AllTab({ isTeacher, onStartQuiz, onHistory, onOpenEditModal, allQuizzes, loading, onDeleteQuiz }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -628,24 +726,13 @@ function ManualTab({ isTeacher, onStartQuiz, onHistory, onOpenAddModal, onOpenEd
         </div>
         <div className="flex items-center gap-2">
           {quizzes.length > 0 && <SearchBox value={search} onChange={setSearch} placeholder="Tìm quiz..."/>}
-          {isTeacher && (
-            <button onClick={() => onOpenAddModal(null)}
-              className="h-9 px-4 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5" style={{ background: "#F26739" }}>
-              ✏️ Tạo Quiz thủ công
-            </button>
-          )}
         </div>
       </div>
       {loading ? <QuizSkeleton/> : (
         <QuizGrid quizzes={filtered} isTeacher={isTeacher}
           onStart={onStartQuiz} onEdit={onOpenEditModal} onDelete={q => setDeleteTarget(q)}
           onHistory={onHistory}
-          emptyMsg="Chưa có quiz thủ công nào"
-          emptyAction={isTeacher && (
-            <button onClick={() => onOpenAddModal(null)} className="text-sm px-5 py-2.5 rounded-xl text-white" style={{ background: "#F26739" }}>
-              ✏️ Tạo Quiz đầu tiên
-            </button>
-          )}
+          emptyMsg="Chưa có quiz thủ công nào"        
         />
       )}
       {deleteTarget && (
@@ -770,25 +857,35 @@ export default function QuizPage() {
   return (
     <>
       <GlobalStyles/>
-      <div className="h-full overflow-y-auto bg-gray-50 px-8 py-6">
-        <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-4">Hệ thống trắc nghiệm</h1>
-
-        {/* Tab bar */}
-        <div className="flex items-center gap-2 mb-6 flex-wrap">
-          {TABS.map(({ key, icon, label, badge }) => (
-            <button key={key} onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] font-bold transition-all ${
-                activeTab === key ? "bg-[#F26739] text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}>
-              {icon}{label}
-              {badge && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  activeTab === key ? "bg-white/30 text-white" : "bg-orange-100 text-orange-600"
-                }`}>{badge}</span>
-              )}
-            </button>
-          ))}
-        </div>
+<div className="h-full overflow-y-auto bg-gray-50 px-8 py-6">
+  <div className="flex items-center justify-between mb-4">
+    <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Hệ thống trắc nghiệm</h1>
+    {isTeacher && (
+      <button
+        onClick={() => openAddModal(null)}
+        className="h-10 px-5 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition"
+        style={{ background: "#F26739" }}
+      >
+        <PenLine size={14}/> Tạo Quiz thủ công
+      </button>
+    )}
+  </div>
+  {/* Tab bar */}
+  <div className="flex items-center gap-2 mb-6 flex-wrap">
+    {TABS.map(({ key, icon, label, badge }) => (
+      <button key={key} onClick={() => setActiveTab(key)}
+        className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] font-bold transition-all ${
+          activeTab === key ? "bg-[#F26739] text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+        }`}>
+        {icon}{label}
+        {badge && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+            activeTab === key ? "bg-white/30 text-white" : "bg-orange-100 text-orange-600"
+          }`}>{badge}</span>
+        )}
+      </button>
+    ))}
+  </div>
 
         {/* Tab content */}
         {activeTab === "all" && (

@@ -1,62 +1,62 @@
 import React, { useState } from "react";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Tag } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Tag, FileText } from "lucide-react";
 import api from "../../../lib/api";
 import Swal from "sweetalert2";
 
 const ReportDetail = ({ report, onBack, onRefresh }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const parseReportContent = (description = "") => {
-    const match = description.match(/^\[(.*?)\](.*)/);
-    if (match) return { title: match[1].trim(), content: match[2].trim() };
-    return { title: "Thông tin sự cố", content: description };
-  };
+  // Logic xử lý tách chuỗi để hiển thị Tiêu đề và Mô tả riêng biệt
+  const parsedData = (() => {
+    const rawContent = report.description || "";
+    const match = rawContent.match(/^\[(.*?)\]\s*(.*)$/);
+    if (match) {
+      return { extractedTitle: match[1], extractedDesc: match[2] };
+    }
+    return { extractedTitle: "Không có tiêu đề", extractedDesc: rawContent };
+  })();
 
-  const { title, content } = parseReportContent(report.description);
+  const ISSUE_TYPE_LABELS = {
+    historical_fact: "Sai thông tin lịch sử",
+    timeline: "Sai thời gian",
+    inappropriate_behavior: "Hành vi không chuẩn mực",
+    spam: "Spam",
+    typo: "Lỗi tài liệu",
+    other: "Khác",
+  };
 
   const updateStatus = async (newStatus) => {
     try {
       setIsUpdating(true);
 
-      // Map giá trị string khớp với Backend
-      const statusMapping = {
-        resolved: "resolved",
-        in_progress: "pending", // Backend dùng 'pending' cho trạng thái chờ/đang xử lý
-        rejected: "rejected",
-      };
-
-      const displayLabel = {
-        resolved: "Đã xử lý",
-        in_progress: "Đang xử lý",
-        rejected: "Từ chối",
-      };
+      // Nội dung phản hồi được gửi lên API để người báo cáo nhận được
+      const adminNotes =
+        newStatus === "resolved"
+          ? "Cảm ơn bạn, Admin đã tiếp nhận và xử lý."
+          : "Báo cáo không hợp lệ hoặc không đủ thông tin để xử lý.";
 
       const response = await api.patch(`reports/${report._id}/status`, {
-        status: statusMapping[newStatus],
-        adminNotes: `Quản trị viên đã cập nhật trạng thái: ${displayLabel[newStatus]}`,
+        status: newStatus,
+        adminNotes: adminNotes,
       });
 
       if (response.data.success) {
+        // Hiển thị thông báo thành công kèm theo nội dung note đã gửi
         await Swal.fire({
           title: "Thành công!",
-          text: `Đã chuyển trạng thái sang: ${displayLabel[newStatus]}`,
+          text: adminNotes,
           icon: "success",
           confirmButtonColor: "#F26739",
+          confirmButtonText: "Đóng",
         });
+
         if (onRefresh) onRefresh();
         onBack();
       }
     } catch (error) {
-      console.error("Lỗi chi tiết:", error);
-
-      let msg = "Không thể kết nối đến máy chủ.";
-      if (error.response?.status === 404)
-        msg =
-          "Lỗi 404: Không tìm thấy đường dẫn (Kiểm tra lại Route PUT ở Backend).";
-
       Swal.fire({
         title: "Lỗi xử lý!",
-        text: msg,
+        text: "Không thể cập nhật trạng thái báo cáo.",
         icon: "error",
         confirmButtonColor: "#F26739",
       });
@@ -83,7 +83,7 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-[2] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-8 text-center border-b border-slate-50 bg-slate-50/30">
-            <h1 className="text-xl font-bold text-slate-900 uppercase mb-2">
+            <h1 className="text-xl font-bold text-slate-900 uppercase">
               Chi tiết báo cáo sự cố
             </h1>
           </div>
@@ -105,7 +105,7 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
               </div>
               <div className="text-right">
                 <p className="text-xs font-bold text-slate-400 mb-2 uppercase">
-                  Thông tin gốc
+                  Thông tin gửi
                 </p>
                 <p className="text-sm text-slate-900">
                   {new Date(report.createdAt).toLocaleString("vi-VN")}
@@ -118,23 +118,43 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
               </div>
             </div>
 
-            <div className="mb-6 bg-blue-50/50 p-5 rounded-xl border border-blue-100 flex items-center gap-4">
-              <div className="p-2.5 bg-blue-600 text-white rounded-lg shadow-sm">
-                <Tag size={20} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100 flex items-center gap-4">
+                <div className="p-2.5 bg-blue-600 text-white rounded-lg shadow-sm">
+                  <Tag size={20} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-blue-600 uppercase mb-1">
+                    Loại sự cố
+                  </p>
+                  <p className="text-lg font-bold text-blue-900">
+                    {ISSUE_TYPE_LABELS[report.issueType] || "Khác"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] font-bold text-blue-600 uppercase mb-1">
-                  Tiêu đề báo cáo
-                </p>
-                <p className="text-lg font-bold text-blue-900">{title}</p>
+
+              <div className="bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 flex items-center gap-4">
+                <div className="p-2.5 bg-indigo-600 text-white rounded-lg shadow-sm">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-indigo-600 uppercase mb-1">
+                    Tiêu đề
+                  </p>
+                  <p className="text-lg font-bold text-indigo-900 truncate">
+                    {parsedData.extractedTitle}
+                  </p>
+                </div>
               </div>
             </div>
 
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 relative mt-4">
               <div className="absolute -top-3 left-6 bg-white px-2 text-[10px] font-bold text-slate-400 uppercase border border-slate-100 rounded">
-                Mô tả
+                Mô tả chi tiết
               </div>
-              <p className="text-slate-700 italic text-lg pt-2">"{content}"</p>
+              <p className="text-slate-700 text-base leading-relaxed pt-2">
+                {parsedData.extractedDesc || "Không có nội dung mô tả"}
+              </p>
             </div>
           </div>
         </div>
@@ -158,28 +178,24 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
                         : "bg-gray-100 text-gray-600"
                   }`}
                 >
-                  {report.status}
+                  {report.status === "pending"
+                    ? "Chưa xử lý"
+                    : report.status === "resolved"
+                      ? "Đã xử lý"
+                      : "Từ chối"}
                 </span>
               </div>
-
               <div className="flex flex-col gap-3 mt-8">
                 <button
-                  disabled={isUpdating}
+                  disabled={isUpdating || report.status !== "pending"}
                   onClick={() => updateStatus("resolved")}
                   className="flex items-center justify-center gap-2 bg-green-600 text-white py-4 rounded-xl hover:bg-green-700 font-bold disabled:opacity-40 shadow-lg shadow-green-100 transition-all"
                 >
                   <CheckCircle size={18} /> Duyệt & Hoàn tất
                 </button>
-                <button
-                  disabled={isUpdating}
-                  onClick={() => updateStatus("in_progress")}
-                  className="flex items-center justify-center gap-2 bg-yellow-500 text-white py-4 rounded-xl hover:bg-yellow-600 font-bold disabled:opacity-40 shadow-lg shadow-yellow-100 transition-all"
-                >
-                  <Clock size={18} /> Đang xử lý
-                </button>
                 <div className="pt-4 border-t border-slate-100">
                   <button
-                    disabled={isUpdating}
+                    disabled={isUpdating || report.status !== "pending"}
                     onClick={() => updateStatus("rejected")}
                     className="w-full flex items-center justify-center gap-2 bg-white text-slate-400 py-4 rounded-xl hover:text-red-600 hover:border-red-200 border border-slate-200 font-bold disabled:opacity-40 transition-all"
                   >

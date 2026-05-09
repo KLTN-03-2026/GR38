@@ -215,7 +215,7 @@ ${text.substring(0, 15000)}`;
       }
     }
 
-    return questions;
+    return questions.slice(0, numQuestions);
   } catch (error) {
     console.error("Lỗi từ API Gemini:", error);
     throw error.status === 429 ? error : new Error("Hệ thống tạm thời không thể tạo câu hỏi trắc nghiệm.");

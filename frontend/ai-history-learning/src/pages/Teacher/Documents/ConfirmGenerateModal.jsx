@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { IconQuiz, IconCards } from "./icons";
 
-
-export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loading }) {
+export default function ConfirmGenerateModal({
+  type,
+  onConfirm,
+  onCancel,
+  loading,
+}) {
   const [numQuestions, setNumQuestions] = useState(10);
   const [title, setTitle] = useState("");
   const [timeLimit, setTimeLimit] = useState(30);
@@ -27,7 +31,9 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
         onClick={(e) => e.stopPropagation()}
       >
         {/* Icon */}
-        <div className={`w-11 h-11 mx-auto mb-4 flex items-center justify-center rounded-full ${isQuiz ? "bg-orange-50 border border-orange-100" : "bg-purple-50 border border-purple-100"}`}>
+        <div
+          className={`w-11 h-11 mx-auto mb-4 flex items-center justify-center rounded-full ${isQuiz ? "bg-orange-50 border border-orange-100" : "bg-purple-50 border border-purple-100"}`}
+        >
           {isQuiz ? <IconQuiz /> : <IconCards />}
         </div>
 
@@ -36,7 +42,8 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
           Tạo {isQuiz ? "bài kiểm tra" : "bộ Flashcard"} bằng AI?
         </p>
         <p className="text-xs text-gray-400 mb-5 leading-relaxed">
-          AI sẽ tự động phân tích và tạo {isQuiz ? "câu hỏi kiểm tra" : "bộ thẻ học"} phù hợp.
+          AI sẽ tự động phân tích và tạo{" "}
+          {isQuiz ? "câu hỏi kiểm tra" : "bộ thẻ học"} phù hợp.
         </p>
 
         {/* Tiêu đề */}
@@ -63,13 +70,24 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
               onClick={() => setNumQuestions((n) => Math.max(5, n - 5))}
               disabled={loading}
               className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold disabled:opacity-40"
-            >−</button>
+            >
+              −
+            </button>
             <input
               type="number"
               min={5}
               max={50}
               value={numQuestions}
-              onChange={(e) => setNumQuestions(Math.min(50, Math.max(5, Number(e.target.value))))}
+              onChange={(e) => {
+  const val = e.target.value;
+  if (val === "") { setNumQuestions(""); return; }
+  if (Number(val) > 50) { setNumQuestions(50); return; }
+  setNumQuestions(Number(val));
+}}
+onBlur={(e) => {
+  const val = Number(e.target.value);
+  setNumQuestions(Math.min(50, Math.max(5, isNaN(val) || val === "" ? 5 : val)));
+}}
               disabled={loading}
               className="flex-1 text-center border border-gray-200 rounded-lg py-1.5 text-sm font-semibold outline-none focus:border-orange-400 disabled:opacity-40"
             />
@@ -77,9 +95,13 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
               onClick={() => setNumQuestions((n) => Math.min(50, n + 5))}
               disabled={loading}
               className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold disabled:opacity-40"
-            >+</button>
+            >
+              +
+            </button>
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5">Tối đa 50 câu · Tối thiểu 5 câu</p>
+          <p className="text-[10px] text-gray-400 mt-1.5">
+            Tối đa 50 câu · Tối thiểu 5 câu
+          </p>
         </div>
 
         {/* Thời gian — chỉ quiz */}
@@ -93,13 +115,24 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
                 onClick={() => setTimeLimit((n) => Math.max(15, n - 5))}
                 disabled={loading}
                 className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold disabled:opacity-40"
-              >−</button>
+              >
+                −
+              </button>
               <input
                 type="number"
                 min={15}
                 max={45}
                 value={timeLimit}
-                onChange={(e) => setTimeLimit(Math.min(45, Math.max(15, Number(e.target.value))))}
+                onChange={(e) => {
+  const val = e.target.value;
+  if (val === "") { setTimeLimit(""); return; }
+  if (Number(val) > 45) { setTimeLimit(45); return; }
+  setTimeLimit(Number(val));
+}}
+onBlur={(e) => {
+  const val = Number(e.target.value);
+  setTimeLimit(Math.min(45, Math.max(15, isNaN(val) || val === "" ? 15 : val)));
+}}
                 disabled={loading}
                 className="flex-1 text-center border border-gray-200 rounded-lg py-1.5 text-sm font-semibold outline-none focus:border-orange-400 disabled:opacity-40"
               />
@@ -107,9 +140,13 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
                 onClick={() => setTimeLimit((n) => Math.min(45, n + 5))}
                 disabled={loading}
                 className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold disabled:opacity-40"
-              >+</button>
+              >
+                +
+              </button>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1.5">Tối thiểu 15 phút · Tối đa 45 phút</p>
+            <p className="text-[10px] text-gray-400 mt-1.5">
+              Tối thiểu 15 phút · Tối đa 45 phút
+            </p>
           </div>
         )}
 
@@ -126,7 +163,9 @@ export default function ConfirmGenerateModal({ type, onConfirm, onCancel, loadin
             onClick={handleConfirm}
             disabled={loading}
             className={`flex-1 py-2.5 rounded-xl text-sm text-white font-medium transition flex items-center justify-center gap-2 ${
-              isQuiz ? "bg-[#F26739] hover:bg-orange-600" : "bg-purple-500 hover:bg-purple-600"
+              isQuiz
+                ? "bg-[#F26739] hover:bg-orange-600"
+                : "bg-purple-500 hover:bg-purple-600"
             } disabled:opacity-60`}
           >
             {loading ? (

@@ -8,9 +8,6 @@ import {
   FileText,
   PenLine,
   CreditCard,
-  Users,
-  GraduationCap,
-  Download,
   Trophy,
   Medal,
   Plus,
@@ -40,11 +37,7 @@ const ACTIVITIES = [
     time: "1 giờ trước",
   },
 ];
-const RANKS = [
-  { name: "Công Phúc", score: 10 },
-  { name: "Nguyễn Toàn Chung", score: 9 },
-  { name: "Nguyễn Tấn Anh", score: 8.5 },
-];
+
 const RANK_COLORS = ["#F59E0B", "#9CA3AF", "#CD7C2F"];
 
 function getUserName() {
@@ -96,6 +89,7 @@ export default function TeacherDashboard() {
   const [flashcardCount, setFlashcardCount] = useState(0);
   const [quizCount, setQuizCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [topRanks, setTopRanks] = useState([]);
 
   useEffect(() => {
     const onUpdate = () => setUserName(getUserName());
@@ -110,16 +104,35 @@ export default function TeacherDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [docRes, flashRes, quizRes] = await Promise.all([
+        const [docRes, flashRes, quizRes, statsRes] = await Promise.all([
           api.get("/documents"),
           api.get("/flashcards"),
           api.get("/quizzes/my-quizzes"),
+          api.get("/quizzes/statistics"),
         ]);
         setDocCount(docRes.data.count ?? docRes.data.data?.length ?? 0);
-        setFlashcardCount(
-          flashRes.data.count ?? flashRes.data.data?.length ?? 0,
-        );
+        setFlashcardCount(flashRes.data.count ?? flashRes.data.data?.length ?? 0);
         setQuizCount(quizRes.data.count ?? quizRes.data.data?.length ?? 0);
+
+        const raw = statsRes.data?.data ?? [];
+        const top3 = [...raw]
+          .filter((q) => q.score != null)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3)
+          .map((q) => ({
+            name: q.learnerName ?? q.learnerEmail ?? "Ẩn danh",
+            score: q.score,
+            date: q.createdAt
+              ? new Date(q.createdAt).toLocaleString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })
+              : "—",
+          }));
+        setTopRanks(top3);
       } catch (err) {
         console.error("Lỗi tải thống kê:", err);
       } finally {
@@ -153,16 +166,16 @@ export default function TeacherDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] font-sans px-8 pt-6"> 
+    <div className="min-h-screen bg-[#F5F6FA] font-sans px-8 pt-6">
       <style>{`
-        .stat-card:hover  { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.10) !important; }
-        .act-row:hover    { background: #F5F6FA; }
-        .export-btn:hover { background: #d9562d; transform: scale(1.03); }
-        .rank-card:hover  { transform: translateX(4px); }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,.10) !important; }
+        .act-row:hover   { background: #F5F6FA; }
+        .cta-btn:hover   { background: #d9562d; transform: scale(1.03); }
+        .rank-card:hover { transform: translateX(4px); }
       `}</style>
 
       {/* HEADER */}
-        <div className="flex items-center justify-between mb-8 pl-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <p className="text-xs text-gray-400 font-medium tracking-wide mb-1">
             {new Date().toLocaleDateString("vi-VN", {
@@ -179,8 +192,11 @@ export default function TeacherDashboard() {
             Đây là tổng quan hoạt động hôm nay của bạn.
           </p>
         </div>
-        <button className="export-btn flex items-center gap-2 bg-[#F26739] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all">
-          <Download size={15} strokeWidth={2.5} /> Xuất báo cáo
+        <button
+          onClick={() => navigate("/teacher/quizzes")}
+          className="cta-btn flex items-center gap-2 bg-[#F26739] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all"
+        >
+          <Plus size={15} strokeWidth={2.5} /> Tạo bài kiểm tra mới
         </button>
       </div>
 
@@ -213,14 +229,14 @@ export default function TeacherDashboard() {
           </div>
         ))}
       </div>
+
       {/* ACTIVITY + RANKING */}
       <div className="grid gap-4" style={{ gridTemplateColumns: "1.1fr 1fr" }}>
         {/* Activity */}
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <Zap size={16} color="#F26739" strokeWidth={2.5} /> Hoạt động gần
-              đây
+              <Zap size={16} color="#F26739" strokeWidth={2.5} /> Hoạt động gần đây
             </h2>
             <span className="text-xs text-blue-600 font-semibold cursor-pointer">
               Xem tất cả →
@@ -256,68 +272,59 @@ export default function TeacherDashboard() {
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <Trophy size={16} color="#F59E0B" strokeWidth={2.5} /> Xếp hạng
-              bài kiểm tra
+              <Trophy size={16} color="#F59E0B" strokeWidth={2.5} /> Xếp hạng bài kiểm tra
             </h2>
-            <span className="text-xs text-blue-600 font-semibold cursor-pointer">
+            <span
+              className="text-xs text-blue-600 font-semibold cursor-pointer"
+              onClick={() => navigate("/teacher/statistics")}
+            >
               Chi tiết →
             </span>
           </div>
-          <div className="flex flex-col gap-3">
-            {RANKS.map((r, i) => (
-              <div
-                key={i}
-                className="rank-card flex items-center gap-3 p-3 rounded-2xl border transition-all"
-                style={{
-                  background:
-                    i === 0
-                      ? "linear-gradient(135deg,#FEF3C7,#FFFBEB)"
-                      : "#F9FAFB",
-                  borderColor: i === 0 ? "#F59E0B44" : "#F3F4F6",
-                }}
-              >
-                <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: RANK_COLORS[i] + "22" }}
-                >
-                  <Medal size={17} color={RANK_COLORS[i]} strokeWidth={2} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-900">{r.name}</p>
-                  <p className="text-xs text-gray-400">14:00 05/11/2025</p>
-                </div>
-                <div className="text-right">
-                  <span
-                    className="text-lg font-extrabold"
-                    style={{ color: RANK_COLORS[i] }}
-                  >
-                    {r.score}
-                  </span>
-                  <p className="text-xs text-gray-300">/10</p>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* CTA */}
-          <div
-            className="mt-5 p-4 rounded-2xl flex items-center justify-between"
-            style={{ background: "linear-gradient(135deg,#F26739,#f9a87e)" }}
-          >
-            <div>
-              <p className="text-sm font-bold text-white mb-0.5">
-                Tạo bài kiểm tra mới
-              </p>
-              <p className="text-xs text-white/80">
-                Thêm câu hỏi cho người học
-              </p>
-            </div>
-            <button
-              onClick={() => navigate("/teacher/quizzes")}
-              className="flex items-center gap-1 text-white text-xs font-bold px-4 py-2 rounded-xl border border-white/50 bg-white/25"
-            >
-              Tạo ngay <Plus size={13} strokeWidth={3} />
-            </button>
+          <div className="flex flex-col gap-3">
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <div key={i} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
+              ))
+            ) : topRanks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 gap-2">
+                <Trophy size={28} className="text-gray-200" />
+                <p className="text-xs text-gray-400">Chưa có dữ liệu xếp hạng</p>
+              </div>
+            ) : (
+              topRanks.map((r, i) => (
+                <div
+                  key={i}
+                  className="rank-card flex items-center gap-3 p-3 rounded-2xl border transition-all"
+                  style={{
+                    background:
+                      i === 0 ? "linear-gradient(135deg,#FEF3C7,#FFFBEB)" : "#F9FAFB",
+                    borderColor: i === 0 ? "#F59E0B44" : "#F3F4F6",
+                  }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: RANK_COLORS[i] + "22" }}
+                  >
+                    <Medal size={17} color={RANK_COLORS[i]} strokeWidth={2} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-900">{r.name}</p>
+                    <p className="text-xs text-gray-400">{r.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className="text-lg font-extrabold"
+                      style={{ color: RANK_COLORS[i] }}
+                    >
+                      {r.score}
+                    </span>
+                    <p className="text-xs text-gray-300">/10</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

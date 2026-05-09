@@ -96,20 +96,20 @@ export default function LearnerDashboard() {
               const currentBest = bestAttemptsMap.get(qId.toString());
               
               if (!currentBest) {
-                 bestAttemptsMap.set(qId.toString(), item);
+                bestAttemptsMap.set(qId.toString(), item);
               } else {
-                 const scoreA = currentBest.score ?? 0;
-                 const scoreB = item.score ?? 0;
-                 
-                 if (scoreB > scoreA) {
+                const scoreA = currentBest.score ?? 0;
+                const scoreB = item.score ?? 0;
+                
+                if (scoreB > scoreA) {
+                  bestAttemptsMap.set(qId.toString(), item);
+                } else if (scoreB === scoreA) {
+                  const dateA = new Date(currentBest.createdAt);
+                  const dateB = new Date(item.createdAt);
+                  if (dateB > dateA) {
                     bestAttemptsMap.set(qId.toString(), item);
-                 } else if (scoreB === scoreA) {
-                    const dateA = new Date(currentBest.createdAt);
-                    const dateB = new Date(item.createdAt);
-                    if (dateB > dateA) {
-                       bestAttemptsMap.set(qId.toString(), item);
-                    }
-                 }
+                  }
+                }
               }
             }
 
@@ -157,18 +157,17 @@ export default function LearnerDashboard() {
     <div className="min-h-screen bg-[#F5F6FA] font-sans pb-6">
       <style>{`
         .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08) !important; }
-        .doc-card:hover  { box-shadow: 0 4px 16px rgba(0,0,0,.06); transform: translateY(-2px); }
-        .quiz-row:hover  { background: #F5F6FA; }
+        .doc-card:hover  { box-shadow: 0 4px 12px rgba(0,0,0,.05); transform: translateY(-1px); }
+        .quiz-row:hover  { background: #F9FAFB; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
       `}</style>
 
-      {/* CONTAINER THU NHỎ LẠI (max-w-6xl) */}
       <div className="max-w-6xl mx-auto px-4 pt-6">
         
-        {/* HEADER GỌN HƠN */}
+        {/* HEADER */}
         <div className="mb-6">
           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-0.5">
             {new Date().toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
@@ -178,7 +177,7 @@ export default function LearnerDashboard() {
           </h1>
         </div>
 
-        {/* STAT CARDS NHỎ HƠN */}
+        {/* STAT CARDS */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {stats.map((s) => (
             <div key={s.label} className="stat-card bg-white rounded-xl p-4 shadow-sm relative overflow-hidden transition-all border border-gray-100">
@@ -198,40 +197,40 @@ export default function LearnerDashboard() {
 
         <div className="flex flex-col gap-6">
           
-          {/* HÀNG 1: TÀI LIỆU VÀ BÀI KIỂM TRA */}
+          {/* HÀNG 1: TÀI LIỆU VÀ BÀI KIỂM TRA (ĐÃ THU GỌN CHIỀU DỌC) */}
           <div className="grid gap-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
             
             {/* CỘT TRÁI - TÀI LIỆU GỢI Ý */}
-            <div className="bg-white rounded-xl p-5 shadow-sm flex flex-col h-full border border-gray-100">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                  <Zap size={16} color="#F26739" strokeWidth={2.5} /> Tài liệu gợi ý
+            <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col border border-gray-100 max-h-[350px]">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                  <Zap size={14} color="#F26739" strokeWidth={2.5} /> Tài liệu gợi ý
                 </h2>
-                <span onClick={() => navigate("/learner/documents")} className="text-xs text-blue-600 font-bold cursor-pointer hover:underline">
+                <span onClick={() => navigate("/learner/documents")} className="text-[10px] text-blue-600 font-bold cursor-pointer hover:underline">
                   Tất cả →
                 </span>
               </div>
               {docs.length === 0 ? (
-                <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl flex-1 flex flex-col justify-center">
-                  <FileText size={28} className="mx-auto text-gray-200 mb-2" />
-                  <p className="text-gray-400 text-xs">Chưa có tài liệu nào</p>
+                <div className="py-6 text-center border-2 border-dashed border-gray-100 rounded-xl flex-1 flex flex-col justify-center">
+                  <FileText size={24} className="mx-auto text-gray-200 mb-1" />
+                  <p className="text-gray-400 text-[10px]">Chưa có tài liệu nào</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 flex-1">
+                <div className="grid grid-cols-2 gap-3 overflow-y-auto pr-1 custom-scrollbar">
                   {docs.map((doc, idx) => (
-                    <div key={doc._id ?? idx} className="doc-card p-4 border border-gray-100 rounded-xl flex flex-col justify-between transition-all cursor-pointer bg-white" onClick={() => navigate(`/learner/documents/${doc._id}`)}>
-                      <div>
-                          <div className="flex justify-between items-start mb-2">
-                              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                                  <FileText size={16} className="text-blue-400" />
+                    <div key={doc._id ?? idx} className="doc-card p-3 border border-gray-100 rounded-lg flex flex-col justify-between transition-all cursor-pointer bg-white" onClick={() => navigate(`/learner/documents/${doc._id}`)}>
+                      <div className="mb-2">
+                          <div className="flex justify-between items-start mb-1">
+                              <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
+                                  <FileText size={14} className="text-blue-400" />
                               </div>
-                              <ChevronRight size={14} className="text-gray-300" />
+                              <ChevronRight size={12} className="text-gray-300" />
                           </div>
-                          <p className="text-sm font-bold text-gray-800 line-clamp-2 mb-3">
+                          <p className="text-[11px] font-bold text-gray-800 line-clamp-2">
                               {doc.title}
                           </p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/learner/documents/${doc._id}`); }} className="w-full py-1.5 bg-[#4ADE80] text-white text-[10px] font-bold rounded-lg hover:opacity-90 transition shadow-sm uppercase tracking-wider">
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/learner/documents/${doc._id}`); }} className="w-full py-1 bg-[#4ADE80] text-white text-[9px] font-bold rounded-md hover:opacity-90 transition shadow-sm uppercase tracking-wider">
                         Xem ngay
                       </button>
                     </div>
@@ -240,27 +239,27 @@ export default function LearnerDashboard() {
               )}
             </div>
 
-            {/* CỘT PHẢI - BÀI KIỂM TRA ĐÃ LÀM  */}
-            <div className="bg-white rounded-xl p-5 shadow-sm flex flex-col border border-gray-100 max-h-[400px]">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <Trophy size={16} color="#F59E0B" strokeWidth={2.5} /> Lịch sử làm bài
+            {/* CỘT PHẢI - BÀI KIỂM TRA ĐÃ LÀM */}
+            <div className="bg-white rounded-xl p-4 shadow-sm flex flex-col border border-gray-100 max-h-[350px]">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <Trophy size={14} color="#F59E0B" strokeWidth={2.5} /> Lịch sử làm bài
                   </h2>
-                  <span onClick={() => navigate("/learner/quizzes")} className="text-xs text-blue-600 font-bold cursor-pointer hover:underline">
+                  <span onClick={() => navigate("/learner/quizzes")} className="text-[10px] text-blue-600 font-bold cursor-pointer hover:underline">
                     Chi tiết →
                   </span>
                 </div>
 
                 {history.length === 0 ? (
-                  <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl flex-1 flex flex-col justify-center">
-                    <ClipboardList size={28} className="mx-auto text-gray-200 mb-2" />
-                    <p className="text-gray-400 text-xs mb-3">Chưa có bài kiểm tra nào</p>
-                    <button onClick={() => navigate("/learner/quizzes")} className="px-4 py-1.5 bg-[#F26739] text-white text-[10px] font-bold rounded-lg hover:opacity-90 transition mx-auto shadow-sm uppercase">
+                  <div className="py-6 text-center border-2 border-dashed border-gray-100 rounded-xl flex-1 flex flex-col justify-center">
+                    <ClipboardList size={24} className="mx-auto text-gray-200 mb-1" />
+                    <p className="text-gray-400 text-[10px] mb-2">Chưa có bài kiểm tra nào</p>
+                    <button onClick={() => navigate("/learner/quizzes")} className="px-3 py-1 bg-[#F26739] text-white text-[9px] font-bold rounded-md hover:opacity-90 transition mx-auto shadow-sm uppercase">
                       Làm bài ngay
                     </button>
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-3">
+                  <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-2">
                     {history.map((item, idx) => {
                       const score = item.score ?? 0;
                       const title = item.quizId?.title ?? item.quiz?.title ?? `Bài kiểm tra ${idx + 1}`;
@@ -269,22 +268,22 @@ export default function LearnerDashboard() {
                       const badgeColor = SCORE_COLORS[idx] || SCORE_COLORS[3];
 
                       return (
-                        <div key={resultId ?? idx} className="quiz-row flex items-center gap-3 p-3 rounded-lg border border-gray-50 cursor-pointer" onClick={() => resultId && navigate(`/learner/quizzes/result/${resultId}`)}>
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: badgeColor + "15" }}>
-                            <Medal size={16} color={badgeColor} />
+                        <div key={resultId ?? idx} className="quiz-row flex items-center gap-2 p-2 rounded-lg border border-gray-50 cursor-pointer" onClick={() => resultId && navigate(`/learner/quizzes/result/${resultId}`)}>
+                          <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: badgeColor + "15" }}>
+                            <Medal size={14} color={badgeColor} />
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-gray-800 truncate">{title}</p>
-                            <div className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
-                              <Clock size={10} />
+                            <p className="text-[11px] font-bold text-gray-800 truncate">{title}</p>
+                            <div className="text-[9px] text-gray-400 flex items-center gap-1">
+                              <Clock size={8} />
                               {date ? new Date(date).toLocaleDateString("vi-VN") : "—"}
                             </div>
                           </div>
 
                           <div className="text-right">
-                            <span className="text-lg font-black" style={{ color: badgeColor }}>
-                              {score}<span className="text-[10px] ml-0.5 opacity-70">đ</span>
+                            <span className="text-base font-black" style={{ color: badgeColor }}>
+                              {score}<span className="text-[9px] ml-0.5 opacity-70">đ</span>
                             </span>
                           </div>
                         </div>
@@ -299,25 +298,25 @@ export default function LearnerDashboard() {
           <div className="grid gap-6" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
             
             {/* Thông báo */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
-                <Bell size={16} className="text-gray-400" /> Thông báo
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-3">
+                <Bell size={14} className="text-gray-400" /> Thông báo
               </h2>
-              <div className="py-6 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50/30">
-                <p className="text-gray-400 italic text-xs">Chưa có thông báo mới</p>
+              <div className="py-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50/30">
+                <p className="text-gray-400 italic text-[10px]">Chưa có thông báo mới</p>
               </div>
             </div>
 
-            {/* Flashcard Gọn Hơn */}
-            <div className="rounded-xl p-5 flex items-center justify-between shadow-md" style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
+            {/* Flashcard */}
+            <div className="rounded-xl p-4 flex items-center justify-between shadow-md" style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
               <div>
-                <p className="text-base font-black text-white">Ôn tập Flashcard</p>
-                <p className="text-[11px] text-white/80 mt-1">
+                <p className="text-sm font-black text-white">Ôn tập Flashcard</p>
+                <p className="text-[10px] text-white/80 mt-0.5">
                   {flashCount} bộ thẻ đang chờ bạn
                 </p>
               </div>
-              <button onClick={() => navigate("/learner/flashcards")} className="flex items-center gap-1.5 text-white text-[11px] font-bold px-4 py-2 rounded-lg border border-white/30 bg-white/10 hover:bg-white/20 transition">
-                Học ngay <ChevronRight size={14} />
+              <button onClick={() => navigate("/learner/flashcards")} className="flex items-center gap-1.5 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border border-white/30 bg-white/10 hover:bg-white/20 transition">
+                Học ngay <ChevronRight size={12} />
               </button>
             </div>
 

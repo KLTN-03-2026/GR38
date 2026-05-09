@@ -8,6 +8,7 @@ import {
   Trash2,
   Edit,
   Plus,
+  RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -30,11 +31,24 @@ const Flashcards = () => {
   const fetchFlashcards = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await api.get("/flashcards");
-      // Dựa trên schema API bạn gửi: res.data.data là mảng các bộ flashcard
-      const data = res?.data?.data || res?.data || res || [];
-      setFlashcardSets(Array.isArray(data) ? data : []);
+      
+      // Chỉnh sửa logic map dữ liệu để khớp với Schema API và file Giáo viên
+      const rawData = res?.data?.data || [];
+      const formattedData = Array.isArray(rawData) ? rawData.map(item => ({
+        ...item,
+        // Ưu tiên thumbnail của bộ thẻ, nếu không có lấy của tài liệu
+        displayThumbnail: item.thumbnail || item.documentId?.thumbnail || PLACEHOLDER,
+        // Tính toán số lượng thẻ: API trả về mảng 'cards' hoặc 'cardCount'
+        displayCardCount: item.cards?.length || item.cardCount || 0,
+        // Xử lý tiến độ học tập (nếu có userProgress hoặc progress từ API)
+        displayProgress: item.progress || item.userProgress || 0
+      })) : [];
+
+      setFlashcardSets(formattedData);
     } catch (err) {
+      console.error("Fetch error:", err);
       setError("Không thể tải danh sách Flashcards.");
     } finally {
       setLoading(false);
@@ -58,27 +72,25 @@ const Flashcards = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const deleteUrl =
-            role === "ADMIN" ? `/admin/flashcards/${id}` : `/flashcards/${id}`;
+          const deleteUrl = role === "ADMIN" ? `/admin/flashcards/${id}` : `/flashcards/${id}`;
           await api.delete(deleteUrl);
-
           Swal.fire("Đã xóa!", "Bộ thẻ đã được gỡ bỏ.", "success");
           fetchFlashcards();
         } catch (error) {
-          Swal.fire("Lỗi!", "Không thể xóa bộ thẻ (Lỗi quyền Admin).", "error");
+          Swal.fire("Lỗi!", "Không thể xóa bộ thẻ.", "error");
         }
       }
     });
   };
 
   const filteredData = flashcardSets.filter((item) =>
-    item.title?.toLowerCase().includes(searchTerm.toLowerCase()),
+    item.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const currentItems = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   return (
@@ -100,18 +112,27 @@ const Flashcards = () => {
             />
           </div>
 
-          {role === "ADMIN" && (
-            <button
-              onClick={() => navigate("/admin/flashcards/create")}
-              className="bg-[#F26739] text-white text-[12px] font-bold rounded-lg px-4 h-9 flex items-center gap-2 hover:bg-orange-600 transition-all shadow-sm"
+          <div className="flex gap-2">
+            <button 
+              onClick={fetchFlashcards}
+              className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Làm mới"
             >
-              <Plus size={16} /> Tạo bộ thẻ mới
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
-          )}
+            {role === "ADMIN" && (
+              <button
+                onClick={() => navigate("/admin/flashcards/create")}
+                className="bg-[#F26739] text-white text-[12px] font-bold rounded-lg px-4 h-9 flex items-center gap-2 hover:bg-orange-600 transition-all shadow-sm"
+              >
+                <Plus size={16} /> Tạo bộ thẻ mới
+              </button>
+            )}
+          </div>
         </div>
 
-        <h2 className="text-xl font-black mb-6 text-[#18181B] border-l-4 border-[#F26739] pl-3">
-          THƯ VIỆN FLASHCARDS
+        <h2 className="text-xl font-black mb-6 text-[#18181B] border-l-4 border-[#F26739] pl-3 uppercase">
+          Thư viện Flashcards
         </h2>
 
         {/* Grid Flashcards */}
@@ -123,7 +144,7 @@ const Flashcards = () => {
             </div>
           ) : currentItems.length === 0 ? (
             <div className="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200 text-xs uppercase font-medium">
-              Trống
+              Không tìm thấy bộ thẻ nào
             </div>
           ) : (
             currentItems.map((item) => (
@@ -131,7 +152,7 @@ const Flashcards = () => {
                 key={item._id}
                 className="group relative flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
               >
-                {/* Nút chức năng */}
+                {/* Nút báo lỗi/xóa */}
                 <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {role === "ADMIN" ? (
                     <button
@@ -145,10 +166,7 @@ const Flashcards = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate("/learner/suco", {
-                          state: {
-                            reportTarget: "flashcards",
-                            targetId: item._id,
-                          },
+                          state: { reportTarget: "flashcards", targetId: item._id },
                         });
                       }}
                       className="p-1.5 bg-white text-gray-400 rounded-lg shadow-sm border border-gray-50 hover:text-red-500"
@@ -161,7 +179,7 @@ const Flashcards = () => {
                 {/* Thumbnail */}
                 <div className="w-full h-[120px] overflow-hidden rounded-xl mb-3 bg-gray-50">
                   <img
-                    src={item.thumbnail || item.image || PLACEHOLDER}
+                    src={item.displayThumbnail}
                     alt={item.title}
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     onError={(e) => (e.target.src = PLACEHOLDER)}
@@ -174,30 +192,26 @@ const Flashcards = () => {
                   </h3>
 
                   <div className="flex items-center justify-between mb-4">
-                    {/* Cập nhật call số lượng thẻ từ API */}
+                    {/* Hiển thị số lượng thẻ thực tế */}
                     <span className="text-[10px] font-bold text-[#1473E6] bg-blue-50 px-2 py-0.5 rounded">
-                      {item.cards?.length || 0} thẻ
+                      {item.displayCardCount} thẻ
                     </span>
-                    {/* Cập nhật call tiến độ từ dữ liệu item */}
+                    {/* Hiển thị tiến độ thực tế */}
                     <span className="text-[10px] text-gray-400 font-medium">
-                      Tiến độ: {item.userProgress || item.progress || 0}%
+                      Tiến độ: <span className="text-orange-500 font-bold">{item.displayProgress}%</span>
                     </span>
                   </div>
 
                   {role === "ADMIN" ? (
                     <button
-                      onClick={() =>
-                        navigate(`/admin/flashcards/edit/${item._id}`)
-                      }
+                      onClick={() => navigate(`/admin/flashcards/edit/${item._id}`)}
                       className="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold text-[12px] hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
                     >
                       <Edit size={14} /> Chỉnh sửa
                     </button>
                   ) : (
                     <button
-                      onClick={() =>
-                        navigate(`/learner/flashcards/${item._id}`)
-                      }
+                      onClick={() => navigate(`/learner/flashcards/${item._id}`)}
                       className="w-full bg-[#F26739] text-white py-2 rounded-lg font-bold text-[12px] hover:bg-[#d9562d] transition-all active:scale-95"
                     >
                       Học ngay
@@ -248,11 +262,7 @@ const Flashcards = () => {
                     );
                   }
                   if (page === currentPage - 2 || page === currentPage + 2) {
-                    return (
-                      <span key={page} className="text-gray-300">
-                        ...
-                      </span>
-                    );
+                    return <span key={page} className="text-gray-300 text-xs">...</span>;
                   }
                   return null;
                 })}

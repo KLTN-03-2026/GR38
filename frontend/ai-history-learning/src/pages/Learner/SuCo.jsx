@@ -49,7 +49,6 @@ const SuCo = () => {
       setIsLoadingList(true);
       try {
         let endpoint = "";
-        // Chỉnh sửa để khớp với API Quizzes của bạn
         switch (formData.nhomNoiDung) {
           case "tài liệu": endpoint = "/documents"; break;
           case "quizzes": endpoint = "/quizzes"; break; 
@@ -60,15 +59,27 @@ const SuCo = () => {
         if (endpoint) {
           const res = await api.get(endpoint);
           
-          // Dựa trên file BE, dữ liệu trả về thường nằm trong res.data.data
-          let dataPayload = res.data?.data || res.data || [];
+          // Logic kiểm tra dữ liệu linh hoạt cho từng loại API
+          let dataPayload = [];
+          const responseData = res.data;
+
+          if (formData.nhomNoiDung === "quizzes") {
+            // Đối với Quizzes, kiểm tra các trường phổ biến như .quizzes hoặc .data
+            dataPayload = responseData.quizzes || responseData.data || responseData;
+          } else {
+            dataPayload = responseData.data || responseData;
+          }
           
-          // Nếu có phân trang (docs), lấy mảng bên trong
+          // Nếu có phân trang kiểu .docs (Thường gặp ở thư viện mongoose-paginate)
           if (!Array.isArray(dataPayload) && dataPayload.docs) {
             dataPayload = dataPayload.docs;
           }
 
-          setApiDataList(Array.isArray(dataPayload) ? dataPayload : []);
+          // Cuối cùng đảm bảo là một mảng
+          const finalData = Array.isArray(dataPayload) ? dataPayload : [];
+          setApiDataList(finalData);
+          
+          console.log(`Dữ liệu tải cho ${formData.nhomNoiDung}:`, finalData);
         }
       } catch (err) {
         console.error("Fetch Error:", err);
@@ -151,7 +162,6 @@ const SuCo = () => {
         "giáo viên": "User" 
       };
 
-      // Backend enum issueType: ['historical_fact', 'timeline', 'inappropriate_behavior', 'spam', 'typo', 'other']
       const issueTypeMapping = {
         "sai thông tin lịch sử": "historical_fact",
         "sai mốc thời gian": "timeline",
@@ -175,6 +185,7 @@ const SuCo = () => {
         setFormData({ nhomNoiDung: "", doiTuongCuThe: "", loaiBaoCao: "sai thông tin lịch sử", tieuDe: "", moTa: "" });
         setUserRoleSelection("");
         setErrors({});
+        setApiDataList([]);
       }
     } catch (err) {
       console.error("Submit Error:", err.response?.data);
@@ -312,7 +323,7 @@ const SuCo = () => {
             {isLoadingList ? (
               <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={16} className="animate-spin"/> Đang tải...</div>
             ) : apiDataList.length > 0 ? (
-              <div className="flex overflow-x-auto gap-2 pb-2">
+              <div className="flex overflow-x-auto gap-2 pb-2 custom-scrollbar">
                 {apiDataList.map((item) => (
                   <button key={item._id || item.id} type="button" onClick={() => { setFormData({ ...formData, doiTuongCuThe: item._id || item.id }); setErrors(prev => ({...prev, doiTuongCuThe: ""})); }} className={`px-4 py-2 text-xs font-medium rounded-full border whitespace-nowrap transition-all ${formData.doiTuongCuThe === (item._id || item.id) ? "bg-[#F26739] text-white" : "bg-white text-gray-700 hover:border-orange-300"}`}>
                     {item.title || item.fullName || item.name || "Không rõ tên"}

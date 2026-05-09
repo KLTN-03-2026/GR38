@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
-import { Calendar, Users, BookOpen, Star, DollarSign, Activity, GraduationCap, Clock } from 'lucide-react';
+import { Calendar, BookOpen, Activity, GraduationCap, Clock } from 'lucide-react';
 import api from "../../lib/api.js";
 
 const TienDo = () => {
@@ -37,28 +37,27 @@ const TienDo = () => {
                 id: 1, 
                 label: "Tổng ngày học", 
                 value: `${apiData.overview.totalStudyDays} Ngày`, 
-                icon: <Calendar size={20}/> 
+                icon: <Calendar size={18}/> 
               },
               { 
                 id: 2, 
                 label: "Bài hoàn thành", 
                 value: apiData.overview.completedQuizzes.toLocaleString(), 
-                sub: "Tổng số Quizzes đã làm", 
-                icon: <BookOpen size={20}/> 
+                sub: "Tổng Quizzes", 
+                icon: <BookOpen size={18}/> 
               },
               { 
                 id: 3, 
-                label: "Chuỗi ngày học", 
-                // CẬP NHẬT: Đảm bảo lấy đúng trường studyStreak từ overview của API
+                label: "Chuỗi ngày", 
                 value: `${apiData.overview.studyStreak || 0} Ngày`, 
-                sub: "Chuỗi ngày học liên tục",
-                icon: <Activity size={20}/> 
+                sub: "Học liên tục",
+                icon: <Activity size={18}/> 
               },
               { 
                 id: 4, 
                 label: "Điểm trung bình", 
                 value: apiData.overview.averageScore, 
-                icon: <GraduationCap size={20}/> 
+                icon: <GraduationCap size={18}/> 
               },
             ],
             chartData: apiData.chartData.map(item => ({
@@ -88,9 +87,9 @@ const TienDo = () => {
   }, []);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mb-4"></div>
-      <p className="text-gray-500 font-medium">Đang tải tiến độ học tập...</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#F8F9FA]">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500 mb-3"></div>
+      <p className="text-gray-400 text-sm">Đang tải dữ liệu...</p>
     </div>
   );
 
@@ -101,31 +100,29 @@ const TienDo = () => {
   );
 
   return (
-    <div className="p-6 bg-[#F8F9FA] min-h-screen">
-      {/* Chiều ngang rộng max-w-[1600px] */}
+    <div className="p-4 bg-[#F8F9FA] min-h-screen">
       <div className="max-w-[1600px] mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Tiến độ</h1>
+        {/* Header - Thu nhỏ margin-bottom */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Tiến độ</h1>
           
-          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-gray-200 text-sm shadow-sm">
-            <div className="flex items-center gap-2 font-bold text-[#f26739]">
-              <Clock size={16} />
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs shadow-sm">
+            <div className="flex items-center gap-1.5 font-bold text-[#f26739]">
+              <Clock size={14} />
               <span>
                 {currentDateTime.toLocaleTimeString('vi-VN', { 
                   hour: '2-digit', 
-                  minute: '2-digit', 
-                  second: '2-digit' 
+                  minute: '2-digit'
                 })}
               </span>
             </div>
-            <div className="w-[1px] h-4 bg-gray-200"></div>
-            <div className="flex items-center gap-2 text-gray-600 font-medium">
-              <Calendar size={16} />
+            <div className="w-[1px] h-3 bg-gray-200"></div>
+            <div className="flex items-center gap-1.5 text-gray-500 font-medium">
+              <Calendar size={14} />
               <span>
                 {currentDateTime.toLocaleDateString('vi-VN', { 
                   day: 'numeric', 
-                  month: 'long', 
+                  month: 'numeric', 
                   year: 'numeric' 
                 })}
               </span>
@@ -133,45 +130,42 @@ const TienDo = () => {
           </div>
         </div>
 
-        {/* 4 Thẻ thống kê top */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* 4 Thẻ thống kê - Giảm padding */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {data.stats.map((stat) => (
-            <div key={stat.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-50 relative">
-              <p className="text-sm font-medium text-gray-500 mb-2">{stat.label}</p>
-              <h3 className="text-2xl font-bold text-gray-800">{stat.value}</h3>
-              {stat.sub && <p className="text-[10px] text-green-500 mt-1 font-medium">{stat.sub}</p>}
-              <div className="absolute top-6 right-6 text-gray-300">
+            <div key={stat.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+              <p className="text-[11px] font-bold text-gray-400 uppercase mb-1">{stat.label}</p>
+              <h3 className="text-xl font-black text-gray-800">{stat.value}</h3>
+              {stat.sub && <p className="text-[9px] text-green-500 font-bold">{stat.sub}</p>}
+              <div className="absolute -top-1 -right-1 p-4 text-gray-50 opacity-50 bg-gray-50 rounded-bl-3xl">
                 {stat.icon}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          {/* Biểu đồ bên trái */}
-          <div className="col-span-12 lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-gray-50">
-            <h3 className="text-lg font-bold text-gray-800 mb-6">Tổng quan hoạt động học tập</h3>
-            <div className="h-[350px] w-full">
+        <div className="grid grid-cols-12 gap-5">
+          {/* Biểu đồ - Thu nhỏ chiều cao h-[300px] */}
+          <div className="col-span-12 lg:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Hoạt động học tập</h3>
+            <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dy={10} />
-                  
+                <BarChart data={data.chartData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F9FAFB" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} dy={8} />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{fill: '#9CA3AF', fontSize: 12}} 
+                    tick={{fill: '#9CA3AF', fontSize: 10}} 
                     allowDecimals={false}
-                    domain={[0, 'dataMax']}
+                    domain={[0, 'dataMax + 2']}
                   />
-                  
                   <Tooltip 
                     cursor={{fill: '#F9FAFB'}} 
-                    contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                    formatter={(value) => [value, "Tổng Bài Làm"]}
+                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px'}}
+                    formatter={(value) => [value, "Bài làm"]}
                   />
-
-                  <Bar dataKey="value" radius={[6, 6, 6, 6]} barSize={35}>
+                  <Bar dataKey="value" radius={[4, 4, 4, 4]} barSize={28}>
                     {data.chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill="#4ADE80" />
                     ))}
@@ -181,31 +175,32 @@ const TienDo = () => {
             </div>
           </div>
 
-          {/* Danh sách bài hoàn thành bên phải */}
-          <div className="col-span-12 lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-50">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-800">Bài làm gần đây</h3>
-              <p className="text-xs text-gray-400">Hiển thị lịch sử Quizzes mới nhất</p>
+          {/* Danh sách gần đây - Thu gọn space-y */}
+          <div className="col-span-12 lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <div className="mb-4">
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Bài làm mới nhất</h3>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               {data.completedLessons.length > 0 ? data.completedLessons.map((item) => (
-                <div key={item.id} className="flex justify-between items-center">
+                <div key={item.id} className="flex justify-between items-center group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-                      <img src={`https://ui-avatars.com/api/?name=User&background=random`} alt="avatar" />
+                    <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center overflow-hidden border border-orange-100">
+                      <img src={`https://ui-avatars.com/api/?name=${item.lesson}&background=fef3c7&color=f59e0b`} alt="avatar" className="w-full h-full object-cover" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-800">{item.lesson}</p>
-                      <p className="text-[10px] text-gray-400">{item.email} • {item.date}</p>
+                      <p className="text-[13px] font-bold text-gray-800 line-clamp-1 group-hover:text-[#f26739] transition-colors">{item.lesson}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{item.email} • {item.date}</p>
                     </div>
                   </div>
-                  <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold">
-                    Hoàn thành
+                  <div className="bg-green-50 text-green-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">
+                    Hoàn Thành
                   </div>
                 </div>
               )) : (
-                <p className="text-gray-500 text-center text-sm">Chưa có lịch sử làm bài.</p>
+                <div className="py-10 text-center">
+                   <p className="text-gray-400 text-xs font-bold uppercase italic">Chưa có lịch sử</p>
+                </div>
               )}
             </div>
           </div>

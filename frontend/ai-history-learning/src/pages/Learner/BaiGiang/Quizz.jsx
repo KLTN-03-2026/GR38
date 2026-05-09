@@ -16,6 +16,9 @@ const Quizz = ({ lessonId, lectureTitle, thumbnail }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Lấy Base URL để nối link ảnh (xóa /api/v1 nếu có)
+  const baseURL = api.defaults.baseURL.replace('/api/v1', '');
+
   // 1. Lấy danh sách Quizzes theo documentId
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -96,36 +99,52 @@ const Quizz = ({ lessonId, lectureTitle, thumbnail }) => {
       {quizzesList.length > 0 ? (
         <div className="space-y-4">
           <div className="grid gap-4">
-            {currentQuizzes.map((quiz) => (
-              <div
-                key={quiz._id}
-                className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-3xl shadow-sm hover:border-orange-200 transition-all group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
-                    {thumbnail ? (
-                      <img src={thumbnail} className="w-full h-full object-cover" alt="quiz" />
-                    ) : (
-                      <BookOpen size={24} className="text-[#f26739]" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-black text-gray-800 uppercase text-sm group-hover:text-[#f26739] transition-colors">
-                      {quiz.title}
-                    </h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full uppercase">
-                      Bài tập trắc nghiệm
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleStartQuiz(quiz)}
-                  className="px-6 py-2.5 bg-[#f26739] text-white text-xs font-black rounded-xl hover:bg-orange-600 shadow-md transition-all active:scale-95"
+            {currentQuizzes.map((quiz) => {
+              // Ưu tiên thumbnail của quiz từ API, nếu không có thì dùng thumbnail từ props
+              const imgUrl = quiz.thumbnail || thumbnail;
+              const finalImgPath = imgUrl 
+                ? (imgUrl.startsWith('http') ? imgUrl : `${baseURL}/${imgUrl}`)
+                : null;
+
+              return (
+                <div
+                  key={quiz._id}
+                  className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-3xl shadow-sm hover:border-orange-200 transition-all group"
                 >
-                  LÀM BÀI NGAY
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                      {finalImgPath ? (
+                        <img 
+                          src={finalImgPath} 
+                          className="w-full h-full object-cover" 
+                          alt="quiz" 
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://placehold.co/200x200?text=Quiz";
+                          }}
+                        />
+                      ) : (
+                        <BookOpen size={24} className="text-[#f26739]" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-gray-800 uppercase text-sm group-hover:text-[#f26739] transition-colors">
+                        {quiz.title}
+                      </h4>
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full uppercase">
+                        Bài tập trắc nghiệm
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleStartQuiz(quiz)}
+                    className="px-6 py-2.5 bg-[#f26739] text-white text-xs font-black rounded-xl hover:bg-orange-600 shadow-md transition-all active:scale-95"
+                  >
+                    LÀM BÀI NGAY
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           {/* Phân trang */}

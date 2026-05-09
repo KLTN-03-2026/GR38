@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Trash2,
   Edit,
-  Plus, // Thêm icon Plus nếu cần
+  Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -25,13 +25,13 @@ const Flashcards = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Tăng số lượng item mỗi trang vì card đã nhỏ hơn (8 hoặc 12 là con số đẹp cho grid 4 cột)
   const itemsPerPage = 8;
 
   const fetchFlashcards = async () => {
     try {
       setLoading(true);
       const res = await api.get("/flashcards");
+      // Dựa trên schema API bạn gửi: res.data.data là mảng các bộ flashcard
       const data = res?.data?.data || res?.data || res || [];
       setFlashcardSets(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -81,7 +81,7 @@ const Flashcards = () => {
   return (
     <div className="flex-1 bg-[#FDFDFD] min-h-screen p-4 md:p-6 font-sans">
       <div className="max-w-7xl mx-auto flex flex-col h-full">
-        {/* Thanh công cụ nhỏ gọn hơn */}
+        {/* Thanh công cụ */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
           <div className="flex items-center bg-[#F4F4F5] rounded-lg px-3 h-9 w-full max-w-sm gap-2">
             <Search size={14} className="text-gray-400" />
@@ -111,7 +111,7 @@ const Flashcards = () => {
           THƯ VIỆN FLASHCARDS
         </h2>
 
-        {/* Grid 4 cột trên màn hình lớn, card nhỏ hơn */}
+        {/* Grid Flashcards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
           {loading ? (
             <div className="col-span-full py-20 flex flex-col items-center gap-2">
@@ -128,7 +128,7 @@ const Flashcards = () => {
                 key={item._id}
                 className="group relative flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
               >
-                {/* Nút chức năng nhỏ gọn */}
+                {/* Nút chức năng */}
                 <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {role === "ADMIN" ? (
                     <button
@@ -155,7 +155,7 @@ const Flashcards = () => {
                   )}
                 </div>
 
-                {/* Thumbnail nhỏ lại */}
+                {/* Thumbnail */}
                 <div className="w-full h-[120px] overflow-hidden rounded-xl mb-3 bg-gray-50">
                   <img
                     src={item.thumbnail || item.image || PLACEHOLDER}
@@ -171,11 +171,13 @@ const Flashcards = () => {
                   </h3>
 
                   <div className="flex items-center justify-between mb-4">
+                    {/* Cập nhật call số lượng thẻ từ API */}
                     <span className="text-[10px] font-bold text-[#1473E6] bg-blue-50 px-2 py-0.5 rounded">
                       {item.cards?.length || 0} thẻ
                     </span>
+                    {/* Cập nhật call tiến độ từ dữ liệu item */}
                     <span className="text-[10px] text-gray-400 font-medium">
-                      Tiến độ: {item.progress || 0}%
+                      Tiến độ: {item.userProgress || item.progress || 0}%
                     </span>
                   </div>
 
@@ -204,7 +206,7 @@ const Flashcards = () => {
           )}
         </div>
 
-        {/* Phân trang tinh gọn */}
+        {/* Phân trang */}
         {!loading && totalPages > 1 && (
           <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 gap-4">
             <span className="text-[12px] text-gray-500 font-medium">
@@ -223,7 +225,6 @@ const Flashcards = () => {
               <div className="flex gap-1">
                 {[...Array(totalPages)].map((_, i) => {
                   const page = i + 1;
-                  // Chỉ hiển thị trang đầu, cuối và quanh trang hiện tại
                   if (
                     page === 1 ||
                     page === totalPages ||

@@ -144,11 +144,13 @@ export const updateQuiz = async (req, res, next) => {
   try {
     const { title, description, tags } = req.body;
 
-    // Tìm quiz và đảm bảo người sửa phải là người tạo ra quiz đó
-    const quiz = await Quiz.findOne({
-      _id: req.params.id,
-      teacherId: req.user._id,
-    });
+    const quizFilter =
+      req.user.role === USER_ROLES.ADMIN
+        ? { _id: req.params.id }
+        : { _id: req.params.id, teacherId: req.user._id };
+
+    // Tìm quiz và đảm bảo người sửa phải là người tạo ra quiz đó (trừ Admin)
+    const quiz = await Quiz.findOne(quizFilter);
 
     if (!quiz) {
       return res.status(404).json({
@@ -188,10 +190,12 @@ export const updateQuizQuestion = async (req, res, next) => {
     const { question, options, correctAnswer, explanation, difficulty } =
       req.body;
 
-    const quiz = await Quiz.findOne({
-      _id: quizId,
-      teacherId: req.user._id,
-    });
+    const quizFilter =
+      req.user.role === USER_ROLES.ADMIN
+        ? { _id: quizId }
+        : { _id: quizId, teacherId: req.user._id };
+
+    const quiz = await Quiz.findOne(quizFilter);
 
     if (!quiz) {
       return res.status(404).json({

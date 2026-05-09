@@ -84,10 +84,12 @@ export const updateDocument = async (req, res, next) => {
   try {
     const { title } = req.body;
 
-    const document = await Document.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
+    const filter =
+      req.user.role === "ADMIN"
+        ? { _id: req.params.id }
+        : { _id: req.params.id, userId: req.user._id };
+
+    const document = await Document.findOne(filter);
 
     if (!document) {
       return res.status(404).json({
@@ -195,7 +197,12 @@ export const getDocument = async (req, res, next) => {
 // @desc Xóa tài liệu
 export const deleteDocument = async (req, res, next) => {
   try {
-    const document = await Document.findOne({ _id: req.params.id, userId: req.user._id });
+    const filter =
+      req.user.role === "ADMIN"
+        ? { _id: req.params.id }
+        : { _id: req.params.id, userId: req.user._id };
+
+    const document = await Document.findOne(filter);
 
     if (!document) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy tài liệu hoặc không có quyền xóa' });

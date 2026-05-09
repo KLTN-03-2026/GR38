@@ -196,15 +196,17 @@ export const updateFlashcardSet = async (req, res, next) => {
     }
 
     // 3. Sử dụng findOneAndUpdate (Thao tác DB nhanh hơn .save())
+    const updateFilter =
+      req.user.role === USER_ROLES.ADMIN
+        ? { _id: req.params.id }
+        : { _id: req.params.id, teacherId: req.user._id };
+
     const updatedFlashcardSet = await Flashcard.findOneAndUpdate(
-      { 
-        _id: req.params.id, 
-        teacherId: req.user._id // Xác thực quyền sở hữu
-      }, 
+      updateFilter,
       { $set: updateData }, // Set các field có thay đổi
-      { 
-        returnDocument: 'after',
-        runValidators: true  // Vẫn bắt Mongoose kiểm tra rule (required, maxlength...)
+      {
+        returnDocument: "after",
+        runValidators: true, // Vẫn bắt Mongoose kiểm tra rule (required, maxlength...)
       }
     );
 
@@ -234,10 +236,12 @@ export const updateFlashcard = async (req, res, next) => {
     const { setId, cardId } = req.params;
     const { front, back, difficulty } = req.body;
 
-    const flashcardSet = await Flashcard.findOne({
-      _id: setId,
-      teacherId: req.user._id,
-    });
+    const setFilter =
+      req.user.role === USER_ROLES.ADMIN
+        ? { _id: setId }
+        : { _id: setId, teacherId: req.user._id };
+
+    const flashcardSet = await Flashcard.findOne(setFilter);
 
     if (!flashcardSet) {
       return res.status(404).json({
@@ -284,10 +288,12 @@ export const updateFlashcard = async (req, res, next) => {
 // @access Private
 export const deleteFlashcardSet = async (req, res, next) => {
   try {
-    const flashcardSet = await Flashcard.findOne({
-      _id: req.params.id,
-      teacherId: req.user._id,
-    });
+    const setFilter =
+      req.user.role === USER_ROLES.ADMIN
+        ? { _id: req.params.id }
+        : { _id: req.params.id, teacherId: req.user._id };
+
+    const flashcardSet = await Flashcard.findOne(setFilter);
 
     if (!flashcardSet) {
       return res.status(404).json({
@@ -313,10 +319,15 @@ export const deleteFlashcardSet = async (req, res, next) => {
 // @access Private (Teacher)
 export const getFlashcardSetForEdit = async (req, res, next) => {
   try {
-    const flashcardSet = await Flashcard.findOne({
-      _id: req.params.id,
-      teacherId: req.user._id,
-    }).populate("documentId", "title thumbnail");
+    const setFilter =
+      req.user.role === USER_ROLES.ADMIN
+        ? { _id: req.params.id }
+        : { _id: req.params.id, teacherId: req.user._id };
+
+    const flashcardSet = await Flashcard.findOne(setFilter).populate(
+      "documentId",
+      "title thumbnail"
+    );
 
     if (!flashcardSet) {
       return res.status(404).json({

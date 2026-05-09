@@ -19,22 +19,28 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
-  // State Phân trang
+  // State Phân trang cho danh sách (nếu có nhiều bộ)
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // Tăng số lượng item mỗi trang vì giao diện list tốn ít diện tích hơn
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const fetchFlashcardSet = async () => {
       if (!documentId) return;
       try {
         setLoading(true);
+        // Gọi API lấy bộ flashcard theo documentId
         const res = await api.get(`/flashcards/document/${documentId}`);
-        const data = res?.data?.data;
-        if (data && data.cards) {
-          setFlashcardSet(data);
+        
+        // Dựa trên Schema: res.data là Object chứa { success, count, data }
+        // Dữ liệu bộ thẻ nằm ở res.data.data
+        if (res.data && res.data.success && res.data.data) {
+          setFlashcardSet(res.data.data);
+        } else {
+          setFlashcardSet(null);
         }
       } catch (err) {
         console.error("Lỗi lấy Flashcard:", err);
+        setFlashcardSet(null);
       } finally {
         setLoading(false);
       }
@@ -55,7 +61,7 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
       </div>
     );
 
-  // GIAO DIỆN 1: DANH SÁCH BỘ THẺ (Sửa thành dạng List nhỏ gọn)
+  // GIAO DIỆN 1: DANH SÁCH BỘ THẺ
   if (!isStudying) {
     const listToShow = flashcardSet ? [flashcardSet] : []; 
     const totalPages = Math.ceil(listToShow.length / itemsPerPage) || 1;
@@ -71,18 +77,16 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
           </p>
         </div>
 
-        {/* Chuyển từ Grid sang Flex Column để tạo danh sách dọc */}
         <div className="flex flex-col gap-3 mb-10">
           {listToShow.length > 0 ? (
             listToShow.map((set, index) => (
               <div 
-                key={index}
+                key={set._id || index}
                 className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
               >
                 <div className="flex items-center gap-4">
-                  {/* Thumbnail nhỏ xinh */}
                   <div className="w-16 h-16 bg-[#fff8f1] rounded-xl flex items-center justify-center overflow-hidden border border-orange-50 shrink-0">
-                    {set.thumbnail || defaultThumbnail ? (
+                    {(set.thumbnail || defaultThumbnail) ? (
                       <img
                         src={set.thumbnail || defaultThumbnail}
                         alt={set.title}
@@ -93,7 +97,6 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
                     )}
                   </div>
 
-                  {/* Thông tin text */}
                   <div>
                     <h3 className="font-bold text-[#001d3d] text-sm uppercase tracking-tight">
                       {set.title || "FLASHCARD ÔN TẬP"}
@@ -106,7 +109,6 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
                   </div>
                 </div>
 
-                {/* Nút hành động */}
                 <button
                   onClick={handleStartStudy}
                   className="bg-[#f26739] text-white text-[11px] font-bold px-5 py-2 rounded-xl hover:bg-[#e0562b] transition-all active:scale-95 shadow-md shadow-orange-100"
@@ -118,12 +120,11 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
           ) : (
             <div className="text-center py-16 bg-gray-50 rounded-[32px] border-2 border-dashed border-gray-200">
                <AlertCircle size={32} className="mx-auto text-gray-300 mb-3" />
-               <p className="text-gray-400 font-bold uppercase text-xs">Chưa có dữ liệu flashcard</p>
+               <p className="text-gray-400 font-bold uppercase text-xs">Chưa có dữ liệu flashcard cho tài liệu này</p>
             </div>
           )}
         </div>
 
-        {/* Thanh phân trang (Giữ nguyên logic) */}
         <div className="flex justify-between items-center pt-6 border-t border-gray-100">
           <span className="text-xs font-bold text-gray-500">
             Trang {currentPage} / {totalPages}
@@ -152,8 +153,8 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
     );
   }
 
-  // GIAO DIỆN 2: CHẾ ĐỘ HỌC (GIỮ NGUYÊN TUYỆT ĐỐI THEO YÊU CẦU)
-  const cards = flashcardSet.cards || [];
+  // GIAO DIỆN 2: CHẾ ĐỘ HỌC (FIX LỖI TRỐNG ĐÁP ÁN)
+  const cards = flashcardSet?.cards || [];
   const currentCard = cards[currentCardIndex];
 
   return (
@@ -167,7 +168,7 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
         </button>
         <span className="text-gray-300 font-black">/</span>
         <h4 className="text-sm font-black text-[#001d3d] uppercase italic">
-          {flashcardSet.title}
+          {flashcardSet?.title}
         </h4>
       </div>
 
@@ -185,16 +186,36 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
             transform: showAnswer ? "rotateY(180deg)" : "rotateY(0deg)" 
           }}
         >
-          <div className={`flex flex-col items-center ${showAnswer ? "[transform:rotateY(180deg)]" : ""}`}>
-            <span className={`text-[11px] font-black uppercase tracking-[0.2em] mb-6 opacity-40 ${showAnswer ? "text-white" : "text-[#f26739]"}`}>
-              {showAnswer ? "ĐÁP ÁN" : "CÂU HỎI"}
-            </span>
-            <h2 className="text-2xl md:text-3xl font-bold leading-snug">
-              {showAnswer ? currentCard.back : currentCard.front}
-            </h2>
+          {/* 
+              Sử dụng logic conditional rendering bên trong để đảm bảo 
+              khi rotateY(180deg) thì text không bị ngược và luôn hiển thị đúng thuộc tính 
+          */}
+          <div className="flex flex-col items-center w-full" style={{ backfaceVisibility: "hidden" }}>
+             {!showAnswer ? (
+                // MẶT TRƯỚC (CÂU HỎI)
+                <>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] mb-6 opacity-40 text-[#f26739]">
+                    CÂU HỎI
+                  </span>
+                  <h2 className="text-2xl md:text-3xl font-bold leading-snug">
+                    {currentCard?.front || "Không có nội dung câu hỏi"}
+                  </h2>
+                </>
+             ) : (
+                // MẶT SAU (ĐÁP ÁN) - Xoay ngược lại 180 độ để chữ không bị ngược khi thẻ lật
+                <div style={{ transform: "rotateY(180deg)" }} className="flex flex-col items-center">
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] mb-6 opacity-60 text-white">
+                    ĐÁP ÁN
+                  </span>
+                  <h2 className="text-2xl md:text-3xl font-bold leading-snug">
+                    {currentCard?.back || "Không có nội dung đáp án"}
+                  </h2>
+                </div>
+             )}
           </div>
           
-          <div className={`absolute bottom-8 flex items-center gap-2 text-[10px] font-bold opacity-30 ${showAnswer ? "text-white [transform:rotateY(180deg)]" : "text-gray-400"}`}>
+          <div className={`absolute bottom-8 flex items-center gap-2 text-[10px] font-bold opacity-30 ${showAnswer ? "text-white" : "text-gray-400"}`}
+               style={showAnswer ? { transform: "rotateY(180deg)" } : {}}>
             <RefreshCcw size={14} className="animate-pulse" /> Chạm để lật thẻ
           </div>
         </div>
@@ -203,25 +224,35 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
       <div className="mt-12 w-full max-w-[550px]">
         <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-black text-gray-400 uppercase italic">Tiến độ tập trung</span>
-            <span className="text-xs font-black text-[#f26739]">{currentCardIndex + 1}/{cards.length}</span>
+            <span className="text-xs font-black text-[#f26739]">{cards.length > 0 ? currentCardIndex + 1 : 0}/{cards.length}</span>
         </div>
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-10">
           <div
             className="h-full bg-[#f26739] shadow-[0_0_10px_rgba(242,103,57,0.4)] transition-all duration-500"
-            style={{ width: `${((currentCardIndex + 1) / cards.length) * 100}%` }}
+            style={{ width: `${((currentCardIndex + 1) / (cards.length || 1)) * 100}%` }}
           ></div>
         </div>
 
         <div className="flex gap-4">
           <button
-            onClick={() => { setShowAnswer(false); setCurrentCardIndex((p) => (p - 1 + cards.length) % cards.length); }}
-            className="flex-1 py-4 rounded-2xl border-2 border-gray-900 font-bold text-sm hover:bg-gray-50 transition-all"
+            onClick={(e) => { 
+                e.stopPropagation();
+                setShowAnswer(false); 
+                setCurrentCardIndex((p) => (p - 1 + cards.length) % cards.length); 
+            }}
+            disabled={cards.length <= 1}
+            className="flex-1 py-4 rounded-2xl border-2 border-gray-900 font-bold text-sm hover:bg-gray-50 transition-all disabled:opacity-30"
           >
             TRƯỚC ĐÓ
           </button>
           <button
-            onClick={() => { setShowAnswer(false); setCurrentCardIndex((p) => (p + 1) % cards.length); }}
-            className="flex-[2] py-4 rounded-2xl bg-[#f26739] text-white font-bold text-sm shadow-lg shadow-orange-200 hover:scale-[1.02] transition-all"
+            onClick={(e) => { 
+                e.stopPropagation();
+                setShowAnswer(false); 
+                setCurrentCardIndex((p) => (p + 1) % cards.length); 
+            }}
+            disabled={cards.length <= 1}
+            className="flex-[2] py-4 rounded-2xl bg-[#f26739] text-white font-bold text-sm shadow-lg shadow-orange-200 hover:scale-[1.02] transition-all disabled:opacity-30"
           >
             THẺ TIẾP THEO
           </button>

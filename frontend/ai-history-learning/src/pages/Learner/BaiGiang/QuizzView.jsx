@@ -24,18 +24,20 @@ const QuizzView = ({ quizData, onBack }) => {
   const handleSubmitQuiz = async () => {
     try {
       setLoading(true);
+      // Chuẩn bị payload theo format API yêu cầu
       const formattedAnswers = Object.entries(userAnswers).map(([qId, ans]) => ({
         questionId: qId,
         selectedAnswer: ans,
       }));
 
+      // Gọi API submit bài làm
       const res = await api.post(`/quizzes/${quizData._id}/submit`, {
         userAnswers: formattedAnswers,
       });
       
       const resData = res?.data?.data || res?.data;
       
-      // ĐỒNG BỘ: Lấy đúng resultId như file HocQuizz tham khảo
+      // Lấy ID kết quả để truyền sang component Result xem chi tiết
       const rId = resData.resultId || resData._id || resData.id;
 
       if (rId) {
@@ -48,16 +50,18 @@ const QuizzView = ({ quizData, onBack }) => {
       }
     } catch (err) {
       console.error("Lỗi nộp bài:", err);
+      alert("Có lỗi xảy ra khi nộp bài. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Nếu đã nộp bài thành công, hiển thị trang kết quả
   if (isSubmitted && resultSummary) {
     return (
       <QuizzResult 
         result={resultSummary} 
-        onRetry={() => window.location.reload()}
+        onRetry={() => window.location.reload()} // Reset toàn bộ state bằng cách reload
         onBack={onBack}
       />
     );
@@ -106,13 +110,17 @@ const QuizzView = ({ quizData, onBack }) => {
         </div>
 
         <div className="flex justify-between mt-8 pt-4 border-t border-gray-200/50">
-          <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(prev => prev - 1)} className="flex items-center text-gray-400 font-bold text-sm disabled:opacity-0 hover:text-gray-600">
+          <button 
+            disabled={currentQuestionIndex === 0} 
+            onClick={() => setCurrentQuestionIndex(prev => prev - 1)} 
+            className="flex items-center text-gray-400 font-bold text-sm disabled:opacity-0 hover:text-gray-600 transition-colors"
+          >
             <ChevronLeft size={18} /> Trước đó
           </button>
           <button
             disabled={loading}
             onClick={() => currentQuestionIndex === questions.length - 1 ? handleSubmitQuiz() : setCurrentQuestionIndex(prev => prev + 1)}
-            className="px-10 py-3 bg-[#f26739] text-white rounded-2xl font-bold shadow-lg hover:bg-orange-600 flex items-center gap-2"
+            className="px-10 py-3 bg-[#f26739] text-white rounded-2xl font-bold shadow-lg hover:bg-orange-600 flex items-center gap-2 transition-all active:scale-95"
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
             {currentQuestionIndex === questions.length - 1 ? "Nộp bài" : "Tiếp theo"}

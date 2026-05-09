@@ -7,7 +7,7 @@ import {
   BookOpen,
   AlertCircle,
   Trash2,
-  Edit3, // Thêm icon Edit
+  Edit3,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -20,9 +20,13 @@ const Quizzes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  // Thay đổi: 4 Quizz/hàng x 2 hàng = 8 items mỗi trang
+  const itemsPerPage = 8;
   const navigate = useNavigate();
   const { role } = useAuth();
+
+  // Lấy Base URL từ cấu hình axios để nối link ảnh
+  const baseURL = api.defaults.baseURL.replace('/api/v1', '');
 
   const fetchAllQuizzes = async () => {
     try {
@@ -93,22 +97,22 @@ const Quizzes = () => {
 
   return (
     <div className="flex-1 bg-[#FDFDFD] min-h-screen p-6 font-sans">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div className="max-w-[1400px] mx-auto">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-black text-[#18181B] mb-1 tracking-tight uppercase">
+            <h1 className="text-xl font-black text-[#18181B] mb-0.5 tracking-tight uppercase">
               HỆ THỐNG TRẮC NGHIỆM
             </h1>
-            <p className="text-sm text-gray-500 font-medium">
+            <p className="text-xs text-gray-500 font-medium">
               {role === "ADMIN"
                 ? "Quản lý danh sách bài trắc nghiệm"
                 : "Chọn bài thi để bắt đầu ôn tập"}
             </p>
           </div>
-          <div className="relative w-full md:w-[320px]">
+          <div className="relative w-full md:w-[300px]">
             <Search
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={16}
             />
             <input
               type="text"
@@ -118,42 +122,40 @@ const Quizzes = () => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm shadow-sm transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-xs shadow-sm transition-all"
             />
           </div>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="animate-spin text-orange-500 w-10 h-10 mb-3" />
-            <p className="text-gray-400 text-sm">Đang tải dữ liệu...</p>
+            <Loader2 className="animate-spin text-orange-500 w-8 h-8 mb-3" />
+            <p className="text-gray-400 text-xs">Đang tải dữ liệu...</p>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-16 bg-red-50 rounded-2xl border border-red-100">
-            <AlertCircle className="text-red-500 w-10 h-10 mb-3" />
-            <p className="text-red-600 font-bold text-sm">{error}</p>
+          <div className="flex flex-col items-center justify-center py-16 bg-red-50 rounded-xl border border-red-100">
+            <AlertCircle className="text-red-500 w-8 h-8 mb-3" />
+            <p className="text-red-600 font-bold text-xs">{error}</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {currentItems.length > 0 ? (
                 currentItems.map((quiz) => (
                   <div
                     key={quiz._id}
-                    className="relative flex flex-col bg-white p-4 rounded-[22px] shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden"
+                    className="relative flex flex-col bg-white p-3 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden"
                   >
-                    {/* ADMIN: LUÔN HIỆN XÓA */}
                     {role === "ADMIN" && (
                       <button
                         onClick={(e) => handleDeleteQuiz(e, quiz._id)}
-                        className="absolute top-4 left-4 z-20 p-2 bg-white/90 hover:bg-red-500 rounded-full text-red-500 hover:text-white transition-all border border-red-100 shadow-md opacity-100"
-                        title="Xóa bài thi này"
+                        className="absolute top-2 left-2 z-20 p-1.5 bg-white/90 hover:bg-red-500 rounded-full text-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
+                        title="Xóa bài thi"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     )}
 
-                    {/* LEARNER: HIỆN BÁO CÁO */}
                     {role !== "ADMIN" && (
                       <button
                         onClick={(e) => {
@@ -165,53 +167,65 @@ const Quizzes = () => {
                             },
                           });
                         }}
-                        className="absolute top-4 right-4 z-20 p-2 bg-white/80 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors border border-gray-100 shadow-sm"
-                        title="Báo cáo lỗi bài thi này"
+                        className="absolute top-2 right-2 z-20 p-1.5 bg-white/80 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors border border-gray-100 shadow-sm"
+                        title="Báo lỗi"
                       >
-                        <AlertCircle size={16} />
+                        <AlertCircle size={14} />
                       </button>
                     )}
 
-                    <div className="w-full h-[140px] overflow-hidden rounded-[14px] mb-4 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
-                      <BookOpen
-                        size={48}
-                        className="text-orange-300 group-hover:scale-110 transition-transform duration-500"
-                      />
+                    {/* PHẦN HIỂN THỊ HÌNH ẢNH ĐÃ ĐƯỢC SỬA */}
+                    <div className="w-full h-[120px] overflow-hidden rounded-lg mb-3 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
+                      {quiz.thumbnail ? (
+                        <img 
+                          src={quiz.thumbnail.startsWith('http') ? quiz.thumbnail : `${baseURL}/${quiz.thumbnail}`} 
+                          alt={quiz.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            e.target.onerror = null; 
+                            e.target.src = "https://placehold.co/600x400?text=No+Image";
+                          }}
+                        />
+                      ) : (
+                        <BookOpen
+                          size={32}
+                          className="text-orange-300 group-hover:scale-110 transition-transform duration-500"
+                        />
+                      )}
                     </div>
 
                     <div className="flex-1 flex flex-col">
-                      <h2 className="text-md font-bold mb-3 h-[44px] line-clamp-2 text-[#18181B] leading-snug uppercase group-hover:text-[#F26739] transition-colors">
+                      <h2 className="text-sm font-bold mb-2 h-[40px] line-clamp-2 text-[#18181B] leading-tight uppercase group-hover:text-[#F26739] transition-colors">
                         {quiz.title}
                       </h2>
-                      <div className="flex justify-between items-center mt-auto pt-3 border-t border-gray-100">
+                      <div className="flex justify-between items-center mt-auto pt-2 border-t border-gray-100">
                         <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-black text-gray-400">
+                          <span className="text-[9px] uppercase font-black text-gray-400">
                             Số câu
                           </span>
-                          <span className="text-xs font-bold text-blue-600">
+                          <span className="text-[11px] font-bold text-blue-600">
                             {quiz.questionCount ?? 0} câu
                           </span>
                         </div>
 
-                        {/* PHÂN QUYỀN NÚT BẤM TẠI ĐÂY */}
                         {role === "ADMIN" ? (
                           <button
                             onClick={() =>
                               navigate(`/admin/quizzes/edit/${quiz._id}`)
                             }
-                            className="bg-slate-800 text-white px-4 py-2.5 rounded-lg font-bold text-xs hover:bg-slate-900 shadow-sm transition-all active:scale-95 flex items-center gap-2"
+                            className="bg-slate-800 text-white px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-slate-900 transition-all flex items-center gap-1.5"
                           >
-                            <Edit3 size={14} />
-                            Chỉnh sửa
+                            <Edit3 size={12} />
+                            Sửa
                           </button>
                         ) : (
                           <button
                             onClick={() =>
                               navigate(`/learner/quizzes/${quiz._id}`)
                             }
-                            className="bg-[#F26739] text-white px-5 py-2.5 rounded-lg font-bold text-xs hover:bg-[#d8562c] shadow-sm transition-all active:scale-95"
+                            className="bg-[#F26739] text-white px-3 py-1.5 rounded-md font-bold text-[10px] hover:bg-[#d8562c] transition-all"
                           >
-                            Làm bài ngay
+                            Làm bài
                           </button>
                         )}
                       </div>
@@ -219,14 +233,14 @@ const Quizzes = () => {
                   </div>
                 ))
               ) : (
-                <div className="col-span-full text-center py-20 text-gray-400 text-sm">
+                <div className="col-span-full text-center py-20 text-gray-400 text-xs">
                   Không tìm thấy bài thi nào khớp với "{searchTerm}"
                 </div>
               )}
             </div>
 
-            <div className="flex flex-row justify-between items-center px-5 gap-4 w-full h-10 mt-8 mb-10">
-              <div className="text-[#000000] font-medium text-base w-[100px]">
+            <div className="flex flex-row justify-between items-center px-2 gap-4 w-full h-10 mt-4 mb-6">
+              <div className="text-gray-500 font-medium text-xs w-[100px]">
                 {totalPages} trang
               </div>
               <div className="flex items-center gap-1">
@@ -235,7 +249,7 @@ const Quizzes = () => {
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(1, prev - 1))
                   }
-                  className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors text-xs"
                 >
                   <ChevronLeft size={14} /> <span>Trước</span>
                 </button>
@@ -244,10 +258,10 @@ const Quizzes = () => {
                     <button
                       key={i + 1}
                       onClick={() => setCurrentPage(i + 1)}
-                      className={`w-10 h-10 rounded-md text-sm font-medium transition-all ${
+                      className={`w-8 h-8 rounded-md text-xs font-medium transition-all ${
                         currentPage === i + 1
-                          ? "border border-[#E4E4E7] bg-white shadow-sm"
-                          : "hover:bg-gray-100"
+                          ? "border border-[#E4E4E7] bg-white shadow-sm font-bold text-orange-600"
+                          : "hover:bg-gray-100 text-gray-600"
                       }`}
                     >
                       {i + 1}
@@ -259,7 +273,7 @@ const Quizzes = () => {
                   onClick={() =>
                     setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                   }
-                  className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors text-xs"
                 >
                   <span>Sau</span> <ChevronRight size={14} />
                 </button>

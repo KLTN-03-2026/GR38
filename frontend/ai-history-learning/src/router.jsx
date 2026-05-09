@@ -150,6 +150,7 @@ export default function AppRouter() {
           <Route path="quizzes/:id" element={<HocQuiz />} />
           <Route path="quizzes/result/:resultId" element={<KetQuaQuizz />} />
           <Route path="quizzes/history/:resultId" element={<KetQuaQuizz />} />
+          <Route path="quiz-results" element={<KetQuaQuizz />} />
           <Route path="suco" element={<SuCo />} />
           <Route path="tiendo" element={<TienDo />} />
           <Route path="profile" element={<ProfilePage />} />

@@ -1,340 +1,319 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
-  Send, Plus, Search, HelpCircle, Settings, 
-  FileText, Loader2, RotateCcw, MessageSquare, Bot, 
-  MoreHorizontal, Sun, Moon, Clock, BookOpen
+  Send, FileText, HelpCircle, BookOpen, Bot, Moon, Sun, 
+  RotateCcw, MessageSquare, Clock, Loader2, Search, 
+  Settings, ChevronUp, MoreHorizontal, X, MessageCircle
 } from "lucide-react";
-import api from "@/lib/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import api from "@/lib/api";
+import { THEME, GRAD } from "./constants/chatConstants";
 
-// IMPORT LOGO WEBSITE
-import logoWeb from "@/assets/img/logo.jpg";
-
-// --- CONSTANTS & THEMES ---
-const GRAD = {
-  indigo: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+// --- Sub Component: ConceptInputDialog ---
+const ConceptInputDialog = ({ isOpen, onClose, onSubmit, T }) => {
+  const [value, setValue] = useState("");
+  if (!isOpen) return null;
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000, padding: 20
+    }}>
+      <div style={{
+        background: T.chatBg, width: '100%', maxWidth: 450, borderRadius: 20, padding: 24,
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: `1px solid ${T.sbBorder}`,
+        position: 'relative', animation: 'modalFadeIn 0.3s ease-out'
+      }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: T.subColor }}>
+          <X size={20} />
+        </button>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ width: 48, height: 48, background: '#FDF2F8', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <BookOpen size={24} color="#DB2777" />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: T.titleColor, margin: '0 0 8px 0' }}>Giải thích khái niệm</h3>
+          <p style={{ fontSize: 14, color: T.subColor, margin: 0 }}>Nhập thuật ngữ bạn muốn AI giải thích chi tiết.</p>
+        </div>
+        <input
+          autoFocus
+          style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: `1px solid ${T.inputBorder}`, background: T.inputBg, color: T.titleColor, fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }}
+          placeholder="Ví dụ: Chiến thắng Điện Biên Phủ..."
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && value.trim()) { onSubmit(value); setValue(""); onClose(); } }}
+        />
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '10px 16px', borderRadius: 10, border: `1px solid ${T.sbBorder}`, background: 'transparent', color: T.titleColor, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
+          <button disabled={!value.trim()} onClick={() => { onSubmit(value); setValue(""); onClose(); }} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: value.trim() ? '#6366f1' : '#E5E7EB', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Giải thích ngay</button>
+        </div>
+      </div>
+      <style>{`@keyframes modalFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  );
 };
 
-const THEME = {
-  light: {
-    sidebar: "#FAFAFA", sidebar2: "#FFFFFF", sbBorder: "#E5E7EB", sbHover: "#F3F4F6", sbBright: "#18181B", sbDim: "#3F3F46", sbMuted: "#71717A",
-    chatBg: "#FFFFFF", chatBorder: "#E4E4E7", surface: "#FFFFFF",
-    titleColor: "#09090B", subColor: "#71717A",
-    inputBg: "#FFFFFF", inputBorder: "#E4E4E7",
-    msgAiBg: "#F4F4F5", msgAiColor: "#09090B", msgUserBg: "#1473E6", msgUserColor: "#FFFFFF",
-    btnBg: "#FFFFFF", btnBorder: "#E4E4E7", btnIcon: "#3F3F46",
-    teacherBadgeBg: "#F4F4F5", teacherBadgeClr: "#71717A", hintColor: "#A1A1AA"
-  },
-  dark: {
-    sidebar: "#09090B", sidebar2: "#18181B", sbBorder: "rgba(255,255,255,0.1)", sbHover: "#27272A", sbBright: "#FAFAFA", sbDim: "#D4D4D8", sbMuted: "#A1A1AA",
-    chatBg: "#09090B", chatBorder: "rgba(255,255,255,0.1)", surface: "#09090B",
-    titleColor: "#FAFAFA", subColor: "#A1A1AA",
-    inputBg: "#18181B", inputBorder: "rgba(255,255,255,0.1)",
-    msgAiBg: "#18181B", msgAiColor: "#F4F4F5", msgUserBg: "#1473E6", msgUserColor: "#FFFFFF",
-    btnBg: "#18181B", btnBorder: "rgba(255,255,255,0.1)", btnIcon: "#A1A1AA",
-    teacherBadgeBg: "#27272A", teacherBadgeClr: "#A1A1AA", hintColor: "#52525B"
-  }
-};
-
-// ĐÃ CẬP NHẬT: Thay đổi nhãn và lệnh cho 2 tính năng learner mới
 const QUICK_ACTIONS = [
-  { label: "Tóm tắt", cmd: "tóm tắt", Icon: FileText, grad: "linear-gradient(135deg, #3b82f6, #2dd4bf)" },
-  { label: "Giải thích", cmd: "giải thích", Icon: BookOpen, grad: "linear-gradient(135deg, #8b5cf6, #ec4899)" },
-  { label: "Hỏi đáp", cmd: "hỏi đáp", Icon: HelpCircle, grad: "linear-gradient(135deg, #f59e0b, #ef4444)" }
+  { label: "Tóm tắt tài liệu", cmd: "tóm tắt", Icon: FileText, color: "#10B981" },
+  { label: "Giải thích khái niệm", cmd: "giải thích", Icon: BookOpen, color: "#DB2777" },
+  { label: "Hỏi đáp", cmd: "hỏi đáp", Icon: HelpCircle, color: "#F59E0B" }
 ];
 
-const ChatAI = ({ documentId, documentTitle }) => {
+const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" }) => {
   const [messages, setMessages] = useState([]);
+  const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [dark, setDark] = useState(false);
-  const [activeSide, setActiveSide] = useState("chat");
+  const [showConceptModal, setShowConceptModal] = useState(false);
+  const [user, setUser] = useState(null);
   
-  const [chatHistoryList, setChatHistoryList] = useState([]);
-  const [userProfile, setUserProfile] = useState({
-    fullName: "Đang tải...",
-    profileImage: null,
-    role: "LEARNER"
-  });
-
   const scrollRef = useRef(null);
-  const textareaRef = useRef(null);
   const T = dark ? THEME.dark : THEME.light;
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const res = await api.get("/user/profile");
-        if (res.data?.success) setUserProfile(res.data.data);
-      } catch (err) {
-        console.error("Lỗi lấy thông tin cá nhân:", err);
-      }
-    };
-    fetchUserProfile();
-  }, []);
-
-  const fetchChatHistory = async () => {
-    if (!documentId) return;
+  // Lấy dữ liệu ban đầu
+  const fetchHistory = async () => {
     try {
       const res = await api.get(`/ai/chat-history/${documentId}`);
-      if (res.data?.success) {
-        const formattedMessages = res.data.data.map((item, idx) => ({
-          id: idx,
-          text: item.content,
-          sender: item.role === "assistant" ? "ai" : "user",
-          timestamp: item.timestamp
-        }));
-        setMessages(formattedMessages);
-
-        const userQueries = res.data.data
-          .filter(item => item.role === "user")
-          .map((item, idx) => ({
-            id: idx,
-            title: item.content,
-            time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }))
-          .reverse(); 
-        
-        setChatHistoryList(userQueries);
-      }
-    } catch (err) {
-      console.error("Lỗi tải lịch sử chat:", err);
-      if(messages.length === 0) {
-         setMessages([{ id: "welcome", text: "Chào bạn! Tôi là trợ lý AI. Hãy đặt câu hỏi về tài liệu này nhé.", sender: "ai" }]);
-      }
-    }
+      if (res.data.success) setHistory(res.data.data);
+    } catch (err) { console.error("Lỗi lấy lịch sử", err); }
   };
 
   useEffect(() => {
-    fetchChatHistory();
+    const fetchUserData = async () => {
+      try {
+        const res = await api.get("/user/profile");
+        if (res.data.success) setUser(res.data.data);
+      } catch (err) { console.error("Lỗi lấy profile", err); }
+    };
+    fetchUserData();
+    fetchHistory();
+    setMessages([{ id: 'init', text: "Phiên chat mới. Hãy đặt câu hỏi hoặc chọn một hành động!", sender: "ai" }]);
   }, [documentId]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isTyping]);
 
-  const handleSend = async (command = null) => {
-    const content = command || input.trim();
-    if (!content || !documentId || isTyping) return;
+  const handleAction = async (command, payload = null) => {
+    if (isTyping) return;
+    
+    // Nếu là click nút Giải thích mà chưa có từ khóa -> Mở Modal
+    if (command === "giải thích" && !payload) { 
+      setShowConceptModal(true); 
+      return; 
+    }
 
-    // Hiển thị tin nhắn người dùng
-    const userMsg = { id: Date.now(), text: content, sender: "user" };
-    setMessages(prev => [...prev, userMsg]);
+    // Xác định nội dung hiển thị của người dùng
+    let userText = "";
+    if (payload) userText = `Giải thích khái niệm: ${payload}`;
+    else if (command === "tóm tắt") userText = "Tóm tắt tài liệu này giúp tôi";
+    else if (command === "hỏi đáp") userText = "Tôi muốn hỏi đáp về nội dung tài liệu";
+    else userText = input;
+
+    if (!userText.trim()) return;
+
+    // Hiển thị tin nhắn user lên UI ngay
+    setMessages(prev => [...prev, { id: Date.now(), text: userText, sender: "user" }]);
     setInput("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsTyping(true);
 
     try {
       let res;
-      const lowerInput = content.toLowerCase();
-
-      // ĐÃ SỬA: Điều hướng API cho 2 mục mới của Learner
-      if (lowerInput === "giải thích") {
-        // Nếu nhấn nút nhanh mà chưa nhập text, AI sẽ hỏi khái niệm cần giải thích
-        addAiMsg("Bạn hãy nhập khái niệm trong tài liệu cần tôi giải thích nhé!");
-      } 
-      else if (lowerInput === "hỏi đáp") {
-        addAiMsg("Mời bạn đặt câu hỏi liên quan đến nội dung tài liệu này.");
-      }
-      else if (lowerInput.includes("tóm tắt")) {
+      // Gọi đúng Endpoint dựa trên hành động
+      if (command === "tóm tắt") {
         res = await api.post("/ai/generate-summary", { documentId });
-        if (res.data?.success) addAiMsg(`📋 **Tóm tắt:**\n\n${res.data.data.summary}`);
-      } 
-      else {
-        // LOGIC XỬ LÝ CHÍNH: Phân loại dựa trên nội dung nếu người dùng gõ trực tiếp
-        // Nếu nội dung chứa từ "giải thích", gọi API explain-concept
-        if (content.toLowerCase().startsWith("giải thích")) {
-          const concept = content.replace(/giải thích/i, "").trim();
-          res = await api.post("/ai/explain-concept", { 
-            documentId, 
-            concept: concept || "Nội dung tổng quát" 
-          });
-          if (res.data?.success) {
-            addAiMsg(`🔍 **Giải thích khái niệm:**\n\n${res.data.data.explanation}`);
-          }
-        } else {
-          // Mặc định gọi API chat cho mọi câu hỏi khác
-          res = await api.post("/api/v1/ai/chat", { documentId, question: content });
-          if (res.data?.success) {
-             addAiMsg(res.data.data.answer);
-             setTimeout(fetchChatHistory, 1000);
-          }
-        }
+        addAiMsg(`📋 **Tóm tắt tài liệu:**\n\n${res.data.data.summary}`);
+      } else if (command === "giải thích") {
+        res = await api.post("/ai/explain-concept", { documentId, concept: payload });
+        addAiMsg(`🔍 **Giải thích cho "${payload}":**\n\n${res.data.data.explanation}`);
+      } else {
+        // Chat thông thường từ Input
+        res = await api.post("/ai/chat", { documentId, question: userText });
+        addAiMsg(res.data.data.answer);
       }
-    } catch (err) {
-      addAiMsg("❌ Hệ thống gặp sự cố kết nối. Vui lòng thử lại.");
-    } finally {
-      setIsTyping(false);
+      
+      // Sau khi AI trả lời thành công, cập nhật lại Sidebar History
+      fetchHistory();
+    } catch (err) { 
+      console.error(err);
+      addAiMsg("❌ Đã xảy ra lỗi khi kết nối với AI. Vui lòng thử lại sau."); 
+    } finally { 
+      setIsTyping(false); 
     }
   };
 
-  const addAiMsg = (text) => {
-    setMessages(prev => [...prev, { id: Date.now() + Math.random(), text, sender: "ai" }]);
-  };
+  const addAiMsg = (text) => setMessages(prev => [...prev, { id: Date.now(), text, sender: "ai" }]);
 
-  const handleNewChat = () => {
-    setMessages([{ id: Date.now(), text: "Phiên chat mới đã bắt đầu! Tôi có thể giúp gì cho bạn?", sender: "ai" }]);
-    setActiveSide("chat");
+  // Khi click vào một mục lịch sử cũ trên Sidebar
+  const loadHistoryToMainChat = () => {
+    if (history.length === 0) return;
+    const formatted = history.map((h, i) => ({
+      id: `old-${i}`,
+      text: h.content,
+      sender: h.role === 'assistant' ? 'ai' : 'user'
+    }));
+    setMessages(formatted);
   };
 
   return (
-    <>
-      <style>{`
-        .ai-markdown p { margin-bottom: 0.75em; }
-        .ai-markdown p:last-child { margin-bottom: 0; }
-        .ai-markdown ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.75em; }
-        .ai-markdown ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.75em; }
-        .ai-markdown li { margin-bottom: 0.25em; }
-        .ai-markdown strong { font-weight: bold; color: inherit; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-      `}</style>
+    <div style={{ display: "flex", width: "100%", height: "90vh", background: T.chatBg, fontFamily: "'Inter', sans-serif", padding: 20, boxSizing: 'border-box' }}>
+      <ConceptInputDialog 
+        isOpen={showConceptModal} 
+        onClose={() => setShowConceptModal(false)} 
+        onSubmit={(v) => handleAction("giải thích", v)} 
+        T={T} 
+      />
 
-      <div style={{
-        display: "flex", width: "100%", height: "650px",
-        fontFamily: "sans-serif", borderRadius: 16, overflow: "hidden",
-        border: `1px solid ${T.chatBorder}`,
-        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-        background: T.chatBg
-      }}>
-        
-        {/* --- SIDEBAR --- */}
-        <div style={{ width: 260, background: T.sidebar, borderRight: `1px solid ${T.sbBorder}`, display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: 16, borderBottom: `1px solid ${T.sbBorder}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.sidebar2, padding: "6px 8px", borderRadius: 10, border: `1px solid ${T.sbBorder}` }}>
-               <img src={logoWeb} alt="Logo" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
-               <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.sbBright, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>AI History</div>
-                  <div style={{ fontSize: 10, color: T.sbMuted }}>Learning Platform</div>
-               </div>
+      {/* --- SIDEBAR --- */}
+      <aside style={{ width: 280, borderRight: `1px solid ${T.sbBorder}`, display: 'flex', flexDirection: 'column', background: T.sidebar, borderRadius: '16px 0 0 16px' }}>
+        <div style={{ padding: 16, borderBottom: `1px solid ${T.sbBorder}`, margin: 12, borderRadius: 12, background: T.chatBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, background: '#FEE2E2', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={18} color="#EF4444" />
             </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.titleColor, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentTitle}</div>
           </div>
+          <ChevronUp size={16} color={T.sbTitle} />
+        </div>
 
-          <div className="scrollbar-hide" style={{ flex: 1, padding: 10, overflowY: "auto" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: T.sbMuted, marginBottom: 8, textTransform: "uppercase", paddingLeft: 8 }}>Menu</div>
-            <button onClick={() => setActiveSide("chat")} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px", borderRadius: 8, border: "none", background: activeSide === "chat" ? T.sbHover : "transparent", color: activeSide === "chat" ? "#6366f1" : T.sbDim, fontWeight: activeSide === "chat" ? 600 : 400, cursor: "pointer", marginBottom: 4 }}>
-              <MessageSquare size={16} /> <span style={{ fontSize: 13 }}>Hội thoại hiện tại</span>
-            </button>
-            <button onClick={handleNewChat} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px", borderRadius: 8, border: "none", background: "transparent", color: T.sbDim, cursor: "pointer", marginBottom: 4 }}>
-              <RotateCcw size={16} /> <span style={{ fontSize: 13 }}>Làm mới chat</span>
-            </button>
-            
-            <div style={{ height: 1, background: T.sbBorder, margin: "15px 8px" }} />
-            <div style={{ fontSize: 10, fontWeight: 700, color: T.sbMuted, marginBottom: 8, textTransform: "uppercase", paddingLeft: 8 }}>Lịch sử gần đây</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {chatHistoryList.length > 0 ? chatHistoryList.map((item) => (
-                    <button 
-                        key={item.id}
-                        onClick={() => setActiveSide("chat")}
-                        style={{ width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", transition: "0.2s" }}
-                        className="group"
-                        onMouseEnter={(e) => e.currentTarget.style.background = T.sbHover}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                    >
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                            <Clock size={14} style={{ marginTop: 2, color: T.sbMuted }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 12, color: T.sbDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-                                <div style={{ fontSize: 9, color: T.sbMuted, marginTop: 2 }}>{item.time}</div>
-                            </div>
-                        </div>
-                    </button>
-                )) : (
-                    <div style={{ padding: "10px", fontSize: 11, color: T.sbMuted, fontStyle: "italic" }}>Chưa có hội thoại nào</div>
-                )}
-            </div>
-
-            <div style={{ height: 1, background: T.sbBorder, margin: "15px 8px" }} />
-            <div style={{ fontSize: 10, fontWeight: 700, color: T.sbMuted, marginBottom: 8, textTransform: "uppercase", paddingLeft: 8 }}>Công cụ nhanh</div>
-            {QUICK_ACTIONS.map(qa => (
-              <button key={qa.cmd} onClick={() => handleSend(qa.cmd)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 8, border: "none", background: "transparent", color: T.sbDim, cursor: "pointer" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, background: qa.grad, color: "white" }}>
-                  <qa.Icon size={16} />
-                </div>
-                <span style={{ fontSize: 13 }}>{qa.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div style={{ padding: 16, borderTop: `1px solid ${T.sbBorder}`, display: "flex", alignItems: "center", gap: 10 }}>
-            {userProfile.profileImage ? (
-              <img src={userProfile.profileImage} alt="Avatar" style={{ width: 34, height: 34, borderRadius: 10, objectFit: "cover", border: `1px solid ${T.sbBorder}` }} />
+        <div style={{ flex: 1, padding: '0 12px', overflowY: 'auto' }} className="custom-scroll">
+          <SectionTitle title="PHIÊN CHAT" T={T} />
+          <SidebarItem icon={<RotateCcw size={16}/>} label="Chat mới" T={T} onClick={() => setMessages([{ id: 'init', text: "Phiên chat mới. Hãy đặt câu hỏi!", sender: "ai" }])} />
+          <SidebarItem icon={<MessageSquare size={16}/>} label="Phiên hiện tại" active T={T} />
+          
+          <SectionTitle title="LỊCH SỬ GẦN ĐÂY" T={T} />
+          <div style={{ maxHeight: 150, overflowY: 'auto' }} className="custom-scroll">
+            {history.length > 0 ? (
+                // Chỉ lấy các câu hỏi của User để làm tiêu đề lịch sử
+                history.filter(h => h.role === 'user').slice(0, 10).map((h, i) => (
+                    <SidebarItem 
+                        key={i} 
+                        icon={<MessageCircle size={14} color={T.subColor}/>} 
+                        label={h.content} 
+                        T={T} 
+                        onClick={loadHistoryToMainChat}
+                    />
+                ))
             ) : (
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: GRAD.indigo, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 14 }}>
-                {userProfile.fullName.charAt(0)}
-              </div>
+                <div style={{ fontSize: 12, color: T.subColor, padding: '8px 12px', fontStyle: 'italic' }}>Chưa có lịch sử</div>
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: T.sbBright, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userProfile.fullName}</div>
-              <div style={{ fontSize: 10, color: T.sbMuted, textTransform: "capitalize" }}>{userProfile.role === "LEARNER" ? "Học sinh" : "Giáo viên"}</div>
-            </div>
           </div>
+
+          <SectionTitle title="CÔNG CỤ" T={T} />
+          {QUICK_ACTIONS.map(qa => (
+            <SidebarItem key={qa.cmd} icon={<qa.Icon size={16} color={qa.color}/>} label={qa.label} T={T} onClick={() => handleAction(qa.cmd)} />
+          ))}
+
+          <SectionTitle title="HỆ THỐNG" T={T} />
+          <SidebarItem icon={<Search size={16}/>} label="Tìm kiếm chat" T={T} />
+          <SidebarItem icon={<Settings size={16}/>} label="Cài đặt" T={T} />
         </div>
 
-        {/* --- MAIN CHAT --- */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "12px 20px", borderBottom: `1px solid ${T.chatBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: GRAD.indigo, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Bot size={22} color="white" />
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.titleColor }}>Trợ lý Học tập AI</div>
-                <div style={{ fontSize: 11, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", animation: "pulse 2s infinite" }} /> Trực tuyến
-                </div>
-              </div>
+        <div style={{ padding: 16, borderTop: `1px solid ${T.sbBorder}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img src={user?.profileImage || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.titleColor }}>{user?.fullName || "Người Học"}</div>
+            <div style={{ fontSize: 11, color: T.subColor }}>{user?.email || "learner@gmail.com"}</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* --- MAIN CHAT --- */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', border: `1px solid ${T.sbBorder}`, borderRadius: '0 16px 16px 0', background: T.chatBg, overflow: 'hidden' }}>
+        <header style={{ padding: '16px 24px', borderBottom: `1px solid ${T.sbBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, background: '#6366f1', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bot color="#fff" size={24} />
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setDark(!dark)} style={{ border: `1px solid ${T.btnBorder}`, background: T.btnBg, width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.btnIcon }}>
-                {dark ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontWeight: 700, color: T.titleColor }}>Trợ lý Giáo viên AI</span>
+                <span style={{ fontSize: 10, background: '#EEF2FF', color: '#6366f1', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>LEARNER</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#10B981' }}>● Sẵn sàng hỗ trợ</div>
             </div>
           </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <HeaderBtn icon={dark ? <Sun size={18}/> : <Moon size={18}/>} T={T} onClick={() => setDark(!dark)} />
+            <HeaderBtn icon={<MoreHorizontal size={18}/>} T={T} />
+          </div>
+        </header>
 
-          <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 20, background: T.surface }}>
-            {messages.map(msg => (
-              <div key={msg.id} style={{ alignSelf: msg.sender === "ai" ? "flex-start" : "flex-end", maxWidth: "85%", display: "flex", flexDirection: "column", alignItems: msg.sender === "ai" ? "flex-start" : "flex-end" }}>
-                <div className={msg.sender === "ai" ? "ai-markdown" : ""} style={{ padding: "12px 16px", borderRadius: msg.sender === "ai" ? "16px 16px 16px 4px" : "16px 16px 4px 16px", fontSize: 14, lineHeight: 1.6, background: msg.sender === "ai" ? T.msgAiBg : GRAD.indigo, color: msg.sender === "ai" ? T.msgAiColor : "white", border: msg.sender === "ai" ? `1px solid ${T.chatBorder}` : "none", wordBreak: "break-word" }}>
-                  {msg.sender === "ai" ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown> : msg.text}
-                </div>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px' }} className="custom-scroll">
+          {messages.map((msg, idx) => (
+            <div key={idx} style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div style={{ 
+                padding: '12px 16px', borderRadius: 16, maxWidth: '80%', 
+                background: msg.sender === 'user' ? '#6366f1' : T.msgAiBg, 
+                color: msg.sender === 'user' ? '#fff' : T.titleColor,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: msg.sender === 'ai' ? `1px solid ${T.sbBorder}` : 'none'
+              }}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
               </div>
+            </div>
+          ))}
+          {isTyping && (
+            <div style={{ textAlign: 'left', color: T.subColor, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Loader2 size={14} className="animate-spin" /> AI đang xử lý tài liệu...
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '20px', borderTop: `1px solid ${T.sbBorder}` }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {QUICK_ACTIONS.slice(0, 2).map(qa => (
+              <button key={qa.cmd} onClick={() => handleAction(qa.cmd)} style={{ border: `1px solid ${T.sbBorder}`, padding: '6px 14px', borderRadius: 20, fontSize: 12, background: T.chatBg, color: T.titleColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <qa.Icon size={14} color={qa.color} /> {qa.label}
+              </button>
             ))}
-            {isTyping && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: T.msgAiBg, borderRadius: "16px 16px 16px 4px", border: `1px solid ${T.chatBorder}`, width: "fit-content" }}>
-                <Loader2 size={14} className="animate-spin" style={{ color: "#6366f1" }} /> 
-                <span style={{ fontSize: 13, color: T.subColor }}>AI đang trả lời...</span>
-              </div>
-            )}
           </div>
-
-          {/* Input Area */}
-          <div style={{ padding: "16px 24px", borderTop: `1px solid ${T.chatBorder}`, background: T.chatBg }}>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: T.inputBg, border: `1.5px solid ${T.inputBorder}`, borderRadius: 14, padding: "8px 12px" }}>
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height = e.target.scrollHeight + "px";
-                }}
-                onKeyDown={(e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }}}
-                placeholder="Nhập nội dung hoặc chọn công cụ nhanh..."
-                style={{ flex: 1, border: "none", outline: "none", background: "transparent", resize: "none", fontSize: 14, color: T.titleColor, padding: "8px 0", maxHeight: "150px" }}
-              />
-              <button onClick={() => handleSend()} disabled={!input.trim() || isTyping} style={{ background: input.trim() ? GRAD.indigo : "#e4e4e7", border: "none", width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <Send size={18} color={input.trim() ? "white" : "#a1a1aa"} />
-              </button>
-            </div>
+          <div style={{ background: T.inputBg, border: `1px solid ${T.inputBorder}`, borderRadius: 12, padding: '8px 12px', display: 'flex', alignItems: 'center' }}>
+            <input 
+              style={{ flex: 1, border: 'none', background: 'none', outline: 'none', color: T.titleColor, fontSize: 14, padding: '8px' }}
+              placeholder="Nhập câu hỏi của bạn tại đây..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAction()}
+            />
+            <button 
+              disabled={isTyping || !input.trim()}
+              onClick={() => handleAction()} 
+              style={{ 
+                background: (isTyping || !input.trim()) ? '#A5A6F6' : '#6366f1', 
+                border: 'none', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 8, transition: '0.3s' 
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 500 }}>Gửi</span>
+              <Send size={16} />
+            </button>
           </div>
         </div>
-      </div>
-    </>
+      </main>
+
+      <style>{`
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; borderRadius: 10px; }
+        @keyframes animate-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin { animation: animate-spin 1s linear infinite; }
+      `}</style>
+    </div>
   );
 };
+
+const SectionTitle = ({ title, T }) => <div style={{ fontSize: 11, fontWeight: 700, color: T.sbTitle, margin: '20px 8px 8px 8px' }}>{title}</div>;
+
+const SidebarItem = ({ icon, label, active, T, onClick }) => (
+  <div onClick={onClick} style={{ 
+    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+    background: active ? T.sidebarActive : 'transparent', color: active ? '#6366f1' : T.sbText, marginBottom: 4, transition: '0.2s'
+  }}>
+    {icon} <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+  </div>
+);
+
+const HeaderBtn = ({ icon, T, onClick }) => (
+  <button onClick={onClick} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${T.sbBorder}`, background: T.chatBg, color: T.sbText, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{icon}</button>
+);
 
 export default ChatAI;

@@ -34,17 +34,25 @@ const Flashcards = () => {
       setError(null);
       const res = await api.get("/flashcards");
       
-      // Chỉnh sửa logic map dữ liệu để khớp với Schema API và file Giáo viên
       const rawData = res?.data?.data || [];
-      const formattedData = Array.isArray(rawData) ? rawData.map(item => ({
-        ...item,
-        // Ưu tiên thumbnail của bộ thẻ, nếu không có lấy của tài liệu
-        displayThumbnail: item.thumbnail || item.documentId?.thumbnail || PLACEHOLDER,
-        // Tính toán số lượng thẻ: API trả về mảng 'cards' hoặc 'cardCount'
-        displayCardCount: item.cards?.length || item.cardCount || 0,
-        // Xử lý tiến độ học tập (nếu có userProgress hoặc progress từ API)
-        displayProgress: item.progress || item.userProgress || 0
-      })) : [];
+      const formattedData = Array.isArray(rawData) ? rawData.map(item => {
+        // Logic tính toán tiến độ dựa trên memoryStatus của từng card
+        const cards = item.cards || [];
+        const memorizedCount = cards.filter(c => c.memoryStatus === "Đã ghi nhớ").length;
+        
+        // Ưu tiên dùng item.progress từ server nếu có, 
+        // nhưng nếu server chưa tính theo memoryStatus thì ta tính thủ công ở đây
+        const calcProgress = cards.length > 0 
+          ? Math.round((memorizedCount / cards.length) * 100) 
+          : (item.progress || 0); 
+
+        return {
+          ...item,
+          displayThumbnail: item.thumbnail || item.documentId?.thumbnail || PLACEHOLDER,
+          displayCardCount: item.cardCount || cards.length || 0,
+          displayProgress: calcProgress
+        };
+      }) : [];
 
       setFlashcardSets(formattedData);
     } catch (err) {
@@ -152,14 +160,14 @@ const Flashcards = () => {
                 key={item._id}
                 className="group relative flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
               >
-                {/* Nút báo lỗi/xóa */}
-                <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 z-10 flex gap-1">
                   {role === "ADMIN" ? (
                     <button
                       onClick={(e) => handleDeleteFlashcard(e, item._id)}
-                      className="p-1.5 bg-white text-red-500 rounded-lg shadow-sm border border-red-50 hover:bg-red-50"
+                      className="p-2 bg-orange-50 text-orange-600 rounded-lg shadow-sm border border-orange-100 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
+                      title="Xóa bộ thẻ"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} strokeWidth={2.5} />
                     </button>
                   ) : (
                     <button
@@ -169,14 +177,14 @@ const Flashcards = () => {
                           state: { reportTarget: "flashcards", targetId: item._id },
                         });
                       }}
-                      className="p-1.5 bg-white text-gray-400 rounded-lg shadow-sm border border-gray-50 hover:text-red-500"
+                      className="p-2 bg-red-50 text-red-500 rounded-lg shadow-sm border border-red-100 hover:bg-red-500 hover:text-white transition-all active:scale-90"
+                      title="Báo cáo sự cố"
                     >
-                      <AlertCircle size={14} />
+                      <AlertCircle size={14} strokeWidth={2.5} />
                     </button>
                   )}
                 </div>
 
-                {/* Thumbnail */}
                 <div className="w-full h-[120px] overflow-hidden rounded-xl mb-3 bg-gray-50">
                   <img
                     src={item.displayThumbnail}
@@ -192,11 +200,9 @@ const Flashcards = () => {
                   </h3>
 
                   <div className="flex items-center justify-between mb-4">
-                    {/* Hiển thị số lượng thẻ thực tế */}
                     <span className="text-[10px] font-bold text-[#1473E6] bg-blue-50 px-2 py-0.5 rounded">
                       {item.displayCardCount} thẻ
                     </span>
-                    {/* Hiển thị tiến độ thực tế */}
                     <span className="text-[10px] text-gray-400 font-medium">
                       Tiến độ: <span className="text-orange-500 font-bold">{item.displayProgress}%</span>
                     </span>
@@ -270,7 +276,7 @@ const Flashcards = () => {
 
               <button
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
+                onClick={() => setCurrentPage((p) => p - 1)}
                 className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
               >
                 <ChevronRight size={16} />

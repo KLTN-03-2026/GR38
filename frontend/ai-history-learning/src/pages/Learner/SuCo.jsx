@@ -59,23 +59,19 @@ const SuCo = () => {
         if (endpoint) {
           const res = await api.get(endpoint);
           
-          // Logic kiểm tra dữ liệu linh hoạt cho từng loại API
           let dataPayload = [];
           const responseData = res.data;
 
           if (formData.nhomNoiDung === "quizzes") {
-            // Đối với Quizzes, kiểm tra các trường phổ biến như .quizzes hoặc .data
             dataPayload = responseData.quizzes || responseData.data || responseData;
           } else {
             dataPayload = responseData.data || responseData;
           }
           
-          // Nếu có phân trang kiểu .docs (Thường gặp ở thư viện mongoose-paginate)
           if (!Array.isArray(dataPayload) && dataPayload.docs) {
             dataPayload = dataPayload.docs;
           }
 
-          // Cuối cùng đảm bảo là một mảng
           const finalData = Array.isArray(dataPayload) ? dataPayload : [];
           setApiDataList(finalData);
           
@@ -208,7 +204,7 @@ const SuCo = () => {
   };
 
   return (
-    <div className="flex items-start justify-center pt-20 px-10 bg-[#FAFAFA] min-h-screen font-['Inter']">
+    <div className="flex items-start justify-center pt-8 px-10 bg-[#FAFAFA] min-h-screen font-['Inter']">
       <div className="relative w-[840px] bg-white border border-[#E4E4E7] shadow-lg rounded-[10px] p-[24px] flex flex-col gap-[16px]">
         
         {showHistory && (

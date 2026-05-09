@@ -66,11 +66,18 @@ const Documents = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await api.delete(`/documents/${id}`);
+          const deleteUrl =
+            role === "ADMIN" ? `/admin/documents/${id}` : `/documents/${id}`;
+          await api.delete(deleteUrl);
+
           Swal.fire("Đã xóa!", "Tài liệu đã được gỡ bỏ.", "success");
           fetchDocuments();
         } catch (error) {
-          Swal.fire("Lỗi!", "Không thể xóa tài liệu này.", "error");
+          Swal.fire(
+            "Lỗi!",
+            "Bạn không có quyền xóa tài liệu của người khác hoặc tài liệu không tồn tại.",
+            "error",
+          );
         }
       }
     });

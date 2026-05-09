@@ -58,11 +58,14 @@ const Flashcards = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await api.delete(`/flashcards/${id}`);
+          const deleteUrl =
+            role === "ADMIN" ? `/admin/flashcards/${id}` : `/flashcards/${id}`;
+          await api.delete(deleteUrl);
+
           Swal.fire("Đã xóa!", "Bộ thẻ đã được gỡ bỏ.", "success");
           fetchFlashcards();
         } catch (error) {
-          Swal.fire("Lỗi!", "Không thể xóa bộ thẻ.", "error");
+          Swal.fire("Lỗi!", "Không thể xóa bộ thẻ (Lỗi quyền Admin).", "error");
         }
       }
     });

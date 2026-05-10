@@ -9,6 +9,8 @@ import {
   Edit,
   Plus,
   RefreshCw,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -25,9 +27,12 @@ const Flashcards = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState("all");
 
+  // 1 trang hàng ngang 4 bài, dọc 2 hàng = 8 bài
   const itemsPerPage = 8;
 
+  // GIỮ NGUYÊN LOGIC CALL API CỦA BẠN
   const fetchFlashcards = async () => {
     try {
       setLoading(true);
@@ -36,12 +41,9 @@ const Flashcards = () => {
       
       const rawData = res?.data?.data || [];
       const formattedData = Array.isArray(rawData) ? rawData.map(item => {
-        // Logic tính toán tiến độ dựa trên memoryStatus của từng card
         const cards = item.cards || [];
         const memorizedCount = cards.filter(c => c.memoryStatus === "Đã nhớ").length;
         
-        // Ưu tiên dùng item.progress từ server nếu có, 
-        // nhưng nếu server chưa tính theo memoryStatus thì ta tính thủ công ở đây
         const calcProgress = cards.length > 0 
           ? Math.round((memorizedCount / cards.length) * 100)
           : 0;
@@ -94,10 +96,15 @@ const Flashcards = () => {
     });
   };
 
-  const filteredData = flashcardSets.filter((item) =>
-    item.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // LOGIC LỌC DỮ LIỆU
+  const filteredData = flashcardSets.filter((item) => {
+    const matchesSearch = item.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (filterStatus === "completed") return matchesSearch && item.displayProgress === 100;
+    if (filterStatus === "uncompleted") return matchesSearch && item.displayProgress < 100;
+    return matchesSearch;
+  });
 
+  // LOGIC PHÂN TRANG
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const currentItems = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
@@ -105,188 +112,195 @@ const Flashcards = () => {
   );
 
   return (
-    <div className="flex-1 bg-[#FDFDFD] min-h-screen p-4 md:p-6 font-sans">
-      <div className="max-w-7xl mx-auto flex flex-col h-full">
-        {/* Thanh công cụ */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center bg-[#F4F4F5] rounded-lg px-3 h-9 w-full max-w-sm gap-2">
-            <Search size={14} className="text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm tên bộ thẻ..."
-              className="bg-transparent border-none outline-none text-[13px] w-full text-gray-700"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
+    <div className="flex flex-col h-screen bg-[#FDFDFD] font-sans overflow-hidden">
+      {/* VÙNG NỘI DUNG CÓ THỂ CUỘN */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+        <div className="max-w-[1400px] mx-auto">
+          
+          {/* Thanh công cụ & Bộ lọc */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="flex items-center bg-[#F4F4F5] rounded-lg px-3 h-10 w-full max-w-xs gap-2 border border-transparent focus-within:border-orange-200 transition-all">
+                <Search size={16} className="text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm tên bộ thẻ..."
+                  className="bg-transparent border-none outline-none text-[13px] w-full text-gray-700"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center bg-gray-50 p-1 rounded-lg border border-gray-100">
+                {["all", "uncompleted", "completed"].map((id) => (
+                  <button
+                    key={id}
+                    onClick={() => { setFilterStatus(id); setCurrentPage(1); }}
+                    className={`px-4 py-1.5 rounded-md text-[11px] font-bold transition-all ${
+                      filterStatus === id ? "bg-white text-[#F26739] shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {id === "all" ? "Tất cả" : id === "uncompleted" ? "Chưa xong" : "Đã xong"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={fetchFlashcards} className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 border border-gray-100">
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              </button>
+              {role === "ADMIN" && (
+                <button
+                  onClick={() => navigate("/admin/flashcards/create")}
+                  className="bg-[#F26739] text-white text-[12px] font-bold rounded-lg px-4 h-10 flex items-center gap-2 hover:bg-orange-600 shadow-sm"
+                >
+                  <Plus size={18} /> Tạo mới
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex gap-2">
-            <button 
-              onClick={fetchFlashcards}
-              className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Làm mới"
-            >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-            </button>
-            {role === "ADMIN" && (
-              <button
-                onClick={() => navigate("/admin/flashcards/create")}
-                className="bg-[#F26739] text-white text-[12px] font-bold rounded-lg px-4 h-9 flex items-center gap-2 hover:bg-orange-600 transition-all shadow-sm"
-              >
-                <Plus size={16} /> Tạo bộ thẻ mới
-              </button>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-black text-[#18181B] border-l-4 border-[#F26739] pl-3 uppercase tracking-tight">
+              Thư viện Flashcards
+            </h2>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-full">
+              Tổng: {filteredData.length} bộ thẻ
+            </div>
+          </div>
+
+          {/* Grid Flashcards: 4 Cột x 2 Hàng */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+            {loading ? (
+              <div className="col-span-full py-20 flex flex-col items-center gap-3">
+                <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
+                <p className="text-gray-400 text-sm">Đang tải dữ liệu...</p>
+              </div>
+            ) : currentItems.length === 0 ? (
+              <div className="col-span-full text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+                <p className="text-gray-400 text-sm font-bold uppercase">Không tìm thấy dữ liệu</p>
+              </div>
+            ) : (
+              currentItems.map((item) => {
+                const isCompleted = item.displayProgress === 100;
+                return (
+                  <div key={item._id} className="group relative flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                    {/* Tools */}
+                    <div className="absolute top-4 right-4 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      {role === "ADMIN" ? (
+                        <button onClick={(e) => handleDeleteFlashcard(e, item._id)} className="p-2 bg-white text-red-500 rounded-lg shadow-sm border hover:bg-red-500 hover:text-white">
+                          <Trash2 size={14} />
+                        </button>
+                      ) : (
+                        <button onClick={(e) => { e.stopPropagation(); navigate("/learner/suco", { state: { reportTarget: "flashcards", targetId: item._id } }); }} className="p-2 bg-white text-amber-500 rounded-lg shadow-sm border hover:bg-amber-500 hover:text-white">
+                          <AlertCircle size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Image */}
+                    <div className="relative w-full h-32 overflow-hidden rounded-xl mb-3 bg-gray-50">
+                      <img src={item.displayThumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => (e.target.src = PLACEHOLDER)} />
+                      <div className="absolute bottom-2 left-2">
+                        {isCompleted ? (
+                          <div className="bg-green-500 text-white px-2 py-0.5 rounded text-[9px] font-black uppercase flex items-center gap-1">
+                            <CheckCircle2 size={10} /> Xong
+                          </div>
+                        ) : (
+                          <div className="bg-white text-gray-600 px-2 py-0.5 rounded text-[9px] font-black uppercase flex items-center gap-1 border">
+                            <Clock size={10} className="text-orange-400" /> Đang học
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className="text-[13px] font-black mb-2 line-clamp-2 text-[#18181B] leading-tight uppercase italic h-8">
+                      {item.title}
+                    </h3>
+
+                    <div className="flex justify-between items-center text-[11px] mb-2 font-bold border-t pt-2">
+                      <span className="text-blue-600">{item.displayCardCount} thẻ</span>
+                      <span className={isCompleted ? "text-green-500" : "text-orange-500"}>{item.displayProgress}%</span>
+                    </div>
+
+                    <div className="w-full h-1 bg-gray-100 rounded-full mb-4">
+                      <div className={`h-full rounded-full ${isCompleted ? "bg-green-500" : "bg-orange-400"}`} style={{ width: `${item.displayProgress}%` }}></div>
+                    </div>
+
+                    {role === "ADMIN" ? (
+                      <button onClick={() => navigate(`/admin/flashcards/edit/${item._id}`)} className="w-full bg-slate-50 text-slate-600 py-2 rounded-lg font-black text-[10px] uppercase hover:bg-gray-900 hover:text-white transition-all border border-slate-100 flex items-center justify-center gap-2">
+                        <Edit size={12} /> Chỉnh sửa
+                      </button>
+                    ) : (
+                      <button onClick={() => navigate(`/learner/flashcards/${item._id}`)} className={`w-full py-2 rounded-lg font-black text-[10px] uppercase text-white shadow-sm transition-all ${isCompleted ? "bg-green-600" : "bg-[#F26739]"}`}>
+                        {isCompleted ? "Ôn tập" : "Học ngay"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
+      </div>
 
-        <h2 className="text-xl font-black mb-6 text-[#18181B] border-l-4 border-[#F26739] pl-3 uppercase">
-          Thư viện Flashcards
-        </h2>
-
-        {/* Grid Flashcards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
-          {loading ? (
-            <div className="col-span-full py-20 flex flex-col items-center gap-2">
-              <Loader2 className="animate-spin text-orange-500 w-6 h-6" />
-              <p className="text-gray-400 text-xs">Đang tải dữ liệu...</p>
-            </div>
-          ) : currentItems.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200 text-xs uppercase font-medium">
-              Không tìm thấy bộ thẻ nào
-            </div>
-          ) : (
-            currentItems.map((item) => (
-              <div
-                key={item._id}
-                className="group relative flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
-              >
-                <div className="absolute top-3 right-3 z-10 flex gap-1">
-                  {role === "ADMIN" ? (
-                    <button
-                      onClick={(e) => handleDeleteFlashcard(e, item._id)}
-                      className="p-2 bg-orange-50 text-orange-600 rounded-lg shadow-sm border border-orange-100 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
-                      title="Xóa bộ thẻ"
-                    >
-                      <Trash2 size={14} strokeWidth={2.5} />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate("/learner/suco", {
-                          state: { reportTarget: "flashcards", targetId: item._id },
-                        });
-                      }}
-                      className="p-2 bg-red-50 text-red-500 rounded-lg shadow-sm border border-red-100 hover:bg-red-500 hover:text-white transition-all active:scale-90"
-                      title="Báo cáo sự cố"
-                    >
-                      <AlertCircle size={14} strokeWidth={2.5} />
-                    </button>
-                  )}
-                </div>
-
-                <div className="w-full h-[120px] overflow-hidden rounded-xl mb-3 bg-gray-50">
-                  <img
-                    src={item.displayThumbnail}
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    onError={(e) => (e.target.src = PLACEHOLDER)}
-                  />
-                </div>
-
-                <div className="flex flex-col flex-1">
-                  <h3 className="text-[14px] font-bold mb-2 line-clamp-2 text-[#18181B] h-10 leading-tight">
-                    {item.title}
-                  </h3>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-bold text-[#1473E6] bg-blue-50 px-2 py-0.5 rounded">
-                      {item.displayCardCount} thẻ
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-medium">
-                      Tiến độ: <span className="text-orange-500 font-bold">{item.displayProgress}%</span>
-                    </span>
-                  </div>
-
-                  {role === "ADMIN" ? (
-                    <button
-                      onClick={() => navigate(`/admin/flashcards/edit/${item._id}`)}
-                      className="w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-bold text-[12px] hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Edit size={14} /> Chỉnh sửa
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => navigate(`/learner/flashcards/${item._id}`)}
-                      className="w-full bg-[#F26739] text-white py-2 rounded-lg font-bold text-[12px] hover:bg-[#d9562d] transition-all active:scale-95"
-                    >
-                      Học ngay
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
+      {/* PHẦN CHUYỂN TRANG CỐ ĐỊNH Ở ĐÁY (STICKY BOTTOM) */}
+      <div className="bg-white border-t border-gray-100 px-6 py-3 flex items-center justify-between shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+        {/* Số trang bên trái */}
+        <div className="text-[14px] font-medium text-gray-700">
+          {currentPage} trang
         </div>
 
-        {/* Phân trang */}
-        {!loading && totalPages > 1 && (
-          <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 gap-4">
-            <span className="text-[12px] text-gray-500 font-medium">
-              Hiển thị {currentItems.length}/{filteredData.length} bộ thẻ
-            </span>
+        {/* Cụm điều hướng bên phải (Giống hình ảnh bạn gửi) */}
+        <div className="flex items-center gap-2">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+            className="flex items-center gap-1 px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all rounded-md"
+          >
+            <ChevronLeft size={18} />
+            <span className="text-[14px]">Previous</span>
+          </button>
 
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              <div className="flex gap-1">
-                {[...Array(totalPages)].map((_, i) => {
-                  const page = i + 1;
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all ${
-                          currentPage === page
-                            ? "bg-[#F26739] text-white shadow-md shadow-orange-200"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  }
-                  if (page === currentPage - 2 || page === currentPage + 2) {
-                    return <span key={page} className="text-gray-300 text-xs">...</span>;
-                  }
-                  return null;
-                })}
-              </div>
-
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => p - 1)}
-                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+          <div className="flex items-center gap-1 mx-2">
+            {[...Array(totalPages)].map((_, i) => {
+              const page = i + 1;
+              // Logic hiển thị rút gọn trang nếu quá nhiều (1, 2, 3... Next)
+              if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-[32px] h-8 flex items-center justify-center rounded-md text-[14px] font-medium transition-all ${
+                      currentPage === page
+                        ? "border border-gray-300 bg-white shadow-sm text-black font-bold"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              }
+              if (page === currentPage - 2 || page === currentPage + 2) {
+                return <span key={page} className="text-gray-400 px-1">...</span>;
+              }
+              return null;
+            })}
           </div>
-        )}
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+            className="flex items-center gap-1 px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all rounded-md"
+          >
+            <span className="text-[14px]">Next</span>
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );

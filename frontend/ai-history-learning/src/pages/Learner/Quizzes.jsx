@@ -94,10 +94,6 @@ const Quizzes = () => {
     currentPage * itemsPerPage
   );
 
-  const handleGoToHistory = () => {
-    navigate("/learner/quiz-results");
-  };
-
   return (
     <div className="flex-1 bg-[#FDFDFD] min-h-screen p-6 font-sans relative">
       <div className="max-w-[1400px] mx-auto">
@@ -114,16 +110,7 @@ const Quizzes = () => {
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            {role !== "ADMIN" && (
-              <button
-                onClick={handleGoToHistory}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-xs font-bold text-[#F26739] shadow-sm transition-all whitespace-nowrap active:scale-95"
-              >
-                <History size={16} className="text-blue-500" />
-                Lịch sử làm bài
-              </button>
-            )}
-
+            {/* Nút Lịch sử làm bài đã được xóa tại đây */}
             <div className="relative w-full md:w-[300px]">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"

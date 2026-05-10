@@ -23,7 +23,6 @@ const BaiGiang = () => {
     const fetchDetailDocument = async () => {
       try {
         setLoading(true);
-        // Gọi API lấy chi tiết tài liệu
         const res = await api.get(`/documents/${id}`);
         const data = res?.data?.data || res?.data || res;
         
@@ -45,42 +44,43 @@ const BaiGiang = () => {
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] gap-4">
-      <Loader2 className="animate-spin text-[#F26739]" size={48} />
-      <p className="text-gray-500 font-medium">Đang tải nội dung...</p>
+      <Loader2 className="animate-spin text-[#F26739]" size={40} />
+      <p className="text-gray-500 text-sm font-medium">Đang tải nội dung...</p>
     </div>
   );
 
   if (error || !lectureData) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] gap-4 p-5 text-center">
-      <AlertCircle className="text-red-500" size={60} />
-      <h2 className="text-2xl font-bold text-gray-800">{error}</h2>
-      <button onClick={() => navigate("/learner/documents")} className="mt-4 bg-[#F26739] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#d8562c] transition-all">
+      <AlertCircle className="text-red-500" size={48} />
+      <h2 className="text-xl font-bold text-gray-800">{error}</h2>
+      <button onClick={() => navigate("/learner/documents")} className="mt-2 bg-[#F26739] text-white px-5 py-2 rounded-lg font-bold shadow-md hover:bg-[#d8562c] transition-all text-sm">
         Quay lại danh sách
       </button>
     </div>
   );
 
   return (
-    <div className="flex flex-col items-center w-full min-h-screen bg-[#FAFAFA] p-5">
-      {/* Header Điều hướng */}
-      <div className="w-full max-w-[1113px] h-[53px] bg-white border border-gray-200 rounded-[10px] flex items-center px-[18px] mb-5 shadow-sm">
-        <button onClick={() => navigate("/learner/documents")} className="flex items-center gap-2 text-[18px] font-semibold text-black hover:text-[#F26739] transition-colors">
-          <ArrowLeft size={20} /> Trở về tài liệu
+    <div className="flex flex-col items-center w-full min-h-screen bg-[#FAFAFA] p-3 md:p-5">
+      {/* Header Điều hướng - Thu nhỏ max-width từ 1113px xuống 1000px */}
+      <div className="w-full max-w-[1000px] h-[48px] bg-white border border-gray-200 rounded-[8px] flex items-center px-4 mb-4 shadow-sm">
+        <button onClick={() => navigate("/learner/documents")} className="flex items-center gap-2 text-[15px] font-bold text-black hover:text-[#F26739] transition-colors">
+          <ArrowLeft size={18} /> Trở về tài liệu
         </button>
       </div>
 
-      <div className="w-full max-w-[1113px] min-h-[800px] bg-white rounded-[6px] p-[20px] flex flex-col gap-4 shadow-sm border border-gray-100 mb-10">
-        <h1 className="text-[24px] md:text-[28px] font-bold text-black uppercase border-b border-gray-100 pb-4">
+      {/* Khung nội dung chính - Thu nhỏ max-width và padding */}
+      <div className="w-full max-w-[1000px] bg-white rounded-[8px] p-4 md:p-5 flex flex-col gap-4 shadow-sm border border-gray-100 mb-6">
+        <h1 className="text-[20px] md:text-[24px] font-black text-black uppercase border-b border-gray-100 pb-3 tracking-tight">
           {lectureData.title}
         </h1>
 
-        {/* Tab Switcher */}
-        <div className="w-full h-[50px] bg-[#F4F4F5] rounded-[6px] p-1 flex items-center">
+        {/* Tab Switcher - Thu nhỏ chiều cao */}
+        <div className="w-full h-[44px] bg-[#F4F4F5] rounded-[8px] p-1 flex items-center">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 h-[42px] flex items-center justify-center rounded-[4px] text-[14px] font-bold transition-all ${
+              className={`flex-1 h-full flex items-center justify-center rounded-[6px] text-[13px] font-black transition-all ${
                 activeTab === tab ? "bg-white shadow-sm text-[#F26739]" : "text-[#09090B] opacity-50 hover:opacity-100"
               }`}
             >
@@ -90,18 +90,18 @@ const BaiGiang = () => {
         </div>
 
         {/* Nội dung các Tab */}
-        <div className="w-full flex-1 bg-white pt-4 flex flex-col">
-  {activeTab === "Thông tin" && (
-    /* ĐIỂM QUAN TRỌNG: Cấp chiều cao cố định cho thẻ bọc ngoài (ví dụ: 75vh hoặc 800px) */
-    <div className="w-full h-[75vh] min-h-[700px] flex flex-col border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      <DocumentViewer 
-        fileUrl={lectureData?.filePath} 
-        title={lectureData?.title} 
-      />
-    </div>
-  )}
+        <div className="w-full flex-1 bg-white pt-2 flex flex-col">
+          {activeTab === "Thông tin" && (
+            /* Thu nhỏ chiều cao khung xem tài liệu để vừa vặn hơn */
+            <div className="w-full h-[65vh] min-h-[550px] flex flex-col border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+              <DocumentViewer 
+                fileUrl={lectureData?.filePath} 
+                title={lectureData?.title} 
+              />
+            </div>
+          )}
 
-          {/* Truyền đúng ID cho các component con */}
+          {/* Các component con giữ nguyên logic truyền ID */}
           {activeTab === "Chat" && <ChatAI documentId={id} />}
           {activeTab === "Quizzes" && <Quizz lessonId={id} lectureTitle={lectureData.title} />}
           {activeTab === "FlashCard" && <FlashCard documentId={id} lectureTitle={lectureData.title} />}

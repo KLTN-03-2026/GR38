@@ -71,7 +71,6 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
   const scrollRef = useRef(null);
   const T = dark ? THEME.dark : THEME.light;
 
-  // Lấy dữ liệu ban đầu
   const fetchHistory = async () => {
     try {
       const res = await api.get(`/ai/chat-history/${documentId}`);
@@ -98,13 +97,11 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
   const handleAction = async (command, payload = null) => {
     if (isTyping) return;
     
-    // Nếu là click nút Giải thích mà chưa có từ khóa -> Mở Modal
     if (command === "giải thích" && !payload) { 
       setShowConceptModal(true); 
       return; 
     }
 
-    // Xác định nội dung hiển thị của người dùng
     let userText = "";
     if (payload) userText = `Giải thích khái niệm: ${payload}`;
     else if (command === "tóm tắt") userText = "Tóm tắt tài liệu này giúp tôi";
@@ -113,14 +110,12 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
 
     if (!userText.trim()) return;
 
-    // Hiển thị tin nhắn user lên UI ngay
     setMessages(prev => [...prev, { id: Date.now(), text: userText, sender: "user" }]);
     setInput("");
     setIsTyping(true);
 
     try {
       let res;
-      // Gọi đúng Endpoint dựa trên hành động
       if (command === "tóm tắt") {
         res = await api.post("/ai/generate-summary", { documentId });
         addAiMsg(`📋 **Tóm tắt tài liệu:**\n\n${res.data.data.summary}`);
@@ -128,13 +123,10 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
         res = await api.post("/ai/explain-concept", { documentId, concept: payload });
         addAiMsg(`🔍 **Giải thích cho "${payload}":**\n\n${res.data.data.explanation}`);
       } else {
-        // Chat thông thường từ Input
         res = await api.post("/ai/chat", { documentId, question: userText });
         addAiMsg(res.data.data.answer);
       }
-      
-      // Sau khi AI trả lời thành công, cập nhật lại Sidebar History
-      fetchHistory();
+      fetchHistory(); // Gọi lại để cập nhật lịch sử mới nhất
     } catch (err) { 
       console.error(err);
       addAiMsg("❌ Đã xảy ra lỗi khi kết nối với AI. Vui lòng thử lại sau."); 
@@ -145,11 +137,54 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
 
   const addAiMsg = (text) => setMessages(prev => [...prev, { id: Date.now(), text, sender: "ai" }]);
 
-  // Khi click vào một mục lịch sử cũ trên Sidebar
-  const loadHistoryToMainChat = () => {
-    if (history.length === 0) return;
-    const formatted = history.map((h, i) => ({
-      id: `old-${i}`,
+  // --- LOGIC TẠO KHUNG (SESSIONS) CHO LỊCH SỬ CHAT (MỚI) ---
+  // Do API trả về mảng phẳng (không có sessionId), chúng ta gộp các chat dựa trên thời gian.
+  // Các câu hỏi/trả lời diễn ra liên tục sẽ nằm trong 1 lịch sử chat.
+  const chatSessions = [];
+  let currentSession = null;
+  const SESSION_TIMEOUT_MINUTES = 30; // Khoảng cách > 30 phút giữa 2 lần chat sẽ tách thành lịch sử mới
+
+  history.forEach((msg) => {
+    const msgTime = new Date(msg.timestamp || Date.now());
+
+    if (!currentSession) {
+      // Khởi tạo phiên chat đầu tiên
+      currentSession = { 
+        label: msg.role === 'user' ? msg.content : "Phiên chat mới", 
+        messages: [msg],
+        lastTime: msgTime
+      };
+    } else {
+      const timeDiffMinutes = (msgTime - currentSession.lastTime) / (1000 * 60);
+
+      // Tách lịch sử mới nếu là tin nhắn của user VÀ cách lần chat trước đó quá lâu (nghĩa là lần ấn New Chat hoặc quay lại sau)
+      if (msg.role === 'user' && timeDiffMinutes > SESSION_TIMEOUT_MINUTES) {
+        chatSessions.push(currentSession);
+        currentSession = { 
+          label: msg.content, 
+          messages: [msg],
+          lastTime: msgTime
+        };
+      } else {
+        // Nếu chat liên tục -> Gộp chung vào lịch sử chat hiện tại
+        currentSession.messages.push(msg);
+        currentSession.lastTime = msgTime;
+        
+        // Cập nhật lại tiêu đề lịch sử nếu đoạn đầu chưa có
+        if (currentSession.label === "Phiên chat mới" && msg.role === 'user') {
+          currentSession.label = msg.content;
+        }
+      }
+    }
+  });
+  if (currentSession) chatSessions.push(currentSession);
+  chatSessions.reverse(); // Đảo ngược để lịch sử chat mới nhất nằm trên cùng
+
+  // Load khung chat được chọn vào màn hình chính
+  const loadSessionToMainChat = (sessionMessages) => {
+    if (!sessionMessages || sessionMessages.length === 0) return;
+    const formatted = sessionMessages.map((h, i) => ({
+      id: `old-${Date.now()}-${i}`,
       text: h.content,
       sender: h.role === 'assistant' ? 'ai' : 'user'
     }));
@@ -157,7 +192,7 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
   };
 
   return (
-    <div style={{ display: "flex", width: "100%", height: "90vh", background: T.chatBg, fontFamily: "'Inter', sans-serif", padding: 20, boxSizing: 'border-box' }}>
+    <div style={{ display: "flex", width: "100%", height: "85vh", background: T.chatBg, fontFamily: "'Inter', sans-serif", padding: 16, boxSizing: 'border-box' }}>
       <ConceptInputDialog 
         isOpen={showConceptModal} 
         onClose={() => setShowConceptModal(false)} 
@@ -166,112 +201,114 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
       />
 
       {/* --- SIDEBAR --- */}
-      <aside style={{ width: 280, borderRight: `1px solid ${T.sbBorder}`, display: 'flex', flexDirection: 'column', background: T.sidebar, borderRadius: '16px 0 0 16px' }}>
-        <div style={{ padding: 16, borderBottom: `1px solid ${T.sbBorder}`, margin: 12, borderRadius: 12, background: T.chatBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <aside style={{ width: 260, borderRight: `1px solid ${T.sbBorder}`, display: 'flex', flexDirection: 'column', background: T.sidebar, borderRadius: '16px 0 0 16px' }}>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.sbBorder}`, margin: 10, borderRadius: 12, background: T.chatBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: '#FEE2E2', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FileText size={18} color="#EF4444" />
+            <div style={{ width: 28, height: 28, background: '#FEE2E2', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={16} color="#EF4444" />
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.titleColor, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentTitle}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.titleColor, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentTitle}</div>
           </div>
-          <ChevronUp size={16} color={T.sbTitle} />
+          <ChevronUp size={14} color={T.sbTitle} />
         </div>
 
-        <div style={{ flex: 1, padding: '0 12px', overflowY: 'auto' }} className="custom-scroll">
+        <div style={{ flex: 1, padding: '0 10px', overflowY: 'auto' }} className="custom-scroll">
           <SectionTitle title="PHIÊN CHAT" T={T} />
-          <SidebarItem icon={<RotateCcw size={16}/>} label="Chat mới" T={T} onClick={() => setMessages([{ id: 'init', text: "Phiên chat mới. Hãy đặt câu hỏi!", sender: "ai" }])} />
-          <SidebarItem icon={<MessageSquare size={16}/>} label="Phiên hiện tại" active T={T} />
+          <SidebarItem icon={<RotateCcw size={15}/>} label="Chat mới" T={T} onClick={() => setMessages([{ id: 'init', text: "Phiên chat mới. Hãy đặt câu hỏi!", sender: "ai" }])} />
+          <SidebarItem icon={<MessageSquare size={15}/>} label="Phiên hiện tại" active T={T} />
           
           <SectionTitle title="LỊCH SỬ GẦN ĐÂY" T={T} />
           <div style={{ maxHeight: 150, overflowY: 'auto' }} className="custom-scroll">
-            {history.length > 0 ? (
-                // Chỉ lấy các câu hỏi của User để làm tiêu đề lịch sử
-                history.filter(h => h.role === 'user').slice(0, 10).map((h, i) => (
-                    <SidebarItem 
-                        key={i} 
-                        icon={<MessageCircle size={14} color={T.subColor}/>} 
-                        label={h.content} 
-                        T={T} 
-                        onClick={loadHistoryToMainChat}
-                    />
-                ))
+            {/* Render các khung chat đã được gộp */}
+            {chatSessions.length > 0 ? (
+              chatSessions.map((session, idx) => (
+                <SidebarItem 
+                  key={idx}
+                  icon={<MessageCircle size={13} color={T.subColor}/>} 
+                  label={session.label} 
+                  T={T} 
+                  onClick={() => loadSessionToMainChat(session.messages)}
+                />
+              ))
             ) : (
-                <div style={{ fontSize: 12, color: T.subColor, padding: '8px 12px', fontStyle: 'italic' }}>Chưa có lịch sử</div>
+                <div style={{ fontSize: 11, color: T.subColor, padding: '8px 12px', fontStyle: 'italic' }}>Chưa có lịch sử</div>
             )}
           </div>
 
           <SectionTitle title="CÔNG CỤ" T={T} />
           {QUICK_ACTIONS.map(qa => (
-            <SidebarItem key={qa.cmd} icon={<qa.Icon size={16} color={qa.color}/>} label={qa.label} T={T} onClick={() => handleAction(qa.cmd)} />
+            <SidebarItem key={qa.cmd} icon={<qa.Icon size={15} color={qa.color}/>} label={qa.label} T={T} onClick={() => handleAction(qa.cmd)} />
           ))}
 
           <SectionTitle title="HỆ THỐNG" T={T} />
-          <SidebarItem icon={<Search size={16}/>} label="Tìm kiếm chat" T={T} />
-          <SidebarItem icon={<Settings size={16}/>} label="Cài đặt" T={T} />
+          <SidebarItem icon={<Search size={15}/>} label="Tìm kiếm chat" T={T} />
+          <SidebarItem icon={<Settings size={15}/>} label="Cài đặt" T={T} />
         </div>
 
-        <div style={{ padding: 16, borderTop: `1px solid ${T.sbBorder}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={user?.profileImage || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover' }} />
+        <div style={{ padding: 12, borderTop: `1px solid ${T.sbBorder}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src={user?.profileImage || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"} style={{ width: 34, height: 34, borderRadius: 10, objectFit: 'cover' }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.titleColor }}>{user?.fullName || "Người Học"}</div>
-            <div style={{ fontSize: 11, color: T.subColor }}>{user?.email || "learner@gmail.com"}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.titleColor }}>{user?.fullName || "Người Học"}</div>
+            <div style={{ fontSize: 10, color: T.subColor }}>{user?.email || "learner@gmail.com"}</div>
           </div>
         </div>
       </aside>
 
       {/* --- MAIN CHAT --- */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', border: `1px solid ${T.sbBorder}`, borderRadius: '0 16px 16px 0', background: T.chatBg, overflow: 'hidden' }}>
-        <header style={{ padding: '16px 24px', borderBottom: `1px solid ${T.sbBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, background: '#6366f1', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bot color="#fff" size={24} />
+        <header style={{ padding: '12px 20px', borderBottom: `1px solid ${T.sbBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, background: '#6366f1', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bot color="#fff" size={20} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 700, color: T.titleColor }}>Trợ lý Giáo viên AI</span>
-                <span style={{ fontSize: 10, background: '#EEF2FF', color: '#6366f1', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>LEARNER</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: T.titleColor }}>Trợ lý Giáo viên AI</span>
+                <span style={{ fontSize: 9, background: '#EEF2FF', color: '#6366f1', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>AI</span>
               </div>
-              <div style={{ fontSize: 12, color: '#10B981' }}>● Sẵn sàng hỗ trợ</div>
+              <div style={{ fontSize: 11, color: '#10B981' }}>● Sẵn sàng hỗ trợ</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <HeaderBtn icon={dark ? <Sun size={18}/> : <Moon size={18}/>} T={T} onClick={() => setDark(!dark)} />
-            <HeaderBtn icon={<MoreHorizontal size={18}/>} T={T} />
+            <HeaderBtn icon={dark ? <Sun size={16}/> : <Moon size={16}/>} T={T} onClick={() => setDark(!dark)} />
+            <HeaderBtn icon={<MoreHorizontal size={16}/>} T={T} />
           </div>
         </header>
 
-        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px' }} className="custom-scroll">
+        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px' }} className="custom-scroll">
           {messages.map((msg, idx) => (
-            <div key={idx} style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div key={idx} style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
               <div style={{ 
-                padding: '12px 16px', borderRadius: 16, maxWidth: '80%', 
+                padding: '10px 14px', borderRadius: 14, maxWidth: '85%', 
                 background: msg.sender === 'user' ? '#6366f1' : T.msgAiBg, 
                 color: msg.sender === 'user' ? '#fff' : T.titleColor,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: msg.sender === 'ai' ? `1px solid ${T.sbBorder}` : 'none'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: msg.sender === 'ai' ? `1px solid ${T.sbBorder}` : 'none',
+                fontSize: 13.5, 
+                lineHeight: '1.5'
               }}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
               </div>
             </div>
           ))}
           {isTyping && (
-            <div style={{ textAlign: 'left', color: T.subColor, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Loader2 size={14} className="animate-spin" /> AI đang xử lý tài liệu...
+            <div style={{ textAlign: 'left', color: T.subColor, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Loader2 size={13} className="animate-spin" /> AI đang xử lý...
             </div>
           )}
         </div>
 
-        <div style={{ padding: '20px', borderTop: `1px solid ${T.sbBorder}` }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderTop: `1px solid ${T.sbBorder}` }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             {QUICK_ACTIONS.slice(0, 2).map(qa => (
-              <button key={qa.cmd} onClick={() => handleAction(qa.cmd)} style={{ border: `1px solid ${T.sbBorder}`, padding: '6px 14px', borderRadius: 20, fontSize: 12, background: T.chatBg, color: T.titleColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <qa.Icon size={14} color={qa.color} /> {qa.label}
+              <button key={qa.cmd} onClick={() => handleAction(qa.cmd)} style={{ border: `1px solid ${T.sbBorder}`, padding: '5px 12px', borderRadius: 20, fontSize: 11, background: T.chatBg, color: T.titleColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <qa.Icon size={13} color={qa.color} /> {qa.label}
               </button>
             ))}
           </div>
-          <div style={{ background: T.inputBg, border: `1px solid ${T.inputBorder}`, borderRadius: 12, padding: '8px 12px', display: 'flex', alignItems: 'center' }}>
+          <div style={{ background: T.inputBg, border: `1px solid ${T.inputBorder}`, borderRadius: 12, padding: '6px 10px', display: 'flex', alignItems: 'center' }}>
             <input 
-              style={{ flex: 1, border: 'none', background: 'none', outline: 'none', color: T.titleColor, fontSize: 14, padding: '8px' }}
-              placeholder="Nhập câu hỏi của bạn tại đây..."
+              style={{ flex: 1, border: 'none', background: 'none', outline: 'none', color: T.titleColor, fontSize: 13, padding: '6px' }}
+              placeholder="Nhập câu hỏi..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAction()}
@@ -281,11 +318,11 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
               onClick={() => handleAction()} 
               style={{ 
                 background: (isTyping || !input.trim()) ? '#A5A6F6' : '#6366f1', 
-                border: 'none', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 8, transition: '0.3s' 
+                border: 'none', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 6, transition: '0.3s' 
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 500 }}>Gửi</span>
-              <Send size={16} />
+              <span style={{ fontSize: 12, fontWeight: 500 }}>Gửi</span>
+              <Send size={14} />
             </button>
           </div>
         </div>
@@ -301,19 +338,19 @@ const ChatAI = ({ documentId, documentTitle = "Tài liệu chưa đặt tên" })
   );
 };
 
-const SectionTitle = ({ title, T }) => <div style={{ fontSize: 11, fontWeight: 700, color: T.sbTitle, margin: '20px 8px 8px 8px' }}>{title}</div>;
+const SectionTitle = ({ title, T }) => <div style={{ fontSize: 10, fontWeight: 700, color: T.sbTitle, margin: '16px 8px 6px 8px', letterSpacing: '0.05em' }}>{title}</div>;
 
 const SidebarItem = ({ icon, label, active, T, onClick }) => (
   <div onClick={onClick} style={{ 
-    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-    background: active ? T.sidebarActive : 'transparent', color: active ? '#6366f1' : T.sbText, marginBottom: 4, transition: '0.2s'
+    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
+    background: active ? T.sidebarActive : 'transparent', color: active ? '#6366f1' : T.sbText, marginBottom: 2, transition: '0.2s'
   }}>
-    {icon} <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+    {icon} <span style={{ fontSize: 12.5, fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
   </div>
 );
 
 const HeaderBtn = ({ icon, T, onClick }) => (
-  <button onClick={onClick} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${T.sbBorder}`, background: T.chatBg, color: T.sbText, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{icon}</button>
+  <button onClick={onClick} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${T.sbBorder}`, background: T.chatBg, color: T.sbText, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{icon}</button>
 );
 
 export default ChatAI;

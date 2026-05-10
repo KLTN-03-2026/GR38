@@ -31,25 +31,45 @@ const Quizzes = () => {
     try {
       setLoading(true);
       setError(null);
-      const docRes = await api.get("/documents");
-      const docs = docRes?.data?.data || docRes?.data || [];
 
-      if (Array.isArray(docs) && docs.length > 0) {
-        const quizPromises = docs.map((doc) =>
-          api.get(`/quizzes/document/${doc._id}`).catch(() => null)
-        );
-        const quizResponses = await Promise.all(quizPromises);
-        let allQuizzes = [];
-        quizResponses.forEach((res) => {
-          const data = res?.data?.data || res?.data || [];
-          if (Array.isArray(data)) allQuizzes = [...allQuizzes, ...data];
-        });
-        const uniqueQuizzes = Array.from(new Set(allQuizzes.map((q) => q._id)))
-          .map((id) => allQuizzes.find((q) => q._id === id))
-          .filter(Boolean);
-        setQuizData(uniqueQuizzes);
+      if (role === "ADMIN") {
+        // --- LOGIC CHO ADMIN: Lấy trực tiếp tất cả bài thi từ hệ thống ---
+        // Giúp Admin quản lý được cả những bài thi chưa được gán vào tài liệu nào
+        const response = await api.get("/quizzes/admin/all");
+        const data = response?.data?.data || response?.data || [];
+        setQuizData(Array.isArray(data) ? data : []);
+      } else {
+        // --- LOGIC CHO TEACHER/LEARNER: Lấy theo cấu trúc tài liệu (Logic cũ) ---
+        const docRes = await api.get("/documents");
+        const docs = docRes?.data?.data || docRes?.data || [];
+
+        if (Array.isArray(docs) && docs.length > 0) {
+          const quizPromises = docs.map((doc) =>
+            api.get(`/quizzes/document/${doc._id}`).catch(() => null),
+          );
+
+          const quizResponses = await Promise.all(quizPromises);
+          let allQuizzes = [];
+
+          quizResponses.forEach((res) => {
+            const data = res?.data?.data || res?.data || [];
+            if (Array.isArray(data)) allQuizzes = [...allQuizzes, ...data];
+          });
+
+          // Loại bỏ các bài thi trùng lặp nếu chúng xuất hiện ở nhiều tài liệu khác nhau
+          const uniqueQuizzes = Array.from(
+            new Set(allQuizzes.map((q) => q._id)),
+          )
+            .map((id) => allQuizzes.find((q) => q._id === id))
+            .filter(Boolean);
+
+          setQuizData(uniqueQuizzes);
+        } else {
+          setQuizData([]);
+        }
       }
     } catch (err) {
+      console.error("Lỗi khi tải bài thi:", err);
       setError("Không thể tải danh sách bài thi.");
     } finally {
       setLoading(false);
@@ -58,7 +78,7 @@ const Quizzes = () => {
 
   useEffect(() => {
     fetchAllQuizzes();
-  }, []);
+  }, [role]); // Cập nhật lại khi vai trò người dùng thay đổi
 
   const handleDeleteQuiz = (e, id) => {
     e.stopPropagation();
@@ -85,13 +105,13 @@ const Quizzes = () => {
   };
 
   const filteredQuizzes = quizData.filter((quiz) =>
-    quiz.title?.toLowerCase().includes(searchTerm.toLowerCase())
+    quiz.title?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const totalPages = Math.ceil(filteredQuizzes.length / itemsPerPage) || 1;
   const currentItems = filteredQuizzes.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   return (
@@ -104,13 +124,12 @@ const Quizzes = () => {
             </h1>
             <p className="text-xs text-gray-500 font-medium">
               {role === "ADMIN"
-                ? "Quản lý danh sách bài trắc nghiệm"
-                : "Chọn bài thi để bắt đầu ôn tập"}
+                ? "Quản trị viên: Quản lý toàn bộ bài thi hệ thống"
+                : "Học viên: Chọn bài thi để bắt đầu ôn tập"}
             </p>
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            {/* Nút Lịch sử làm bài đã được xóa tại đây */}
             <div className="relative w-full md:w-[300px]">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -169,7 +188,10 @@ const Quizzes = () => {
                           className="p-2 bg-blue-50 hover:bg-blue-500 rounded-lg text-blue-500 hover:text-white transition-all duration-200 border border-blue-100 shadow-sm group/btn"
                           title="Lịch sử làm bài"
                         >
-                          <History size={15} className="group-hover/btn:scale-110 transition-transform" />
+                          <History
+                            size={15}
+                            className="group-hover/btn:scale-110 transition-transform"
+                          />
                         </button>
                         <button
                           onClick={(e) => {
@@ -184,7 +206,10 @@ const Quizzes = () => {
                           className="p-2 bg-red-50 hover:bg-red-500 rounded-lg text-red-500 hover:text-white transition-all duration-200 border border-red-100 shadow-sm group/btn"
                           title="Báo cáo sự cố"
                         >
-                          <AlertCircle size={15} className="group-hover/btn:scale-110 transition-transform" />
+                          <AlertCircle
+                            size={15}
+                            className="group-hover/btn:scale-110 transition-transform"
+                          />
                         </button>
                       </div>
                     )}
@@ -249,6 +274,7 @@ const Quizzes = () => {
               )}
             </div>
 
+            {/* Pagination Controls */}
             <div className="flex flex-row justify-between items-center px-2 gap-4 w-full h-10 mt-4 mb-6">
               <div className="text-gray-500 font-medium text-xs w-[100px]">
                 {totalPages} trang
@@ -256,7 +282,9 @@ const Quizzes = () => {
               <div className="flex items-center gap-1">
                 <button
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   className="flex items-center gap-1 px-2 py-1 rounded bg-transparent disabled:opacity-30 hover:bg-gray-100 transition-colors text-xs"
                 >
                   <ChevronLeft size={14} /> <span>Trước</span>

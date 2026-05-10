@@ -29,11 +29,17 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
     try {
       setIsUpdating(true);
 
-      // Nội dung phản hồi được gửi lên API để người báo cáo nhận được
+      // 1. Nội dung này sẽ lưu vào DB và hiển thị cho NGƯỜI HỌC (Người báo cáo)
       const adminNotes =
         newStatus === "resolved"
-          ? "Cảm ơn bạn, Admin đã tiếp nhận và xử lý."
+          ? "Cảm ơn bạn, Admin đã tiếp nhận và xử lý khiếu nại này."
           : "Báo cáo không hợp lệ hoặc không đủ thông tin để xử lý.";
+
+      // 2. Nội dung này hiển thị cho ADMIN (Người đang thao tác)
+      const successMessage =
+        newStatus === "resolved"
+          ? "Đã duyệt báo cáo thành công!"
+          : "Đã từ chối báo cáo này.";
 
       const response = await api.patch(`reports/${report._id}/status`, {
         status: newStatus,
@@ -41,10 +47,10 @@ const ReportDetail = ({ report, onBack, onRefresh }) => {
       });
 
       if (response.data.success) {
-        // Hiển thị thông báo thành công kèm theo nội dung note đã gửi
+        // Hiển thị thông báo phù hợp với vai trò Admin
         await Swal.fire({
           title: "Thành công!",
-          text: adminNotes,
+          text: successMessage,
           icon: "success",
           confirmButtonColor: "#F26739",
           confirmButtonText: "Đóng",

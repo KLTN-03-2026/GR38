@@ -1,6 +1,44 @@
 import Flashcard from "#models/Flashcard.js";
 import FlashcardProgress from "#models/FlashcardProgress.js";
 
+const normalizeMemoryStatus = (value) => {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const map = {
+    "Chưa học": "Chưa thuộc",
+    "Đã ghi nhớ": "Đã nhớ",
+  };
+
+  const normalized = map[trimmed] || trimmed;
+  const allowed = new Set(["Chưa thuộc", "Đã nhớ"]);
+
+  return allowed.has(normalized) ? normalized : null;
+};
+
+const presentMemoryStatus = (value) => {
+  if (value === "Chưa học") return "Chưa thuộc";
+  if (value === "Đã ghi nhớ") return "Đã nhớ";
+  return value || "Chưa thuộc";
+};
+
+const sanitizeProgressStatuses = (progressDoc) => {
+  if (!progressDoc?.cardProgress) return;
+
+  progressDoc.cardProgress.forEach((cardProg) => {
+    const normalized = normalizeMemoryStatus(cardProg.memoryStatus);
+    if (normalized && normalized !== cardProg.memoryStatus) {
+      cardProg.memoryStatus = normalized;
+    }
+
+    if (!normalized) {
+      cardProg.memoryStatus = "Chưa thuộc";
+    }
+  });
+};
+
 // Hàm helper được di chuyển sang đây vì chỉ liên quan đến logic tiến độ
 const resolveFlashcardSetId = async ({ setId, cardId }) => {
   if (setId) {
@@ -47,7 +85,7 @@ export const getFlashcardSetWithProgress = async (req, res, next) => {
         difficulty: card.difficulty,
         isStarred: cardProg ? cardProg.isStarred : false,
         reviewCount: cardProg ? cardProg.reviewCount : 0,
-        memoryStatus: cardProg ? cardProg.memoryStatus : "Chưa học",
+        memoryStatus: presentMemoryStatus(cardProg?.memoryStatus),
         lastReviewed: cardProg ? cardProg.lastReviewed : null,
       };
     });
@@ -111,7 +149,7 @@ export const getFlashcardsByDocument = async (req, res, next) => {
         difficulty: card.difficulty,
         isStarred: cardProg ? cardProg.isStarred : false,
         reviewCount: cardProg ? cardProg.reviewCount : 0,
-        memoryStatus: cardProg ? cardProg.memoryStatus : "Chưa học",
+        memoryStatus: presentMemoryStatus(cardProg?.memoryStatus),
         lastReviewed: cardProg ? cardProg.lastReviewed : null,
       };
     });
@@ -216,6 +254,10 @@ export const reviewFlashcard = async (req, res, next) => {
       });
     }
 
+    // Normalize legacy values before validation
+    sanitizeProgressStatuses(progress);
+
+    const requestedStatus = normalizeMemoryStatus(req.body?.memoryStatus);
     let cardProg = progress.cardProgress.find(
       (cp) => cp.cardId.toString() === cardId,
     );
@@ -223,12 +265,16 @@ export const reviewFlashcard = async (req, res, next) => {
     if (cardProg) {
       cardProg.reviewCount += 1;
       cardProg.lastReviewed = new Date();
+      if (requestedStatus) {
+        cardProg.memoryStatus = requestedStatus;
+      }
     } else {
       progress.cardProgress.push({
         cardId: cardId,
         reviewCount: 1,
         lastReviewed: new Date(),
         isStarred: false,
+        memoryStatus: requestedStatus || "Chưa thuộc",
       });
     }
 

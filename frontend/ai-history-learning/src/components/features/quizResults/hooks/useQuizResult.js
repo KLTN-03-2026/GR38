@@ -2,23 +2,23 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { quizService } from "@/services/quizService";
 
-// ==========================================
-// useQuizResult - Custom Hook
-// Chứa toàn bộ state + logic fetch cho QuizResultDetail
-// ==========================================
 export default function useQuizResult() {
   const { resultId } = useParams();
 
   const [loading,             setLoading]             = useState(true);
-  const [attemptsList,        setAttemptsList]        = useState([]);   // Tất cả lần làm của quiz đó
-  const [activeAttemptId,     setActiveAttemptId]     = useState(null); // Lần đang xem chi tiết
-  const [apiDetail,           setApiDetail]           = useState(null); // Dữ liệu chi tiết 1 bài
+  const [attemptsList,        setAttemptsList]        = useState([]);
+  const [activeAttemptId,     setActiveAttemptId]     = useState(null);
+  const [apiDetail,           setApiDetail]           = useState(null);
   const [showDetailQuestions, setShowDetailQuestions] = useState(false);
   const [mounted,             setMounted]             = useState(false);
 
-  // ----------------------------------------
-  // Logic 1: Lấy danh sách lịch sử khi mount
-  // ----------------------------------------
+  // Helper: lấy _id từ quizId dù là string hay object
+  const getQuizId = (h) => {
+    if (!h.quizId) return null;
+    if (typeof h.quizId === "string") return h.quizId;
+    return h.quizId._id ?? null;
+  };
+
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 60);
 
@@ -26,70 +26,76 @@ export default function useQuizResult() {
       .then(res => {
         const allHistory = res.data?.data || res.data || [];
 
-        // Xác định resultId là ID của 1 lần làm cụ thể hay ID của quiz
-        const isResultId = allHistory.find(h => h._id === resultId);
+        // Case A: resultId trùng với _id của 1 lần làm → lấy quizId từ đó
+        const matchedAttempt = allHistory.find(h => h._id === resultId);
 
-        let filteredAttempts = [];
-        if (isResultId) {
-          // Lọc tất cả lần thi của cùng quiz đó
-          filteredAttempts = allHistory.filter(h => h.quizId?._id === isResultId.quizId?._id);
+        let targetQuizId;
+        if (matchedAttempt) {
+          targetQuizId = getQuizId(matchedAttempt);
         } else {
-          filteredAttempts = allHistory.filter(h => h.quizId?._id === resultId || h.quizId === resultId);
+          // Case B: resultId là quiz._id trực tiếp
+          targetQuizId = resultId;
         }
 
-        // Mới nhất lên đầu
-        filteredAttempts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const filtered = allHistory
+          .filter(h => getQuizId(h) === targetQuizId)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map(h => ({
+            _id:            h._id,
+            createdAt:      h.createdAt,
+            score:          h.correctAnswersCount ?? h.score ?? 0,
+            totalQuestions: h.totalQuestions
+              ?? (typeof h.quizId === "object" ? h.quizId?.questionCount : null)
+              ?? 0,
+          }));
 
-        setAttemptsList(filteredAttempts);
+        setAttemptsList(filtered);
       })
-      .catch(err => console.error(err))
+      .catch(err => console.error("[useQuizResult]", err))
       .finally(() => setLoading(false));
 
     return () => clearTimeout(t);
   }, [resultId]);
 
-  // ----------------------------------------
-  // Logic 2: Fetch chi tiết khi user chọn 1 lần
-  // ----------------------------------------
   useEffect(() => {
     if (!activeAttemptId) return;
     setLoading(true);
+    setShowDetailQuestions(false);
 
     quizService.getResultDetail(activeAttemptId)
       .then(res => {
         const raw           = res.data?.data ?? res.data;
         const fullQuestions = raw?.quizId?.questions || [];
 
-        // Ánh xạ đáp án đúng và đáp án user chọn
         const qs = fullQuestions.map(q => {
           let correctIdx = q.options.findIndex(opt => opt === q.correctAnswer);
-          if (correctIdx === -1) correctIdx = Number(q.correctAnswer || q.answer);
+          if (correctIdx === -1) correctIdx = Number(q.correctAnswer ?? q.answer ?? 0);
 
           let userIdx = null;
           if (raw?.answers) {
-            const ansInfo = raw.answers.find(a => String(a.questionId) === String(q._id));
-            if (ansInfo && ansInfo.selectedAnswer !== null) {
-              userIdx = q.options.findIndex(opt => opt === ansInfo.selectedAnswer);
-              if (userIdx === -1) userIdx = Number(ansInfo.selectedAnswer);
+            const ans = raw.answers.find(a => String(a.questionId) === String(q._id));
+            if (ans?.selectedAnswer != null) {
+              userIdx = q.options.findIndex(opt => opt === ans.selectedAnswer);
+              if (userIdx === -1) userIdx = Number(ans.selectedAnswer);
             }
           }
           return { ...q, answer: correctIdx, userAnswer: userIdx };
         });
 
+        const score    = raw?.correctAnswersCount ?? raw?.score ?? 0;
+        const total    = raw?.totalQuestions ?? fullQuestions.length ?? 0;
+        const answered = raw?.answers?.filter(a => a.selectedAnswer != null).length ?? score;
+
         setApiDetail({
-          quizTitle: raw?.quizId?.title || "Bài Kiểm Tra",
-          score:     raw?.correctAnswersCount ?? raw?.score ?? 0,
-          total:     raw?.totalQuestions ?? 10,
-          answered:  raw?.answers?.length ?? 0,
+          quizTitle: raw?.quizId?.title ?? "Bài Kiểm Tra",
+          score, total, answered,
           questions: qs.length > 0 ? qs : null,
         });
       })
+      .catch(err => console.error("[useQuizResult] detail error:", err))
       .finally(() => setLoading(false));
   }, [activeAttemptId]);
 
-  // ----------------------------------------
-  // Handler: quay lại danh sách
-  // ----------------------------------------
   const handleBack = () => {
     setActiveAttemptId(null);
     setApiDetail(null);
@@ -97,16 +103,8 @@ export default function useQuizResult() {
   };
 
   return {
-    // States
-    loading,
-    attemptsList,
-    activeAttemptId,
-    apiDetail,
-    showDetailQuestions,
-    mounted,
-    // Setters / Handlers
-    setActiveAttemptId,
-    setShowDetailQuestions,
-    handleBack,
+    loading, attemptsList, activeAttemptId, apiDetail,
+    showDetailQuestions, mounted,
+    setActiveAttemptId, setShowDetailQuestions, handleBack,
   };
 }

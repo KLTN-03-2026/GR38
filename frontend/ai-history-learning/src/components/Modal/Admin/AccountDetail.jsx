@@ -217,9 +217,6 @@ const AccountDetail = ({ account, onBack, onUpdate, onDelete }) => {
                   }
                   className="w-full p-3 bg-white border border-slate-200 rounded-xl font-semibold outline-none focus:ring-2 focus:ring-orange-100 cursor-pointer"
                 >
-                  {normalizeRole(formData.role) === "TEACHER" && (
-                    <option value="Chờ xử lý">Chờ xử lý</option>
-                  )}
                   <option value="Đang hoạt động">Đang hoạt động</option>
                   <option value="Đã vô hiệu hóa">Đã vô hiệu hóa</option>
                 </select>

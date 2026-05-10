@@ -32,7 +32,7 @@ const FlashcardDetail = () => {
           // Khởi tạo danh sách các thẻ đã thuộc từ dữ liệu server
           const initialMemorized = new Set(
             cards
-              .filter(card => card.memoryStatus === "Đã ghi nhớ")
+              .filter(card => card.memoryStatus === "Đã nhớ")
               .map(card => card._id)
           );
           setMemorizedIds(initialMemorized);
@@ -59,7 +59,7 @@ const FlashcardDetail = () => {
   const toggleMemorized = async (e, cardId) => {
     e.stopPropagation(); 
     const isCurrentlyMemorized = memorizedIds.has(cardId);
-    const newStatus = isCurrentlyMemorized ? "Chưa thuộc" : "Đã ghi nhớ";
+    const newStatus = isCurrentlyMemorized ? "Chưa thuộc" : "Đã nhớ";
     
     try {
         // 1. Gọi API cập nhật trạng thái lên server

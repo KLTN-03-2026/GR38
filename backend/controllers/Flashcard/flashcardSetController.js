@@ -1,4 +1,5 @@
 import Flashcard from "#models/Flashcard.js";
+import FlashcardProgress from "#models/FlashcardProgress.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
 
@@ -16,12 +17,36 @@ export const getAllFlashcardSets = async (req, res, next) => {
       .populate("documentId", "title thumbnail")
       .sort({ createdAt: -1 });
 
+    let progressMap = new Map();
+    if (req.user.role === USER_ROLES.LEARNER && flashcardSets.length > 0) {
+      const setIds = flashcardSets.map((set) => set._id);
+      const progressDocs = await FlashcardProgress.find({
+        userId: req.user._id,
+        flashcardSetId: { $in: setIds },
+      }).select("flashcardSetId cardProgress");
+
+      progressMap = new Map(
+        progressDocs.map((doc) => [doc.flashcardSetId.toString(), doc]),
+      );
+    }
+
     const mappedSets = flashcardSets.map((set) => {
       const setObj = set.toObject();
+      const totalCards = Array.isArray(setObj.cards) ? setObj.cards.length : 0;
+      const progressDoc = progressMap.get(setObj._id.toString());
+      const memorizedCount = progressDoc
+        ? progressDoc.cardProgress.filter(
+            (cardProg) => cardProg.memoryStatus === "Đã nhớ",
+          ).length
+        : 0;
+      const progressPercent = totalCards > 0
+        ? Math.round((memorizedCount / totalCards) * 100)
+        : 0;
       return {
         ...setObj,
         thumbnail: setObj.thumbnail || setObj.documentId?.thumbnail || null,
-        cardCount: Array.isArray(setObj.cards) ? setObj.cards.length : 0,
+        cardCount: totalCards,
+        progress: req.user.role === USER_ROLES.LEARNER ? progressPercent : 0,
       };
     });
 

@@ -34,7 +34,7 @@ components:
               example: 3
             memoryStatus:
               type: string
-              example: Đang ghi nhớ
+              example: Đã nhớ
             lastReviewed:
               type: string
               format: date-time

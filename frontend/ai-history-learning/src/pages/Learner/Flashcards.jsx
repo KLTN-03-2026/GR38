@@ -38,19 +38,22 @@ const Flashcards = () => {
       const formattedData = Array.isArray(rawData) ? rawData.map(item => {
         // Logic tính toán tiến độ dựa trên memoryStatus của từng card
         const cards = item.cards || [];
-        const memorizedCount = cards.filter(c => c.memoryStatus === "Đã ghi nhớ").length;
+        const memorizedCount = cards.filter(c => c.memoryStatus === "Đã nhớ").length;
         
         // Ưu tiên dùng item.progress từ server nếu có, 
         // nhưng nếu server chưa tính theo memoryStatus thì ta tính thủ công ở đây
         const calcProgress = cards.length > 0 
-          ? Math.round((memorizedCount / cards.length) * 100) 
-          : (item.progress || 0); 
+          ? Math.round((memorizedCount / cards.length) * 100)
+          : 0;
+        const displayProgress = Number.isFinite(item.progress)
+          ? item.progress
+          : calcProgress;
 
         return {
           ...item,
           displayThumbnail: item.thumbnail || item.documentId?.thumbnail || PLACEHOLDER,
           displayCardCount: item.cardCount || cards.length || 0,
-          displayProgress: calcProgress
+          displayProgress: displayProgress
         };
       }) : [];
 

@@ -36,8 +36,8 @@ const flashcardProgressSchema = new mongoose.Schema({
             },
             memoryStatus: {
                 type: String,
-                enum: ['Chưa học', 'Đang học', 'Đã nhớ'],
-                default: 'Chưa học'
+                enum: ['Chưa thuộc', 'Đã nhớ'],
+                default: 'Chưa thuộc'
             }
         }
     ]

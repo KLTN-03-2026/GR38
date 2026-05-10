@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { AlertCircle, ChevronsUpDown, Loader2, User, GraduationCap, History, X, CheckCircle2, Clock, MessageSquare } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, Loader2, History, X, CheckCircle2, Clock, MessageSquare } from "lucide-react";
 import Swal from "sweetalert2";
 import api from "../../lib/api";
 
@@ -11,7 +11,6 @@ const SuCo = () => {
 
   const [apiDataList, setApiDataList] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
-  const [userRoleSelection, setUserRoleSelection] = useState("");
 
   const [showHistory, setShowHistory] = useState(false);
   const [historyData, setHistoryData] = useState([]);
@@ -32,15 +31,11 @@ const SuCo = () => {
         nhomNoiDung: location.state.reportTarget,
         doiTuongCuThe: location.state.targetId || prev.doiTuongCuThe
       }));
-      
-      if (location.state.reportTarget === "giáo viên") {
-          setUserRoleSelection(location.state.role || "");
-      }
     }
   }, [location.state]);
 
   useEffect(() => {
-    if (!formData.nhomNoiDung || formData.nhomNoiDung === "giáo viên") {
+    if (!formData.nhomNoiDung) {
       setApiDataList([]);
       return;
     }
@@ -49,33 +44,54 @@ const SuCo = () => {
       setIsLoadingList(true);
       try {
         let endpoint = "";
+        let requestParams = {};
+
+        // GIỮ NGUYÊN LOGIC CHO TÀI LIỆU VÀ FLASHCARDS
         switch (formData.nhomNoiDung) {
-          case "tài liệu": endpoint = "/documents"; break;
-          case "quizzes": endpoint = "/quizzes"; break; 
-          case "flashcards": endpoint = "/flashcards"; break;
-          default: break;
+          case "tài liệu": 
+            endpoint = "/documents"; 
+            break;
+          case "flashcards": 
+            endpoint = "/flashcards"; 
+            break;
+          case "quizzes": 
+            // Nếu /quizzes không ra data, ta dùng logic lấy thông qua documents như trang Quizzes
+            endpoint = "/documents"; 
+            break;
+          default: 
+            break;
         }
 
         if (endpoint) {
-          const res = await api.get(endpoint);
-          
-          let dataPayload = [];
-          const responseData = res.data;
-
-          if (formData.nhomNoiDung === "quizzes") {
-            dataPayload = responseData.quizzes || responseData.data || responseData;
-          } else {
-            dataPayload = responseData.data || responseData;
-          }
+          const res = await api.get(endpoint, { params: requestParams });
+          let dataPayload = res.data?.data || res.data || [];
           
           if (!Array.isArray(dataPayload) && dataPayload.docs) {
             dataPayload = dataPayload.docs;
           }
 
-          const finalData = Array.isArray(dataPayload) ? dataPayload : [];
-          setApiDataList(finalData);
-          
-          console.log(`Dữ liệu tải cho ${formData.nhomNoiDung}:`, finalData);
+          // LOGIC RIÊNG CHO QUIZZES (Lấy Quiz từ danh sách Document)
+          if (formData.nhomNoiDung === "quizzes") {
+            const docs = Array.isArray(dataPayload) ? dataPayload : [];
+            const quizPromises = docs.map((doc) =>
+              api.get(`/quizzes/document/${doc._id}`).catch(() => null)
+            );
+            const quizResponses = await Promise.all(quizPromises);
+            let allQuizzes = [];
+            quizResponses.forEach((r) => {
+              const qData = r?.data?.data || r?.data || [];
+              if (Array.isArray(qData)) allQuizzes = [...allQuizzes, ...qData];
+            });
+            // Loại bỏ trùng lặp ID
+            const uniqueQuizzes = Array.from(new Set(allQuizzes.map((q) => q._id)))
+              .map((id) => allQuizzes.find((q) => q._id === id))
+              .filter(Boolean);
+            
+            setApiDataList(uniqueQuizzes);
+          } else {
+            // GIỮ NGUYÊN CHO TÀI LIỆU VÀ FLASHCARD
+            setApiDataList(Array.isArray(dataPayload) ? dataPayload : []);
+          }
         }
       } catch (err) {
         console.error("Fetch Error:", err);
@@ -111,7 +127,6 @@ const SuCo = () => {
         [name]: value, 
         doiTuongCuThe: (value === originalTarget) ? (originalId || "") : "" 
       });
-      setUserRoleSelection("");
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -124,13 +139,7 @@ const SuCo = () => {
     
     const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
-    if (formData.nhomNoiDung === "giáo viên") {
-      if (!userRoleSelection) newErrors.userRoleSelection = "Vui lòng chọn vai trò";
-      if (!formData.doiTuongCuThe || !isValidObjectId(formData.doiTuongCuThe)) {
-        Swal.fire({ icon: 'error', title: 'Thiếu đối tượng', text: 'Vui lòng báo cáo từ trang cá nhân của người dùng.' });
-        return false;
-      }
-    } else if (formData.nhomNoiDung) {
+    if (formData.nhomNoiDung) {
       if (!formData.doiTuongCuThe || !isValidObjectId(formData.doiTuongCuThe)) {
         newErrors.doiTuongCuThe = "Vui lòng chọn một mục cụ thể";
         Swal.fire({ icon: 'warning', title: 'Chưa chọn đối tượng', text: 'Vui lòng chọn một mục cụ thể từ danh sách.' });
@@ -154,8 +163,7 @@ const SuCo = () => {
       const targetTypeMap = { 
         "tài liệu": "Document", 
         "quizzes": "Quiz", 
-        "flashcards": "Flashcard", 
-        "giáo viên": "User" 
+        "flashcards": "Flashcard"
       };
 
       const issueTypeMapping = {
@@ -179,12 +187,10 @@ const SuCo = () => {
       if (response.data?.success) {
         Swal.fire({ icon: 'success', title: 'Thành công', text: response.data.message });
         setFormData({ nhomNoiDung: "", doiTuongCuThe: "", loaiBaoCao: "sai thông tin lịch sử", tieuDe: "", moTa: "" });
-        setUserRoleSelection("");
         setErrors({});
         setApiDataList([]);
       }
     } catch (err) {
-      console.error("Submit Error:", err.response?.data);
       Swal.fire({ 
         icon: 'error', 
         title: 'Lỗi gửi báo cáo', 
@@ -239,9 +245,9 @@ const SuCo = () => {
                       <p className="text-xs text-gray-600 line-clamp-2 italic">"{report.description}"</p>
                       {report.adminNotes && (
                         <div className="mt-2 bg-blue-50 border-l-2 border-blue-400 p-2 rounded-r">
-                           <p className="text-[11px] text-blue-700 flex items-center gap-1">
-                            <MessageSquare size={10}/> <strong>Phản hồi:</strong> {report.adminNotes}
-                           </p>
+                            <p className="text-[11px] text-blue-700 flex items-center gap-1">
+                             <MessageSquare size={10}/> <strong>Phản hồi:</strong> {report.adminNotes}
+                            </p>
                         </div>
                       )}
                     </div>
@@ -278,7 +284,6 @@ const SuCo = () => {
                 <option value="tài liệu">Tài liệu học tập</option>
                 <option value="quizzes">Bài kiểm tra (Quiz)</option> 
                 <option value="flashcards">Bộ thẻ ghi nhớ (Flashcards)</option>
-                <option value="giáo viên">Người Học / Giáo viên</option>
               </select>
               <ChevronsUpDown size={14} className="absolute right-3 top-3 opacity-40 pointer-events-none" />
             </div>
@@ -300,20 +305,7 @@ const SuCo = () => {
           </div>
         </div>
 
-        {formData.nhomNoiDung === "giáo viên" && (
-          <div className="flex flex-col gap-1">
-            <div className={`flex gap-4 p-2 bg-slate-50 rounded-lg border ${errors.userRoleSelection ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}>
-              <button type="button" onClick={() => { setUserRoleSelection("learner"); setErrors(prev => ({...prev, userRoleSelection: ""})); }} className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-md transition-all text-sm font-semibold ${userRoleSelection === "learner" ? "bg-[#F26739] text-white shadow-md" : "bg-white text-slate-600 border"}`}>
-                <User size={16} /> Người Học
-              </button>
-              <button type="button" onClick={() => { setUserRoleSelection("teacher"); setErrors(prev => ({...prev, userRoleSelection: ""})); }} className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-md transition-all text-sm font-semibold ${userRoleSelection === "teacher" ? "bg-[#F26739] text-white shadow-md" : "bg-white text-slate-600 border"}`}>
-                <GraduationCap size={16} /> Giáo viên
-              </button>
-            </div>
-          </div>
-        )}
-
-        {formData.nhomNoiDung && formData.nhomNoiDung !== "giáo viên" && (
+        {formData.nhomNoiDung && (
           <div className={`flex flex-col gap-2 p-4 bg-orange-50/50 border rounded-lg ${errors.doiTuongCuThe ? 'border-red-500' : 'border-orange-100'}`}>
             <label className="text-xs font-semibold text-orange-700 uppercase">Danh sách {formData.nhomNoiDung}</label>
             {isLoadingList ? (

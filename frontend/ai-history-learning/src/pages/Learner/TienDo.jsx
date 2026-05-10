@@ -22,7 +22,7 @@ const TienDo = () => {
     const fetchProgressData = async () => {
       try {
         setLoading(true);
-        // Gọi song song Dashboard và History để lấy đầy đủ dữ liệu hình ảnh nếu cần
+        // Gọi song song Dashboard và History
         const [dashRes, historyRes] = await Promise.all([
           api.get("/progress/dashboard"),
           api.get("/quizzes/my-history")
@@ -32,19 +32,41 @@ const TienDo = () => {
           const apiData = dashRes.data.data;
           const historyData = historyRes.data?.data || [];
 
+          // Đảm bảo lấy đúng các trường từ overview trong response API của bạn
           const formattedData = {
             stats: [
-              { id: 1, label: "Tổng ngày học", value: `${apiData.overview.totalStudyDays || 0} Ngày`, icon: <Calendar size={18}/> },
-              { id: 2, label: "Bài hoàn thành", value: (apiData.overview.completedQuizzes || 0).toLocaleString(), sub: "Tổng Quizzes", icon: <BookOpen size={18}/> },
-              { id: 3, label: "Chuỗi ngày", value: `${apiData.overview.studyStreak || 0} Ngày`, sub: "Học liên tục", icon: <Activity size={18}/> },
-              { id: 4, label: "Điểm trung bình", value: apiData.overview.averageScore || 0, icon: <GraduationCap size={18}/> },
+              { 
+                id: 1, 
+                label: "Tổng ngày học", 
+                value: `${apiData.overview?.totalStudyDays || 0} Ngày`, 
+                icon: <Calendar size={18}/> 
+              },
+              { 
+                id: 2, 
+                label: "Bài hoàn thành", 
+                value: (apiData.overview?.completedQuizzes || 0).toLocaleString(), 
+                sub: "Tổng Quizzes", 
+                icon: <BookOpen size={18}/> 
+              },
+              { 
+                id: 3, 
+                label: "Chuỗi ngày", 
+                value: `${apiData.overview?.studyStreak || 0} Ngày`, 
+                sub: "Học liên tục", 
+                icon: <Activity size={18}/> 
+              },
+              { 
+                id: 4, 
+                label: "Điểm trung bình", 
+                value: apiData.overview?.averageScore || 0, 
+                icon: <GraduationCap size={18}/> 
+              },
             ],
-            chartData: apiData.chartData.map(item => ({
+            chartData: (apiData.chartData || []).map(item => ({
               name: item.month,
               value: item.exercises
             })),
-            completedLessons: apiData.recent.quizzes.map((quiz, index) => {
-              // Tìm kiếm thông tin hình ảnh bổ sung từ history API nếu dashboard không trả về image
+            completedLessons: (apiData.recent?.quizzes || []).map((quiz, index) => {
               const detailedQuiz = historyData.find(h => h.id === quiz.id || h.quizId === quiz.id);
               
               return {
@@ -52,7 +74,6 @@ const TienDo = () => {
                 name: "Học viên",
                 email: `Điểm số: ${quiz.score}`,
                 lesson: quiz.title,
-                // Ưu tiên: Ảnh từ API > Ảnh chi tiết > Avatar mặc định
                 image: quiz.image || quiz.thumbnail || detailedQuiz?.quiz?.image || null, 
                 date: new Date(quiz.createdAt).toLocaleDateString('vi-VN')
               };
@@ -142,7 +163,6 @@ const TienDo = () => {
                 <div key={item.id} className="flex justify-between items-center group">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center overflow-hidden border border-orange-100">
-                      {/* LOGIC HÌNH ẢNH: Nếu có item.image thì hiện ảnh, không thì hiện avatar chữ */}
                       {item.image ? (
                         <img src={item.image} alt={item.lesson} className="w-full h-full object-cover" />
                       ) : (

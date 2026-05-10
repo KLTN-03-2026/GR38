@@ -196,7 +196,7 @@ const Flashcards = () => {
                           <Trash2 size={14} />
                         </button>
                       ) : (
-                        <button onClick={(e) => { e.stopPropagation(); navigate("/learner/suco", { state: { reportTarget: "flashcards", targetId: item._id } }); }} className="p-2 bg-white text-amber-500 rounded-lg shadow-sm border hover:bg-amber-500 hover:text-white">
+                        <button onClick={(e) => { e.stopPropagation(); navigate("/learner/suco", { state: { reportTarget: "flashcards", targetId: item._id } }); }} className="p-2 bg-white text-red-500 rounded-lg shadow-sm border hover:bg-red-500 hover:text-white">
                           <AlertCircle size={14} />
                         </button>
                       )}
@@ -218,7 +218,7 @@ const Flashcards = () => {
                       </div>
                     </div>
 
-                    <h3 className="text-[13px] font-black mb-2 line-clamp-2 text-[#18181B] leading-tight uppercase italic h-8">
+                    <h3 className="text-[13px] font-black mb-2 line-clamp-2 text-[#18181B] leading-tight uppercase font-bold h-8">
                       {item.title}
                     </h3>
 
@@ -255,7 +255,7 @@ const Flashcards = () => {
           {currentPage} trang
         </div>
 
-        {/* Cụm điều hướng bên phải (Giống hình ảnh bạn gửi) */}
+        {/* Cụm điều hướng bên phải */}
         <div className="flex items-center gap-2">
           <button
             disabled={currentPage === 1}
@@ -269,7 +269,6 @@ const Flashcards = () => {
           <div className="flex items-center gap-1 mx-2">
             {[...Array(totalPages)].map((_, i) => {
               const page = i + 1;
-              // Logic hiển thị rút gọn trang nếu quá nhiều (1, 2, 3... Next)
               if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
                 return (
                   <button
@@ -286,7 +285,7 @@ const Flashcards = () => {
                 );
               }
               if (page === currentPage - 2 || page === currentPage + 2) {
-                return <span key={page} className="text-gray-400 px-1">...</span>;
+                return <span key={page} className="text-gray-400 px-1 font-bold">...</span>;
               }
               return null;
             })}

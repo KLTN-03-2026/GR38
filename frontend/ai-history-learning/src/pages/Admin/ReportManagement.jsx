@@ -27,9 +27,15 @@ const ReportManagement = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalReports, setTotalReports] = useState(0);
 
+  // Thêm state để lưu số lượng tổng cho các thẻ thống kê
+  const [stats, setStats] = useState({
+    pending: 0,
+    resolved: 0,
+    rejected: 0,
+  });
+
   const itemsPerPage = 5;
 
-  // Logic xử lý tách chuỗi [Tiêu đề] Nội dung
   const parseDescription = (rawContent = "") => {
     const match = rawContent.match(/^\[(.*?)\]\s*(.*)$/);
     if (match) {
@@ -64,6 +70,24 @@ const ReportManagement = () => {
     ...Object.values(ISSUE_TYPE_LABELS),
   ];
 
+  // Hàm lấy số liệu thống kê tổng (không phân trang)
+  const fetchAllStats = async () => {
+    try {
+      // Gọi API với limit lớn để lấy toàn bộ dữ liệu phục vụ đếm số lượng
+      const response = await api.get(`/reports?limit=9999`);
+      if (response.data.success) {
+        const allData = response.data.data;
+        setStats({
+          pending: allData.filter((r) => r.status === "pending").length,
+          resolved: allData.filter((r) => r.status === "resolved").length,
+          rejected: allData.filter((r) => r.status === "rejected").length,
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi khi lấy thống kê:", err);
+    }
+  };
+
   const fetchReports = async (page = 1, statusFilter = "") => {
     try {
       setLoading(true);
@@ -89,6 +113,7 @@ const ReportManagement = () => {
 
   useEffect(() => {
     fetchReports(1, filterStatus);
+    fetchAllStats(); // Cập nhật số liệu thống kê mỗi khi trạng thái lọc thay đổi
   }, [filterStatus]);
 
   const filteredReports = useMemo(() => {
@@ -109,18 +134,39 @@ const ReportManagement = () => {
     });
   }, [reports, searchQuery, filterType]);
 
+  // ... (các phần code phía trên giữ nguyên)
+
   const handleDelete = (id) => {
     Swal.fire({
-      title: "Xác nhận từ chối?",
-      text: "Báo cáo này sẽ được chuyển sang trạng thái Từ chối!",
+      title: "Xác nhận xóa báo cáo?",
+      text: "Dữ liệu này sẽ bị xóa vĩnh viễn và không thể khôi phục!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#F26739",
-      confirmButtonText: "Xác nhận",
+      confirmButtonColor: "#d33", // Đổi màu đỏ cho nút xóa
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xóa ngay",
       cancelButtonText: "Hủy",
     }).then((result) => {
-      if (result.isConfirmed) handleUpdateStatus(id, "rejected");
+      if (result.isConfirmed) {
+        confirmDelete(id);
+      }
     });
+  };
+
+  const confirmDelete = async (reportId) => {
+    try {
+      await api.delete(`/reports/${reportId}`);
+      Swal.fire("Đã xóa!", "Báo cáo đã được loại bỏ khỏi hệ thống.", "success");
+      fetchReports(currentPage, filterStatus);
+      fetchAllStats();
+    } catch (error) {
+      console.error("Lỗi khi xóa:", error);
+      Swal.fire(
+        "Lỗi!",
+        "Không thể xóa báo cáo này. Vui lòng thử lại.",
+        "error",
+      );
+    }
   };
 
   const handleUpdateStatus = async (reportId, newStatus) => {
@@ -131,6 +177,7 @@ const ReportManagement = () => {
       });
       Swal.fire("Thành công!", "Đã cập nhật trạng thái báo cáo.", "success");
       fetchReports(currentPage, filterStatus);
+      fetchAllStats();
     } catch (error) {
       Swal.fire("Lỗi!", "Không thể cập nhật trạng thái.", "error");
     }
@@ -161,7 +208,10 @@ const ReportManagement = () => {
       <ReportDetail
         report={viewingReport}
         onBack={() => setViewingReport(null)}
-        onRefresh={() => fetchReports(currentPage, filterStatus)}
+        onRefresh={() => {
+          fetchReports(currentPage, filterStatus);
+          fetchAllStats();
+        }}
       />
     );
   }
@@ -200,6 +250,8 @@ const ReportManagement = () => {
             onSelect={setFilterStatus}
           />
         </div>
+
+        {/* CÁC THẺ THỐNG KÊ HIỂN THỊ SỐ LIỆU TỔNG */}
         <div className="grid grid-cols-4 gap-4">
           <StatCard
             label="Tổng sự cố"
@@ -208,17 +260,17 @@ const ReportManagement = () => {
           />
           <StatCard
             label="Đã xử lý"
-            value={reports.filter((r) => r.status === "resolved").length}
+            value={stats.resolved}
             icon={<Wrench size={16} />}
           />
           <StatCard
             label="Chưa xử lý"
-            value={reports.filter((r) => r.status === "pending").length}
+            value={stats.pending}
             icon={<ClipboardList size={16} />}
           />
           <StatCard
             label="Từ chối"
-            value={reports.filter((r) => r.status === "rejected").length}
+            value={stats.rejected}
             icon={<AlertCircle size={16} />}
             isAlert
           />
@@ -293,7 +345,6 @@ const ReportManagement = () => {
                         {ISSUE_TYPE_LABELS[report.issueType] || "Khác"}
                       </span>
                     </td>
-                    {/* CHỈ HIỂN THỊ TITLE ĐÃ TÁCH */}
                     <td className="px-4 py-4 border-r border-gray-200 text-center font-medium text-slate-700 truncate max-w-[250px]">
                       {parseDescription(report.description).title}
                     </td>

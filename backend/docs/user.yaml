@@ -37,6 +37,10 @@ components:
           nullable: true
           description: "URL anh dai dien (luu tren Cloudinary hoac Google)"
           example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v123/avatar.jpg"
+        currentStreak:
+          type: integer
+          minimum: 0
+          example: 7
         createdAt:
           type: string
           format: date-time
@@ -85,6 +89,10 @@ paths:
                   type: string
                   format: binary
                   description: "File anh dai dien moi de tai len Cloudinary"
+                currentStreak:
+                  type: integer
+                  minimum: 0
+                  example: 7
           application/json:
             schema:
               type: object
@@ -96,6 +104,9 @@ paths:
                 profileImage:
                   type: string
                   description: "URL anh neu da co san"
+                currentStreak:
+                  type: integer
+                  minimum: 0
       responses:
         '200':
           description: Cap nhat thanh cong

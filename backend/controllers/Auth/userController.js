@@ -26,6 +26,7 @@ export const getProfile = async (req, res, next) => {
                 teacherApprovalStatus: user.teacherApprovalStatus,
                 isActive: user.isActive,
                 profileImage: user.profileImage,
+                currentStreak: user.currentStreak,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt
             }
@@ -46,7 +47,7 @@ export const getProfile = async (req, res, next) => {
  */
 export const updateProfile = async (req, res, next) => {
     try {
-        const { fullName, email, profileImage } = req.body;
+        const { fullName, email, profileImage, currentStreak } = req.body;
 
         const user = await User.findById(req.user._id);
         if (!user) {
@@ -84,6 +85,19 @@ export const updateProfile = async (req, res, next) => {
             user.profileImage = profileImage;
         }
 
+        // 4. Cập nhật currentStreak
+        if (currentStreak !== undefined) {
+            const streakNumber = Number(currentStreak);
+            if (!Number.isInteger(streakNumber) || streakNumber < 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'currentStreak phải là số nguyên không âm'
+                });
+            }
+
+            user.currentStreak = streakNumber;
+        }
+
         // Lưu thông tin
         await user.save();
 
@@ -97,6 +111,7 @@ export const updateProfile = async (req, res, next) => {
                 teacherApprovalStatus: user.teacherApprovalStatus,
                 isActive: user.isActive,
                 profileImage: user.profileImage, 
+                currentStreak: user.currentStreak,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt
             },

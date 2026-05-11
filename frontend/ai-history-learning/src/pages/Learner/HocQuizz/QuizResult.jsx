@@ -188,7 +188,7 @@ export default function QuizResultPage({ quiz: pQuiz, resultId: pResultId, score
           </div>
 
           <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-            <button onClick={() => navigate("/")} style={{ flex: 1, padding: "16px", background: "#1F2937", color: "#fff", border: "none", borderRadius: 16, fontWeight: 800, cursor: "pointer" }}>Trang chủ</button>
+            <button onClick={() => navigate("/")} style={{ flex: 1, padding: "16px", background: "#1473e6", color: "#fff", border: "none", borderRadius: 16, fontWeight: 800, cursor: "pointer" }}>Trang chủ</button>
             <button onClick={() => window.location.reload()} style={{ flex: 1, padding: "16px", background: "#F26739", color: "#fff", border: "none", borderRadius: 16, fontWeight: 800, cursor: "pointer" }}>Làm lại</button>
           </div>
 

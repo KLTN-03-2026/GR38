@@ -91,32 +91,33 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-
       {/* AUTH ROUTES */}
       <Route element={<PublicRoute />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
-
       {/* ADMIN ROUTES */}
+      // ... (các import giữ nguyên) // ADMIN ROUTES - Sửa lại phần này
       <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="content" element={<ReportManagement />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="documents" element={<DocumentsLearner />} />
-          <Route path="documents/:id" element={<BaiGiang />} />
-          <Route path="flashcards" element={<FlashcardsLearner />} />
-          <Route path="flashcards/:id" element={<FlashcardDetailLearner />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="documents/:id" element={<DocumentsDetailPage />} />
+          <Route path="baigiang/:id" element={<Baigiangpage />} />
+          <Route path="flashcards" element={<Flashcards />} />
+          <Route path="flashcards/add" element={<AddFlashcards />} />
           <Route path="flashcards/edit/:id" element={<AddFlashcards />} />
-          <Route path="quizzes" element={<QuizzesLearner />} />
-          <Route path="quizzes/:id" element={<HocQuiz />} />
-          <Route path="quizzes/edit/:id" element={<Baikiemtra />} />
+          <Route path="flashcards/:id" element={<FlashcardDetail />} />
+          <Route path="quizzes" element={<QuizPage />} />
+          <Route path="baikiemtra/:id" element={<Baikiemtra />} />
+          <Route path="quiz-result" element={<QuizResultPage />} />
+          <Route path="quizzes/result/:resultId" element={<KetQuaQuizz />} />
         </Route>
       </Route>
-
       {/* TEACHER ROUTES */}
       <Route element={<PrivateRoute allowedRole="TEACHER" />}>
         <Route path="/teacher" element={<AppLayout />}>
@@ -136,7 +137,6 @@ export default function AppRouter() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
-
       {/* LEARNER ROUTES */}
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<AppLayout />}>
@@ -156,7 +156,6 @@ export default function AppRouter() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
-
       {/* FALLBACK */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

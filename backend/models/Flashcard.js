@@ -48,6 +48,11 @@ const flashcardSchema = new mongoose.Schema({
         type: String,
         trim: true
     }],
+    starredBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: []
+    }],
     stats: {
         enrolledLearners: {
             type: Number,

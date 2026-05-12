@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,18 +22,24 @@ const DIFFICULTY_CONFIG = {
 export default function FlashcardPlayer({
   cards,
   onToggleMemorized,
+  onToggleStar,
   initialMemorized,
+  initialStarred,
   onComplete,
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [starred, setStarred] = useState(new Set());
+  const [starred, setStarred] = useState(() => new Set(initialStarred ?? []));
   const [seen, setSeen] = useState(new Set());
 
   // memorizedIds chỉ dùng khi học sinh truyền initialMemorized
   const [memorizedIds, setMemorizedIds] = useState(
     () => new Set(initialMemorized ?? []),
   );
+
+  useEffect(() => {
+    setStarred(new Set(initialStarred ?? []));
+  }, [initialStarred]);
 
   const normalizedCards = useMemo(() => {
     if (!Array.isArray(cards)) return null;
@@ -45,6 +51,14 @@ export default function FlashcardPlayer({
         (card.difficulty ?? "").toString().toLowerCase().trim() || null,
     }));
   }, [cards]);
+
+  useEffect(() => {
+    if (!normalizedCards) return;
+    if (currentIndex >= normalizedCards.length) {
+      setCurrentIndex(Math.max(0, normalizedCards.length - 1));
+      setIsFlipped(false);
+    }
+  }, [normalizedCards, currentIndex]);
 
   if (!normalizedCards) {
     return (
@@ -76,7 +90,7 @@ export default function FlashcardPlayer({
         className: "bg-gray-100 text-gray-600",
       })
     : null;
-  const isStarred = starred.has(currentIndex);
+  const isStarred = currentCard?._id ? starred.has(currentCard._id) : false;
   const isLearner = !!onToggleMemorized; // chỉ học sinh mới truyền prop này
   const isMemorized = memorizedIds.has(currentCard._id);
   const progressPercent =
@@ -99,14 +113,25 @@ export default function FlashcardPlayer({
     setIsFlipped((prev) => !prev);
   };
 
-  const toggleStar = (e) => {
+  const toggleStar = async (e) => {
     e.stopPropagation();
-    setStarred((prev) => {
-      const next = new Set(prev);
-      const wasStarred = next.has(currentIndex);
-      wasStarred ? next.delete(currentIndex) : next.add(currentIndex);
-      return next;
-    });
+    const cardId = currentCard?._id;
+    if (!cardId) return;
+
+    const wasStarred = starred.has(cardId);
+    const next = new Set(starred);
+    wasStarred ? next.delete(cardId) : next.add(cardId);
+    setStarred(next);
+
+    if (onToggleStar) {
+      try {
+        await onToggleStar(cardId, !wasStarred);
+      } catch {
+        const rollback = new Set(next);
+        wasStarred ? rollback.add(cardId) : rollback.delete(cardId);
+        setStarred(rollback);
+      }
+    }
   };
 
   const toggleMemorized = (e) => {

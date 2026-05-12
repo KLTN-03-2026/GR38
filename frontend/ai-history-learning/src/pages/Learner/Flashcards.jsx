@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   BarChart2,
+  Star
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "../../lib/api";
@@ -71,6 +72,7 @@ const Flashcards = () => {
         : [];
 
       setFlashcardSets(formattedData);
+      console.log("DATA TỪ API:", formattedData[0]);
     } catch (err) {
       setError("Không thể tải danh sách Flashcards.");
     } finally {
@@ -108,16 +110,18 @@ const Flashcards = () => {
     });
   };
 
-  const filteredData = flashcardSets.filter((item) => {
-    const matchesSearch = item.title
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    if (filterStatus === "completed")
-      return matchesSearch && item.displayProgress === 100;
-    if (filterStatus === "uncompleted")
-      return matchesSearch && item.displayProgress < 100;
-    return matchesSearch;
-  });
+ const filteredData = flashcardSets.filter((item) => {
+  const matchesSearch = item.title
+    ?.toLowerCase()
+    .includes(searchTerm.toLowerCase());
+  if (filterStatus === "completed")
+    return matchesSearch && item.displayProgress === 100;
+  if (filterStatus === "uncompleted")
+    return matchesSearch && item.displayProgress < 100;
+  if (filterStatus === "starred")
+    return matchesSearch && (item.isStarred === true || item.starred === true);
+  return matchesSearch;
+});
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const currentItems = filteredData.slice(
@@ -126,10 +130,11 @@ const Flashcards = () => {
   );
 
   const filterTabs = [
-    { id: "all", label: "Tất cả" },
-    { id: "uncompleted", label: "Chưa xong" },
-    { id: "completed", label: "Đã xong" },
-  ];
+  { id: "all",       label: "Tất cả" },
+  { id: "uncompleted", label: "Chưa xong" },
+  { id: "completed", label: "Đã xong" },
+  { id: "starred",   label: "Đã đánh dấu sao" },
+];
 
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F8] font-sans overflow-hidden">
@@ -153,9 +158,10 @@ const Flashcards = () => {
                     : "bg-white text-gray-500 border-gray-200 hover:border-orange-300 hover:text-orange-500"
                 }`}
               >
-                {tab.id === "all" && <BarChart2 size={14} />}
+                {tab.id === "all"         && <BarChart2 size={14} />}
                 {tab.id === "uncompleted" && <Clock size={14} />}
-                {tab.id === "completed" && <CheckCircle2 size={14} />}
+                {tab.id === "completed"   && <CheckCircle2 size={14} />}
+                {tab.id === "starred"     && <Star size={14} />}
                 {tab.label}
               </button>
             ))}
@@ -165,11 +171,10 @@ const Flashcards = () => {
           <div className="flex items-center justify-between mb-5">
             <div>
               <p className="text-[15px] font-bold text-[#18181B]">
-                {filterStatus === "all"
-                  ? "Tất cả Flashcard"
-                  : filterStatus === "uncompleted"
-                  ? "Chưa hoàn thành"
-                  : "Đã hoàn thành"}
+                {filterStatus === "all"         ? "Tất cả Flashcard"
+ : filterStatus === "uncompleted" ? "Chưa hoàn thành"
+ : filterStatus === "completed"   ? "Đã hoàn thành"
+ : "Đã đánh dấu sao"}
               </p>
               <p className="text-[12px] text-gray-400 mt-0.5">
                 {filteredData.length} bộ thẻ

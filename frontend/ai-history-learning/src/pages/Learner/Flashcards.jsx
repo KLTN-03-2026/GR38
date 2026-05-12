@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   Clock,
   BarChart2,
-  Star
+  Star,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "../../lib/api";
@@ -50,7 +50,7 @@ const Flashcards = () => {
         ? rawData.map((item) => {
             const cards = item.cards || [];
             const memorizedCount = cards.filter(
-              (c) => c.memoryStatus === "Đã nhớ"
+              (c) => c.memoryStatus === "Đã nhớ",
             ).length;
 
             const calcProgress =
@@ -97,9 +97,7 @@ const Flashcards = () => {
       if (result.isConfirmed) {
         try {
           const deleteUrl =
-            role === "ADMIN"
-              ? `/admin/flashcards/${id}`
-              : `/flashcards/${id}`;
+            role === "ADMIN" ? `/admin/flashcards/${id}` : `/flashcards/${id}`;
           await api.delete(deleteUrl);
           Swal.fire("Đã xóa!", "Bộ thẻ đã được gỡ bỏ.", "success");
           fetchFlashcards();
@@ -110,37 +108,38 @@ const Flashcards = () => {
     });
   };
 
- const filteredData = flashcardSets.filter((item) => {
-  const matchesSearch = item.title
-    ?.toLowerCase()
-    .includes(searchTerm.toLowerCase());
-  if (filterStatus === "completed")
-    return matchesSearch && item.displayProgress === 100;
-  if (filterStatus === "uncompleted")
-    return matchesSearch && item.displayProgress < 100;
-  if (filterStatus === "starred")
-    return matchesSearch && (item.isStarred === true || item.starred === true);
-  return matchesSearch;
-});
+  const filteredData = flashcardSets.filter((item) => {
+    const matchesSearch = item.title
+      ?.toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    if (filterStatus === "completed")
+      return matchesSearch && item.displayProgress === 100;
+    if (filterStatus === "uncompleted")
+      return matchesSearch && item.displayProgress < 100;
+    if (filterStatus === "starred")
+      return (
+        matchesSearch && (item.isStarred === true || item.starred === true)
+      );
+    return matchesSearch;
+  });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const currentItems = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const filterTabs = [
-  { id: "all",       label: "Tất cả" },
-  { id: "uncompleted", label: "Chưa xong" },
-  { id: "completed", label: "Đã xong" },
-  { id: "starred",   label: "Đã đánh dấu sao" },
-];
+    { id: "all", label: "Tất cả" },
+    { id: "uncompleted", label: "Chưa xong" },
+    { id: "completed", label: "Đã xong" },
+    { id: "starred", label: "Đã đánh dấu sao" },
+  ];
 
   return (
     <div className="flex flex-col h-screen bg-[#F8F8F8] font-sans overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
         <div className="max-w-[1400px] mx-auto">
-
           {/* Tiêu đề lớn */}
           <h1 className="text-2xl font-black text-[#18181B] uppercase mb-5 tracking-tight">
             Thư viện Flashcards
@@ -151,17 +150,20 @@ const Flashcards = () => {
             {filterTabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => { setFilterStatus(tab.id); setCurrentPage(1); }}
+                onClick={() => {
+                  setFilterStatus(tab.id);
+                  setCurrentPage(1);
+                }}
                 className={`flex items-center gap-2 px-5 py-2 rounded-full text-[13px] font-bold transition-all border ${
                   filterStatus === tab.id
                     ? "bg-[#F26739] text-white border-[#F26739] shadow-sm"
                     : "bg-white text-gray-500 border-gray-200 hover:border-orange-300 hover:text-orange-500"
                 }`}
               >
-                {tab.id === "all"         && <BarChart2 size={14} />}
+                {tab.id === "all" && <BarChart2 size={14} />}
                 {tab.id === "uncompleted" && <Clock size={14} />}
-                {tab.id === "completed"   && <CheckCircle2 size={14} />}
-                {tab.id === "starred"     && <Star size={14} />}
+                {tab.id === "completed" && <CheckCircle2 size={14} />}
+                {tab.id === "starred" && <Star size={14} />}
                 {tab.label}
               </button>
             ))}
@@ -171,10 +173,13 @@ const Flashcards = () => {
           <div className="flex items-center justify-between mb-5">
             <div>
               <p className="text-[15px] font-bold text-[#18181B]">
-                {filterStatus === "all"         ? "Tất cả Flashcard"
- : filterStatus === "uncompleted" ? "Chưa hoàn thành"
- : filterStatus === "completed"   ? "Đã hoàn thành"
- : "Đã đánh dấu sao"}
+                {filterStatus === "all"
+                  ? "Tất cả Flashcard"
+                  : filterStatus === "uncompleted"
+                    ? "Chưa hoàn thành"
+                    : filterStatus === "completed"
+                      ? "Đã hoàn thành"
+                      : "Đã đánh dấu sao"}
               </p>
               <p className="text-[12px] text-gray-400 mt-0.5">
                 {filteredData.length} bộ thẻ
@@ -202,7 +207,10 @@ const Flashcards = () => {
                 onClick={fetchFlashcards}
                 className="flex items-center gap-1.5 px-3 h-10 bg-white border border-gray-200 rounded-xl text-[12px] font-semibold text-gray-600 hover:bg-gray-50 shadow-sm"
               >
-                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                <RefreshCw
+                  size={14}
+                  className={loading ? "animate-spin" : ""}
+                />
                 Làm mới
               </button>
 
@@ -237,8 +245,7 @@ const Flashcards = () => {
                 return (
                   <div
                     key={item._id}
-                    className="group relative flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
-                  >
+className="group relative flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden h-[340px]"                  >
                     {/* Action buttons (hover) */}
                     <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                       {role === "ADMIN" ? (
@@ -267,7 +274,7 @@ const Flashcards = () => {
                     </div>
 
                     {/* Image */}
-                    <div className="relative w-full h-44 overflow-hidden bg-gray-50">
+                    <div className="relative w-full h-36 overflow-hidden bg-gray-50">
                       <img
                         src={item.displayThumbnail}
                         alt={item.title}
@@ -276,71 +283,84 @@ const Flashcards = () => {
                       />
                       {/* Badge trạng thái */}
                       <div className="absolute top-3 left-3">
-                        {isCompleted ? (
+                        {item.displayProgress === 100 ? (
                           <div className="bg-green-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow">
                             <CheckCircle2 size={10} /> Đã xong
                           </div>
                         ) : (
                           <div className="bg-white text-gray-600 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 border shadow">
-                            <Clock size={10} className="text-orange-400" /> Đang học
+                            <Clock size={10} className="text-orange-400" />
+                            {item.displayProgress > 0 ? "Đang học" : "Chưa học"}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-4 flex flex-col flex-1">
-                      {/* Title */}
-                      <h3 className="text-[14px] font-bold mb-3 line-clamp-2 text-[#18181B] leading-snug">
-                        {item.title}
-                      </h3>
+                 {/* Content */}
+<div className="p-4 flex flex-col flex-1 justify-between">
+  <div>
+    {/* Title */}
+    <h3 className="text-[15px] font-bold mb-3 line-clamp-2 text-[#18181B] leading-snug min-h-[40px]">
+      {item.title}
+    </h3>
 
-                      {/* Số thẻ + % */}
-                      <div className="flex items-center justify-between text-[12px] mb-2">
-                        <span className="text-gray-500">
-                          Số thẻ:{" "}
-                          <span className="text-[#F26739] font-bold">
-                            {item.displayCardCount} thẻ
-                          </span>
-                        </span>
-                        <span className={`font-bold ${isCompleted ? "text-green-500" : "text-orange-500"}`}>
-                          {item.displayProgress}%
-                        </span>
-                      </div>
+    {/* Số thẻ + % */}
+    <div className={`flex items-center justify-between text-[12px] ${filterStatus !== "starred" ? "mb-2" : "mb-0"}`}>
+      <span className="text-gray-500">
+        Số thẻ:{" "}
+        <span className="text-[#F26739] font-bold">
+          {item.displayCardCount} thẻ
+        </span>
+      </span>
+      {filterStatus !== "starred" && (
+        <span className={`font-bold ${isCompleted ? "text-green-500" : "text-orange-500"}`}>
+          {item.displayProgress}%
+        </span>
+      )}
+    </div>
 
-                      {/* Progress bar */}
-                      <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4">
-                        <div
-                          className={`h-full rounded-full transition-all ${isCompleted ? "bg-green-500" : "bg-[#F26739]"}`}
-                          style={{ width: `${item.displayProgress}%` }}
-                        />
-                      </div>
+    {/* Progress bar */}
+    {filterStatus !== "starred" && (
+      <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4">
+        <div
+          className={`h-full rounded-full transition-all ${isCompleted ? "bg-green-500" : "bg-[#F26739]"}`}
+          style={{ width: `${item.displayProgress}%` }}
+        />
+      </div>
+    )}
+  </div>
 
-                      {/* Buttons */}
-                      {role === "ADMIN" ? (
-                        <>
-                          <button
-                            onClick={() => navigate(`/learner/flashcards/${item._id}`)}
-                            className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white mb-2 transition-all ${isCompleted ? "bg-green-600 hover:bg-green-700" : "bg-[#F26739] hover:bg-orange-600"}`}
-                          >
-                            {isCompleted ? "Ôn tập" : "Học ngay"}
-                          </button>
-                          <button
-                            onClick={() => navigate(`/admin/flashcards/edit/${item._id}`)}
-                            className="w-full py-2.5 rounded-xl font-bold text-[13px] text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"
-                          >
-                            <Edit size={13} /> Chỉnh sửa
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => navigate(`/learner/flashcards/${item._id}`)}
-                          className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-all ${isCompleted ? "bg-green-600 hover:bg-green-700" : "bg-[#F26739] hover:bg-orange-600"}`}
-                        >
-                          {isCompleted ? "Ôn tập" : "Học ngay"}
-                        </button>
-                      )}
-                    </div>
+  {/* Buttons — luôn dính đáy */}
+  {role === "ADMIN" ? (
+    <>
+      <button
+        onClick={() => navigate(`/learner/flashcards/${item._id}`)}
+        className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white mb-2 transition-all ${isCompleted ? "bg-green-600 hover:bg-green-700" : "bg-[#F26739] hover:bg-orange-600"}`}
+      >
+        {isCompleted ? "Ôn tập" : "Học ngay"}
+      </button>
+      <button
+        onClick={() => navigate(`/admin/flashcards/edit/${item._id}`)}
+        className="w-full py-2.5 rounded-xl font-bold text-[13px] text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"
+      >
+        <Edit size={13} /> Chỉnh sửa
+      </button>
+    </>
+  ) : (
+    <button
+      onClick={() => navigate(`/learner/flashcards/${item._id}`, {
+        state: { starredOnly: filterStatus === "starred" },
+      })}
+      className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-all ${
+        item.displayProgress === 100
+          ? "bg-green-600 hover:bg-green-700"
+          : "bg-[#F26739] hover:bg-orange-600"
+      }`}
+    >
+      {item.displayProgress === 100 ? "Ôn tập" : item.displayProgress > 0 ? "Học tiếp" : "Học ngay"}
+    </button>
+  )}
+</div>
                   </div>
                 );
               })

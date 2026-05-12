@@ -82,6 +82,7 @@ export const getFlashcardSetWithProgress = async (req, res, next) => {
       return {
         _id: card._id,
         front: card.front,
+        back: card.back,
         difficulty: card.difficulty,
         isStarred: cardProg ? cardProg.isStarred : false,
         reviewCount: cardProg ? cardProg.reviewCount : 0,
@@ -146,6 +147,7 @@ export const getFlashcardsByDocument = async (req, res, next) => {
       return {
         _id: card._id,
         front: card.front,
+        back: card.back,
         difficulty: card.difficulty,
         isStarred: cardProg ? cardProg.isStarred : false,
         reviewCount: cardProg ? cardProg.reviewCount : 0,

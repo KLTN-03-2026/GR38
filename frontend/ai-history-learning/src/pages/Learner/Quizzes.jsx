@@ -149,7 +149,32 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
                     <RotateCcw size={13} /> Làm lại
                   </button>
                 </div>
-              </div>
+                 {/* ✅ THÊM: Navigation số câu hỏi */}
+  <div className="mt-3 flex flex-wrap gap-2">
+    {detail.questions.map((q, idx) => {
+      const isCorrect = q.userAnswer === q.answer;
+      const isSkipped = q.userAnswer === null || q.userAnswer === undefined;
+      
+      let bg = "bg-green-100 text-green-700 border-green-200";
+      if (isSkipped) bg = "bg-gray-100 text-gray-400 border-gray-200";
+      else if (!isCorrect) bg = "bg-red-100 text-red-500 border-red-200";
+
+      return (
+        <button
+          key={idx}
+          onClick={() => {
+            const el = document.getElementById(`q-detail-${idx}`);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+          className={`w-8 h-8 rounded-lg border text-[11px] font-bold transition hover:scale-110 ${bg}`}
+        >
+          {idx + 1}
+        </button>
+      );
+    })}
+  </div>
+</div>
+              
 
               {/* Questions */}
               <div className="flex-1 overflow-y-auto px-6 py-5 bg-gray-50 space-y-4">
@@ -158,6 +183,7 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
                   const isSkipped = q.userAnswer === null || q.userAnswer === undefined;
                   return (
                     <div key={q._id ?? idx}
+                      id={`q-detail-${idx}`}
                       className={`bg-white rounded-2xl border p-5 ${isSkipped ? "border-gray-200" : isCorrect ? "border-green-200" : "border-red-200"}`}
                       style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
                       <div className="flex items-start gap-3 mb-4">
@@ -169,7 +195,7 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
                           : isCorrect ? <CheckCircle size={17} className="text-green-500 shrink-0" />
                           : <XCircle size={17} className="text-red-400 shrink-0" />}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                      <div className="grid grid-cols-1 gap-2 mb-3">
                         {q.options?.map((opt, oIdx) => {
                           const isAns  = oIdx === q.answer;
                           const isUser = oIdx === q.userAnswer;
@@ -227,21 +253,33 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
               const p     = total > 0 ? Math.round((score / total) * 100) : 0;
               const c     = scoreColor(p);
               return (
-                <div key={attempt._id ?? idx}
-                  className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-4 hover:border-orange-200 hover:shadow-sm transition cursor-pointer"
-                  onClick={() => handleViewDetail(attempt)}>
-                  <ScoreCircle score={score} total={total} size={48} stroke={5} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400">
-                      {attempt.createdAt ? new Date(attempt.createdAt).toLocaleString("vi-VN") : ""}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-black" style={{ color: c }}>{score}/{total}</p>
-                    <p className="text-[10px] text-gray-400">câu đúng</p>
-                  </div>
-                  <ChevronRight size={14} className="text-gray-300 shrink-0" />
-                </div>
+               <div key={attempt._id ?? idx}
+  className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center gap-4 hover:border-orange-200 hover:shadow-sm transition cursor-pointer"
+  onClick={() => handleViewDetail(attempt)}>
+  
+  {/* Thêm số thứ tự */}
+  <span className="shrink-0 text-xs font-bold text-gray-400 w-5 text-center">
+    {idx + 1}
+  </span>
+  
+  <ScoreCircle score={score} total={total} size={48} stroke={5} />
+  <div className="flex-1 min-w-0">
+    <p className="text-xs text-gray-400">
+      {attempt.createdAt ? new Date(attempt.createdAt).toLocaleString("vi-VN") : ""}
+    </p>
+    {/* Thêm số câu đúng/sai/tổng */}
+    <div className="flex gap-3 mt-1 text-[11px] flex-wrap">
+      <span className="text-green-600 font-bold">✓ Đúng: {score}</span>
+      <span className="text-red-500 font-bold">✕ Sai: {total - score}</span>
+      <span className="text-gray-400">Tổng: {total} câu</span>
+    </div>
+  </div>
+  <div className="text-right shrink-0">
+    <p className="text-sm font-black" style={{ color: c }}>{score}/{total}</p>
+    <p className="text-[10px] text-gray-400">câu đúng</p>
+  </div>
+  <ChevronRight size={14} className="text-gray-300 shrink-0" />
+</div>
               );
             })}
           </div>
@@ -326,45 +364,49 @@ const Quizzes = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
               {currentItems.length > 0 ? currentItems.map(quiz => (
-                <div key={quiz._id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-                  style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                  {/* Thumbnail */}
-                  <div className="relative overflow-hidden">
-                    {quiz.thumbnail ? (
-                      <img src={quiz.thumbnail.startsWith("http") ? quiz.thumbnail : `${baseURL}/${quiz.thumbnail}`}
-                        alt={quiz.title} className="w-full h-40 object-cover bg-[#fdf3ec]" />
-                    ) : (
-                      <div className="w-full h-40 flex items-center justify-center" style={{ background: "#fdf3ec" }}>
-                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#F26739" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                <div key={quiz._id}
+  className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col h-[340px]"
+  style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
 
-                  {/* Body */}
-                  <div className="p-4">
-                    <p className="font-bold text-gray-800 text-[15px] mb-1 leading-snug line-clamp-2 uppercase tracking-wide">
-                      {quiz.title}
-                    </p>
-                    <p className="text-xs text-gray-400 mb-3">
-                      Số câu hỏi <span className="font-bold text-[#F26739]">{quiz.questionCount ?? 0} câu</span>
-                    </p>
+  {/* Thumbnail */}
+  <div className="relative overflow-hidden shrink-0">
+    {quiz.thumbnail ? (
+      <img src={quiz.thumbnail.startsWith("http") ? quiz.thumbnail : `${baseURL}/${quiz.thumbnail}`}
+        alt={quiz.title} className="w-full h-36 object-cover bg-[#fdf3ec]" />
+    ) : (
+      <div className="w-full h-36 flex items-center justify-center" style={{ background: "#fdf3ec" }}>
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#F26739" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        </svg>
+      </div>
+    )}
+  </div>
 
-                    <button onClick={() => navigate(`/learner/quizzes/${quiz._id}`)}
-                      className="w-full py-2.5 rounded-xl text-sm text-white font-semibold transition"
-                      style={{ background: "#F26739" }}>
-                      Làm bài ngay
-                    </button>
+  {/* Body */}
+  <div className="p-4 flex flex-col flex-1 justify-between">
+    <div>
+      <p className="font-bold text-gray-800 text-[15px] mb-1 leading-snug line-clamp-2 uppercase tracking-wide min-h-[40px]">
+        {quiz.title}
+      </p>
+      <p className="text-[13px] text-gray-400">
+        Số câu hỏi <span className="font-bold text-[#F26739]">{quiz.questionCount ?? 0} câu</span>
+      </p>
+    </div>
 
-                    {/* Lịch sử → mở modal, không navigate */}
-                    <button onClick={() => setHistoryQuiz(quiz)}
-                      className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-orange-200 text-xs text-orange-500 hover:bg-orange-50 transition">
-                      <Clock size={13} /> Lịch sử làm bài
-                    </button>
-                  </div>
-                </div>
+    <div>
+      <button onClick={() => navigate(`/learner/quizzes/${quiz._id}`)}
+        className="w-full py-2.5 rounded-xl text-[13px] text-white font-semibold transition mb-2"
+        style={{ background: "#F26739" }}>
+        Làm bài ngay
+      </button>
+      <button onClick={() => setHistoryQuiz(quiz)}
+        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-orange-200 text-[13px] text-orange-500 hover:bg-orange-50 transition">
+        <Clock size={13} /> Lịch sử làm bài
+      </button>
+    </div>
+  </div>
+</div>
               )) : (
                 <div className="col-span-full flex flex-col items-center justify-center py-20 gap-3 border-2 border-dashed border-gray-200 rounded-2xl">
                   <BookOpen size={32} className="text-gray-300" />
@@ -414,5 +456,4 @@ const Quizzes = () => {
     </div>
   );
 };
-
 export default Quizzes;

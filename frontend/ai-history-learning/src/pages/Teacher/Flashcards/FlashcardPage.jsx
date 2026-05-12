@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Search, Loader2, ChevronLeft, ChevronRight, AlertCircle,
-  Trash2, Edit, Plus, RefreshCw, CheckCircle2, Clock, BarChart2, Star
+  Trash2, Edit, Plus, RefreshCw, CheckCircle2, Clock, BarChart2, Star,
+  Library, FileText, PenLine, BookOpen, Sparkles, AlertTriangle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { flashcardService } from "@/services/flashcardSevice";
@@ -163,7 +164,6 @@ const Flashcards = () => {
   { key: "tat-ca",       icon: <Library size={15} />,  label: "Tất cả" },
   { key: "tai-lieu",     icon: <FileText size={15} />, label: "Theo tài liệu" },
   { key: "thu-cong",     icon: <PenLine size={15} />,  label: "Thủ công" },
-  { key: "danh-dau-sao", icon: <Star size={15} />,     label: "Đã đánh dấu sao" },
 ];
 
   return (

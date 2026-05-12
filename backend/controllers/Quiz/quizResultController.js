@@ -2,6 +2,7 @@ import Quiz from "#models/Quiz.js";
 import QuizResult from "#models/QuizResult.js";
 import { USER_ROLES } from "#models/User.js";
 import mongoose from "mongoose";
+import User from "#models/User.js";
 
 //@desc Nộp bài quiz và tự động chấm điểm
 //@route POST /api/v1/quizzes/:quizId/submit
@@ -9,7 +10,7 @@ import mongoose from "mongoose";
 export const submitQuiz = async (req, res, next) => {
   try {
     const { quizId } = req.params;
-    const { timeSpent = 0 } = req.body; // Khai báo biến timeSpent từ req.body
+    const { timeSpent = 0 } = req.body;
     const userAnswers = Array.isArray(req.body.userAnswers) ? req.body.userAnswers : [];
 
     if (!userAnswers.length) {
@@ -20,7 +21,6 @@ export const submitQuiz = async (req, res, next) => {
       });
     }
 
-    // 1. Tìm đề thi gốc để đối chiếu đáp án
     const quiz = await Quiz.findById(quizId);
     if (!quiz) {
       return res.status(404).json({
@@ -30,7 +30,6 @@ export const submitQuiz = async (req, res, next) => {
       });
     }
 
-    // 2. Map lại đáp án của user
     const answerMap = new Map(
       userAnswers
         .filter((ans) => ans && ans.questionId)
@@ -40,36 +39,57 @@ export const submitQuiz = async (req, res, next) => {
     let correctCount = 0;
     const totalQuestions = quiz.totalQuestions || quiz.questions.length;
 
-    // 3. Chấm điểm từng câu
     const processedAnswers = quiz.questions.map((q) => {
       const qIdStr = String(q._id);
       const selectedAnswer = answerMap.has(qIdStr) ? String(answerMap.get(qIdStr)).trim() : null;
-      
       const isCorrect = selectedAnswer === String(q.correctAnswer).trim();
       if (isCorrect) correctCount++;
-      return {
-        questionId: q._id,
-        selectedAnswer: selectedAnswer,
-        isCorrect: isCorrect,
-      };
+      return { questionId: q._id, selectedAnswer, isCorrect };
     });
 
-    // Xác định xem ai đang nộp bài (Giáo viên hay Người học)
-    const isTeacherPreview = req.user.role === USER_ROLES.TEACHER; 
+    const isTeacherPreview = req.user.role === USER_ROLES.TEACHER;
     const scoreSystem10 = totalQuestions > 0 ? (correctCount / totalQuestions) * 10 : 0;
-    const roundedScore = Math.round(scoreSystem10 * 100) / 100; 
+    const roundedScore = Math.round(scoreSystem10 * 100) / 100;
 
-    // 4. Lưu kết quả vào DB 
     const newResult = await QuizResult.create({
       userId: req.user._id,
       quizId: quiz._id,
-      score: roundedScore,                
-      correctAnswersCount: correctCount,  
-      totalQuestions: totalQuestions,
-      timeSpent: timeSpent,               
+      score: roundedScore,
+      correctAnswersCount: correctCount,
+      totalQuestions,
+      timeSpent,
       answers: processedAnswers,
-      isTeacherPreview: isTeacherPreview,
+      isTeacherPreview,
     });
+
+    // ✅ Cập nhật streak cho Learner
+    if (!isTeacherPreview) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const user = await User.findById(req.user._id).select("currentStreak lastStudyDate");
+
+      if (user) {
+        const lastStudy = user.lastStudyDate ? new Date(user.lastStudyDate) : null;
+        if (lastStudy) lastStudy.setHours(0, 0, 0, 0);
+
+        const todayTime = today.getTime();
+        const lastTime = lastStudy?.getTime();
+
+        if (!lastStudy || lastTime < todayTime) {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          if (lastStudy && lastTime === yesterday.getTime()) {
+            user.currentStreak += 1; // Liên tiếp → tăng
+          } else {
+            user.currentStreak = 1;  // Bỏ ngày → reset
+          }
+          user.lastStudyDate = today;
+          await user.save();
+        }
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -77,8 +97,8 @@ export const submitQuiz = async (req, res, next) => {
       data: {
         resultId: newResult._id,
         score: correctCount,
-        totalQuestions: totalQuestions,
-        isTeacherPreview: isTeacherPreview 
+        totalQuestions,
+        isTeacherPreview,
       },
     });
   } catch (error) {

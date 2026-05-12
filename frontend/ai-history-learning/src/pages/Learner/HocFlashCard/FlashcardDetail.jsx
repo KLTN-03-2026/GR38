@@ -7,6 +7,7 @@ const FlashcardDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
+  const starredOnly = location.state?.starredOnly ?? false;
 
   const [flashcardSet, setFlashcardSet] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,40 +34,32 @@ const FlashcardDetail = () => {
         }
 
         const baseCards = Array.isArray(raw.cards)
-          ? raw.cards.map((card) => ({
-              _id: card._id ?? card.id ?? null,
-              front: card.front ?? card.question ?? card.term ?? "",
-              back: card.back ?? card.answer ?? card.definition ?? "",
-              difficulty: card.difficulty ?? null,
-              memoryStatus: card.memoryStatus ?? null,
-              isStarred: card.isStarred ?? false,
-            }))
-          : [];
+  ? raw.cards.map((card) => ({
+      _id: card._id ?? card.id ?? null,
+      front: card.front ?? card.question ?? card.term ?? "",
+      back: card.back ?? card.answer ?? card.definition ?? "",
+      difficulty: card.difficulty ?? null,
+      memoryStatus: card.memoryStatus ?? null,
+      isStarred: card.isStarred ?? false,
+    }))
+  : [];
 
-        const withBack = await Promise.all(
-          baseCards.map(async (card) => {
-            if (card.back || !card._id) return card;
-            try {
-              const backRes = await api.get(`/flashcards/${id}/cards/${card._id}/back`);
-              const backData = backRes?.data?.data ?? backRes?.data ?? null;
-              return { ...card, back: backData?.back ?? "" };
-            } catch {
-              return card;
-            }
-          })
-        );
+        const displayCards = starredOnly
+  ? baseCards.filter((c) => c.isStarred)
+  : baseCards;
 
-        const starredCards = withBack.filter((c) => c.isStarred);
 
-        setFlashcardSet({
-          _id: raw._id,
-          title: raw.title ?? "Flashcard",
-          cards: starredCards,
-          initialMemorized: starredCards
-            .filter((c) => c.memoryStatus === "Đã nhớ")
-            .map((c) => c._id),
-          initialStarred: starredCards.map((c) => c._id),
-        });
+  setFlashcardSet({
+  _id: raw._id,
+  title: raw.title ?? "Flashcard",
+  cards: displayCards,
+  initialMemorized: displayCards
+    .filter((c) => c.memoryStatus === "Đã nhớ")
+    .map((c) => c._id),
+  initialStarred: displayCards
+    .filter((c) => c.isStarred)
+    .map((c) => c._id),
+});
 } catch {
   setError("Không tải được bộ flashcard. Vui lòng thử lại.");
   setFlashcardSet(null);
@@ -96,22 +89,22 @@ loadFlashcardSet();
       // handle silently
     }
   };
-
-  const handleToggleStar = async (cardId, newStarred) => {
-    if (!flashcardSet?._id) return;
-    await api.put(`/flashcards/${flashcardSet._id}/cards/${cardId}/star`);
-    setFlashcardSet((prev) => {
-      const updatedCards = prev.cards.map((c) =>
-        c._id === cardId ? { ...c, isStarred: newStarred } : c,
-      );
-      const starredCards = updatedCards.filter((c) => c.isStarred);
-      return {
-        ...prev,
-        cards: starredCards,
-        initialStarred: starredCards.map((c) => c._id),
-      };
-    });
-  };
+const handleToggleStar = async (cardId, newStarred) => {
+  if (!flashcardSet?._id) return;
+  await api.put(`/flashcards/${flashcardSet._id}/cards/${cardId}/star`);
+  setFlashcardSet((prev) => {
+    const updatedCards = prev.cards.map((c) =>
+      c._id === cardId ? { ...c, isStarred: newStarred } : c
+    );
+    return {
+      ...prev,
+      cards: updatedCards,                        
+      initialStarred: updatedCards
+        .filter((c) => c.isStarred)
+        .map((c) => c._id),
+    };
+  });
+};
 
   if (loading) {
     return (
@@ -138,21 +131,23 @@ loadFlashcardSet();
     );
   }
 
-  if ((flashcardSet?.cards ?? []).length === 0) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <p className="text-sm text-gray-500">
-          Chua co the nao duoc danh dau sao.
-        </p>
-        <button
-          onClick={() => navigate("/learner/flashcards")}
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Quay lai
-        </button>
-      </div>
-    );
-  }
+ if ((flashcardSet?.cards ?? []).length === 0) {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+      <p className="text-sm text-gray-500">
+        {starredOnly
+          ? "Bộ thẻ này chưa có thẻ nào được đánh dấu sao."
+          : "Bộ flashcard này chưa có thẻ nào."}
+      </p>
+      <button
+        onClick={() => navigate("/learner/flashcards")}
+        className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+      >
+        Quay lại
+      </button>
+    </div>
+  );
+}
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-6">
@@ -170,13 +165,14 @@ loadFlashcardSet();
       </div>
 
       {/* FlashcardPlayer — dùng chung với giáo viên, thêm prop onToggleMemorized */}
-      <FlashcardPlayer
-    cards={flashcardSet?.cards ?? []}
-    onToggleMemorized={handleToggleMemorized}
-    onToggleStar={handleToggleStar}
-    initialMemorized={flashcardSet?.initialMemorized ?? []}
-    initialStarred={flashcardSet?.initialStarred ?? []}
-    onComplete={() => navigate("/learner/flashcards", { state: { filterTab: "completed" } })}
+     <FlashcardPlayer
+  cards={flashcardSet?.cards ?? []}
+  onToggleMemorized={handleToggleMemorized}
+  onToggleStar={handleToggleStar}
+  initialMemorized={flashcardSet?.initialMemorized ?? []}
+  initialStarred={flashcardSet?.initialStarred ?? []}
+  onComplete={() => navigate("/learner/flashcards", { state: { filterTab: "completed" } })}
+  hideProgress={starredOnly} 
 />
     </div>
   );

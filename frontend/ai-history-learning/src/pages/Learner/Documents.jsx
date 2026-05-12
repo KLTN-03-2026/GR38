@@ -11,13 +11,7 @@ import {
 } from "lucide-react";
 import api from "../../lib/api";
 import Swal from "sweetalert2";
-
-// Import hình ảnh từ assets
-import Hinh1 from "@/assets/img/HinhChinh1.png";
-import Hinh2 from "@/assets/img/Hinhchinh2.jpg";
-import Hinh3 from "@/assets/img/Hinhchinh3.jpg";
-import Hinh4 from "@/assets/img/Hinhchinh4.jpg";
-import Hinh5 from "@/assets/img/Hinhchinh5.jpg";
+import BannerImg from "@/assets/img/Chien-Thang-Dien-Bie.jpg";
 
 const Documents = () => {
   const navigate = useNavigate();
@@ -28,19 +22,6 @@ const Documents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-
-  // Logic cho Carousel hình ảnh
-  const bannerImages = [Hinh1, Hinh2, Hinh3, Hinh4, Hinh5];
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentImageIndex((prevIndex) =>
-        prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1
-      );
-    }, 3000); // Chuyển hình mỗi 3 giây
-    return () => clearInterval(timer);
-  }, [bannerImages.length]);
 
   const fetchDocuments = async () => {
     try {
@@ -57,7 +38,6 @@ const Documents = () => {
       }
       setAllDocuments(finalData);
     } catch (err) {
-      console.error("Lỗi lấy danh sách tài liệu:", err);
       setError(
         err.response?.status === 401
           ? "Phiên đăng nhập đã hết hạn."
@@ -114,7 +94,7 @@ const Documents = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg border border-red-100 p-6 md:p-10 mx-auto w-full max-w-[1113px]">
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg border border-red-100 p-6 md:p-10 mx-auto w-full max-w-[1400px]">
         <AlertCircle className="text-red-500 w-12 h-12 mb-4" />
         <h2 className="text-xl font-bold text-gray-800 mb-2">Thông báo</h2>
         <p className="text-gray-600 mb-6 text-center">{error}</p>
@@ -129,40 +109,31 @@ const Documents = () => {
   }
 
   return (
-    <div className="bg-[#FFFFFF] rounded-[6px] p-[12px] md:p-[15px] flex flex-col gap-[15px] w-full max-w-[1000px] min-h-[600px] mx-auto shadow-sm border border-gray-100 transition-all">
-      
-      {/* PHẦN HÌNH ẢNH SLIDESHOW (Carousel) */}
-      <div className="relative w-full h-[180px] md:h-[240px] rounded-lg overflow-hidden shadow-sm group">
-        {bannerImages.map((img, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentImageIndex ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <img
-              src={img}
-              alt={`Banner Lịch Sử ${index + 1}`}
-              className="w-full h-full object-cover"
-            />
-            {/* Overlay nhẹ để làm nổi bật hình ảnh */}
-            <div className="absolute inset-0 bg-black/5"></div>
-          </div>
-        ))}
-        {/* Indicators cho Slideshow */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-          {bannerImages.map((_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i === currentImageIndex ? "bg-orange-500 w-4" : "bg-white/50"
-              }`}
-            ></div>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col w-full min-h-screen bg-[#F8F8F8]">
 
-      <div className="flex flex-col gap-3">
+     {/* BANNER COVER */}
+<div className="relative rounded-md w-full h-[320px] md:h-[400px] overflow-hidden">
+  <img
+    src={BannerImg}
+    alt="Chiến Thắng Điện Biên Phủ"
+    className="w-full h-full object-cover object-center"
+  />
+  {/* Overlay gradient */}
+  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+  {/* Text overlay */}
+  <div className="absolute bottom-6 left-8">
+    <h1 className="text-white text-2xl md:text-3xl font-black uppercase tracking-wide drop-shadow-lg">
+      Tài liệu học tập
+    </h1>
+    <p className="text-white/80 text-sm mt-1 drop-shadow">
+      Khám phá lịch sử Việt Nam qua các bài học
+    </p>
+  </div>
+</div>
+      {/* NỘI DUNG */}
+      <div className="bg-white flex flex-col gap-[15px] w-full max-w-[1400px] min-h-[600px] mx-auto p-[12px] md:p-[20px]">
+
+        {/* SEARCH */}
         <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -181,137 +152,135 @@ const Documents = () => {
             Tìm kiếm
           </button>
         </div>
-        <h2 className="font-semibold text-[20px] md:text-[24px] text-black">
-          Tài liệu học tập
-        </h2>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[15px] w-full flex-1">
-        {loading ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-16">
-            <Loader2 className="animate-spin text-orange-500 w-8 h-8 mb-2" />
-            <span className="font-medium text-[14px] text-gray-500">
-              Đang truy xuất dữ liệu...
-            </span>
-          </div>
-        ) : filteredDocs.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center px-4">
-            <p className="text-[14px]">Hiện chưa có tài liệu nào khả dụng.</p>
-          </div>
-        ) : (
-          currentItems.map((doc) => (
-            <div
-              key={doc._id}
-              className="bg-white rounded-[8px] flex flex-col p-[10px] gap-[10px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 group h-fit relative"
-              onClick={() => {
-                const basePath = role === "ADMIN" ? "/admin" : "/learner";
-                navigate(`${basePath}/documents/${doc._id}`);
-              }}
-            >
-              {role === "ADMIN" && (
-                <button
-                  onClick={(e) => handleDeleteDocument(e, doc._id)}
-                  className="absolute top-3 left-3 z-20 p-1.5 bg-white/90 hover:bg-red-500 rounded-full text-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
-                  title="Xóa tài liệu này"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-
-              {role !== "ADMIN" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate("/learner/suco", {
-                      state: { reportTarget: "tài liệu", targetId: doc._id },
-                    });
-                  }}
-                  className="absolute top-3 right-3 z-20 p-1.5 bg-white/80 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors border border-gray-100"
-                  title="Báo cáo lỗi tài liệu này"
-                >
-                  <AlertCircle size={16} />
-                </button>
-              )}
-
-              <div className="w-full h-[120px] rounded-[6px] bg-gray-100 overflow-hidden flex items-center justify-center">
-                {doc.thumbnail || doc.image ? (
-                  <img
-                    src={doc.thumbnail || doc.image}
-                    alt={doc.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                    <span className="text-orange-400 text-[10px] font-semibold">
-                      Lịch sử Việt Nam
-                    </span>
-                  </div>
+        {/* GRID */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[15px] w-full flex-1">
+          {loading ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16">
+              <Loader2 className="animate-spin text-orange-500 w-8 h-8 mb-2" />
+              <span className="font-medium text-[14px] text-gray-500">
+                Đang truy xuất dữ liệu...
+              </span>
+            </div>
+          ) : filteredDocs.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center px-4">
+              <p className="text-[14px]">Hiện chưa có tài liệu nào khả dụng.</p>
+            </div>
+          ) : (
+            currentItems.map((doc) => (
+              <div
+                key={doc._id}
+                className="bg-white rounded-[8px] flex flex-col p-[10px] gap-[10px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 group h-fit relative"
+                onClick={() => {
+                  const basePath = role === "ADMIN" ? "/admin" : "/learner";
+                  navigate(`${basePath}/documents/${doc._id}`);
+                }}
+              >
+                {role === "ADMIN" && (
+                  <button
+                    onClick={(e) => handleDeleteDocument(e, doc._id)}
+                    className="absolute top-3 left-3 z-20 p-1.5 bg-white/90 hover:bg-red-500 rounded-full text-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
+                    title="Xóa tài liệu này"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 )}
-              </div>
 
-              <div className="flex flex-col gap-1.5">
-                <h3 className="font-bold text-[15px] text-gray-800 line-clamp-1 group-hover:text-orange-500 transition-colors">
-                  {doc.title}
-                </h3>
-                <div className="flex flex-wrap justify-between items-center gap-2">
-                  <div className="px-2 py-0.5 bg-blue-500 rounded-full text-white text-[9px] font-bold uppercase">
-                    Bài học
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-[10px] text-gray-500 font-medium">
-                      {doc.flashcardCount || 0} Flashcards
-                    </span>
-                    <span className="text-[10px] text-gray-500 font-medium">
-                      {doc.quizCount || 0} Quizzes
-                    </span>
+                {role !== "ADMIN" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate("/learner/suco", {
+                        state: { reportTarget: "tài liệu", targetId: doc._id },
+                      });
+                    }}
+                    className="absolute top-3 right-3 z-20 p-1.5 bg-white/80 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors border border-gray-100"
+                    title="Báo cáo lỗi tài liệu này"
+                  >
+                    <AlertCircle size={16} />
+                  </button>
+                )}
+
+                <div className="w-full h-[120px] rounded-[6px] bg-gray-100 overflow-hidden flex items-center justify-center">
+                  {doc.thumbnail || doc.image ? (
+                    <img
+                      src={doc.thumbnail || doc.image}
+                      alt={doc.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                      <span className="text-orange-400 text-[10px] font-semibold">
+                        Lịch sử Việt Nam
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="font-bold text-[15px] text-gray-800 line-clamp-1 group-hover:text-orange-500 transition-colors">
+                    {doc.title}
+                  </h3>
+                  <div className="flex flex-wrap justify-between items-center gap-2">
+                    <div className="px-2 py-0.5 bg-blue-500 rounded-full text-white text-[9px] font-bold uppercase">
+                      Bài học
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        {doc.flashcardCount || 0} Flashcards
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        {doc.quizCount || 0} Quizzes
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="flex flex-col md:flex-row items-center justify-between px-2 py-3 border-t border-gray-50 mt-auto gap-3">
-        <span className="text-[13px] text-gray-500 font-medium order-2 md:order-1">
-          {currentPage} / {totalPages} trang
-        </span>
-        <div className="flex items-center gap-1 order-1 md:order-2">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
-            className="flex items-center gap-1 px-2 py-1 text-[13px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
-          >
-            <ChevronLeft size={16} />
-            <span className="hidden sm:inline">Previous</span>
-          </button>
-          <div className="flex gap-1">
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`min-w-[28px] h-7 rounded text-[13px] font-bold transition-all ${
-                  currentPage === i + 1
-                    ? "bg-orange-500 text-white shadow-sm"
-                    : "text-gray-400 hover:text-black"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            className="flex items-center gap-1 px-2 py-1 text-[13px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
-          >
-            <span className="hidden sm:inline">Next</span>
-            <ChevronRight size={16} />
-          </button>
+            ))
+          )}
         </div>
+
+        {/* PAGINATION */}
+        <div className="flex flex-col md:flex-row items-center justify-between px-2 py-3 border-t border-gray-50 mt-auto gap-3">
+          <span className="text-[13px] text-gray-500 font-medium order-2 md:order-1">
+            {currentPage} / {totalPages} trang
+          </span>
+          <div className="flex items-center gap-1 order-1 md:order-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              className="flex items-center gap-1 px-2 py-1 text-[13px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
+            >
+              <ChevronLeft size={16} />
+              <span className="hidden sm:inline">Previous</span>
+            </button>
+            <div className="flex gap-1">
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`min-w-[28px] h-7 rounded text-[13px] font-bold transition-all ${
+                    currentPage === i + 1
+                      ? "bg-orange-500 text-white shadow-sm"
+                      : "text-gray-400 hover:text-black"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              className="flex items-center gap-1 px-2 py-1 text-[13px] font-semibold text-gray-500 hover:text-orange-500 disabled:opacity-30"
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

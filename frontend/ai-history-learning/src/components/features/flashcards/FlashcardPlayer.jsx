@@ -26,6 +26,7 @@ export default function FlashcardPlayer({
   initialMemorized,
   initialStarred,
   onComplete,
+  hideProgress,  
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -42,15 +43,15 @@ export default function FlashcardPlayer({
   }, [initialStarred]);
 
   const normalizedCards = useMemo(() => {
-    if (!Array.isArray(cards)) return null;
-    return cards.map((card) => ({
-      _id: card._id ?? null,
-      front: card.front ?? card.q ?? card.question ?? "",
-      back: card.back ?? card.a ?? card.answer ?? "",
-      difficulty:
-        (card.difficulty ?? "").toString().toLowerCase().trim() || null,
-    }));
-  }, [cards]);
+  if (!Array.isArray(cards)) return null;
+  return cards.map((card) => ({
+    ...card, 
+    _id: card._id ?? null,
+    front: card.front ?? card.q ?? card.question ?? "",
+    back: card.back ?? card.a ?? card.answer ?? "",
+    difficulty: (card.difficulty ?? "").toString().toLowerCase().trim() || null,
+  }));
+}, [cards]);
 
   useEffect(() => {
     if (!normalizedCards) return;
@@ -331,51 +332,47 @@ export default function FlashcardPlayer({
         </button>
 
         {/* Giáo viên: số trang to ở giữa | Học sinh: progress bar */}
-        {isLearner ? (
-          <div className="flex flex-col items-center gap-1 flex-1 max-w-xs mx-4">
-            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#F26739] rounded-full transition-all duration-700"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between w-full">
-              <span className="text-[11px] font-bold text-gray-400 uppercase">
-                Tiến độ
-              </span>
-              <span className="text-[12px] font-black text-[#F26739]">
-                {progressPercent}%
-              </span>
-            </div>
-          </div>
-        ) : (
-          <span className="text-2xl font-black text-gray-900">
-            {currentIndex + 1}{" "}
-            <span className="text-sm font-medium text-gray-400">/ {total}</span>
-          </span>
-        )}
+       {isLearner && !hideProgress ? (  
+  <div className="flex flex-col items-center gap-1 flex-1 max-w-xs mx-4">
+    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-[#F26739] rounded-full transition-all duration-700"
+        style={{ width: `${progressPercent}%` }}
+      />
+    </div>
+    <div className="flex items-center justify-between w-full">
+      <span className="text-[11px] font-bold text-gray-400 uppercase">Tiến độ</span>
+      <span className="text-[12px] font-black text-[#F26739]">{progressPercent}%</span>
+    </div>
+  </div>
+) : (
+  <span className="text-2xl font-black text-gray-900">
+    {currentIndex + 1}{" "}
+    <span className="text-sm font-medium text-gray-400">/ {total}</span>
+  </span>
+)}
 
-        <button
+  <button
   type="button"
   onClick={
-    currentIndex >= total - 1 && isLearner && progressPercent === 100
+    currentIndex >= total - 1 && isLearner && !hideProgress && progressPercent === 100
       ? onComplete
       : goNext
   }
   disabled={
     currentIndex >= total - 1 &&
-    !(isLearner && progressPercent === 100)
+    !(isLearner && !hideProgress && progressPercent === 100)
   }
   className={`flex items-center gap-1 text-sm font-semibold transition ${
-    currentIndex >= total - 1 && isLearner && progressPercent === 100
+    currentIndex >= total - 1 && isLearner && !hideProgress && progressPercent === 100
       ? "bg-[#F26739] text-white px-4 py-2 rounded-xl hover:bg-orange-600"
       : "text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-35"
   }`}
 >
-  {currentIndex >= total - 1 && isLearner && progressPercent === 100
+  {currentIndex >= total - 1 && isLearner && !hideProgress && progressPercent === 100
     ? "Hoàn thành"
     : "Tiếp"}
-  {!(currentIndex >= total - 1 && isLearner && progressPercent === 100) && (
+  {!(currentIndex >= total - 1 && isLearner && !hideProgress && progressPercent === 100) && (
     <ChevronRight size={16} />
   )}
 </button>

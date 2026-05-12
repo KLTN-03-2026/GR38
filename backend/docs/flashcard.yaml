@@ -29,6 +29,7 @@ components:
             isStarred:
               type: boolean
               example: true
+              description: Trạng thái đánh dấu sao của user hiện tại (client có thể lọc chỉ lấy thẻ đã sao)
             reviewCount:
               type: integer
               example: 3
@@ -89,6 +90,10 @@ components:
           items:
             type: string
             example: lich-su-viet-nam
+        isStarred:
+          type: boolean
+          example: true
+          description: Trạng thái đánh dấu sao của user hiện tại
         stats:
           type: object
           properties:
@@ -184,6 +189,14 @@ paths:
       tags: [Flashcard]
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: starred
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Lọc theo bộ flashcard đã đánh dấu sao của user hiện tại
       responses:
         '200':
           description: Lấy danh sách thành công
@@ -439,10 +452,39 @@ paths:
         '404':
           description: Không tìm thấy thẻ
 
+  /api/v1/flashcards/{id}/star:
+    post:
+      summary: Bật/tắt đánh dấu sao cho bộ flashcard
+      description: Toggle trạng thái sao cho bộ flashcard của user hiện tại.
+      tags: [Flashcard]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cập nhật trạng thái sao thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/FlashcardSetBase'
+        '404':
+          description: Không tìm thấy bộ flashcard
+
   /api/v1/flashcards/{id}:
     get:
       summary: Lấy chi tiết bộ flashcard theo ID bộ thẻ
-      description: Xem chi tiết 1 bộ flashcard (kèm tiến độ học). Tự động lấy ảnh ưu tiên.
+      description: Xem chi tiết 1 bộ flashcard (kèm tiến độ học). Tự động lấy ảnh ưu tiên. Client có thể lọc thẻ theo isStarred.
       tags: [Flashcard]
       security:
         - bearerAuth: []

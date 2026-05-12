@@ -39,6 +39,7 @@ const FlashcardDetail = () => {
               back: card.back ?? card.answer ?? card.definition ?? "",
               difficulty: card.difficulty ?? null,
               memoryStatus: card.memoryStatus ?? null,
+              isStarred: card.isStarred ?? false,
             }))
           : [];
 
@@ -55,14 +56,17 @@ const FlashcardDetail = () => {
           })
         );
 
+        const starredCards = withBack.filter((c) => c.isStarred);
+
         setFlashcardSet({
-  _id: raw._id,
-  title: raw.title ?? "Flashcard",
-  cards: withBack,
-  initialMemorized: withBack
-    .filter((c) => c.memoryStatus === "Đã nhớ")
-    .map((c) => c._id),
-});
+          _id: raw._id,
+          title: raw.title ?? "Flashcard",
+          cards: starredCards,
+          initialMemorized: starredCards
+            .filter((c) => c.memoryStatus === "Đã nhớ")
+            .map((c) => c._id),
+          initialStarred: starredCards.map((c) => c._id),
+        });
 } catch {
   setError("Không tải được bộ flashcard. Vui lòng thử lại.");
   setFlashcardSet(null);
@@ -93,6 +97,22 @@ loadFlashcardSet();
     }
   };
 
+  const handleToggleStar = async (cardId, newStarred) => {
+    if (!flashcardSet?._id) return;
+    await api.put(`/flashcards/${flashcardSet._id}/cards/${cardId}/star`);
+    setFlashcardSet((prev) => {
+      const updatedCards = prev.cards.map((c) =>
+        c._id === cardId ? { ...c, isStarred: newStarred } : c,
+      );
+      const starredCards = updatedCards.filter((c) => c.isStarred);
+      return {
+        ...prev,
+        cards: starredCards,
+        initialStarred: starredCards.map((c) => c._id),
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -118,6 +138,22 @@ loadFlashcardSet();
     );
   }
 
+  if ((flashcardSet?.cards ?? []).length === 0) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <p className="text-sm text-gray-500">
+          Chua co the nao duoc danh dau sao.
+        </p>
+        <button
+          onClick={() => navigate("/learner/flashcards")}
+          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Quay lai
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-6">
       {/* Header — giống giáo viên */}
@@ -137,7 +173,9 @@ loadFlashcardSet();
       <FlashcardPlayer
     cards={flashcardSet?.cards ?? []}
     onToggleMemorized={handleToggleMemorized}
+    onToggleStar={handleToggleStar}
     initialMemorized={flashcardSet?.initialMemorized ?? []}
+    initialStarred={flashcardSet?.initialStarred ?? []}
     onComplete={() => navigate("/learner/flashcards", { state: { filterTab: "completed" } })}
 />
     </div>

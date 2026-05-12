@@ -7,7 +7,8 @@ import {
     getFlashcardSetForEdit,
     updateFlashcardSet,
     updateFlashcard,
-    deleteFlashcardSet
+    deleteFlashcardSet,
+    toggleStarFlashcardSet
 } from '#controllers/Flashcard/flashcardSetController.js';
 
 import {
@@ -37,6 +38,9 @@ router.get('/my-flashcards', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), ge
 
 // Tạo bộ flashcard thủ công (Hỗ trợ upload ảnh bìa)
 router.post('/', authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN), uploadFlashcardImage.single('thumbnail'), createManualFlashcardSet);
+
+// Toggle sao (bookmark) cho bộ flashcard
+router.post('/:id/star', authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN), toggleStarFlashcardSet);
 
 // NHÓM 2: CÁC ROUTE PARAMETER ĐỘNG
 

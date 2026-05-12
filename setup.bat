@@ -1,4 +1,4 @@
-@echo off
+echo off
 echo ==================================================
 echo   KHOI TAO MOI TRUONG DU AN - AI HISTORY LEARNING
 echo ==================================================

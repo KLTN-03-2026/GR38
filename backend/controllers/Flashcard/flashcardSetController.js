@@ -9,8 +9,13 @@ import Document from "#models/Document.js";
 export const getAllFlashcardSets = async (req, res, next) => {
   try {
     let query = {};
+    const isStarredFilter = req.query.starred === "true";
     if (req.user.role === USER_ROLES.TEACHER) {
       query = { teacherId: req.user._id };
+    }
+
+    if (isStarredFilter && req.user.role !== USER_ROLES.LEARNER) {
+      query = { ...query, starredBy: req.user._id };
     }
 
     const flashcardSets = await Flashcard.find(query)
@@ -34,6 +39,17 @@ export const getAllFlashcardSets = async (req, res, next) => {
       const setObj = set.toObject();
       const totalCards = Array.isArray(setObj.cards) ? setObj.cards.length : 0;
       const progressDoc = progressMap.get(setObj._id.toString());
+      const isStarredFromProgress = Array.isArray(progressDoc?.cardProgress)
+        ? progressDoc.cardProgress.some((cardProg) => cardProg.isStarred)
+        : false;
+      const isStarredFromSet = Array.isArray(setObj.starredBy)
+        ? setObj.starredBy.some(
+            (userId) => userId.toString() === req.user._id.toString(),
+          )
+        : false;
+      const isStarred = req.user.role === USER_ROLES.LEARNER
+        ? isStarredFromProgress || isStarredFromSet
+        : isStarredFromSet;
       const memorizedCount = progressDoc
         ? progressDoc.cardProgress.filter(
             (cardProg) => cardProg.memoryStatus === "Đã nhớ",
@@ -47,17 +63,63 @@ export const getAllFlashcardSets = async (req, res, next) => {
         thumbnail: setObj.thumbnail || setObj.documentId?.thumbnail || null,
         cardCount: totalCards,
         progress: req.user.role === USER_ROLES.LEARNER ? progressPercent : 0,
+        isStarred,
       };
     });
 
-    mappedSets.forEach((set) => {
+    const filteredSets =
+      isStarredFilter && req.user.role === USER_ROLES.LEARNER
+        ? mappedSets.filter((set) => set.isStarred)
+        : mappedSets;
+
+    filteredSets.forEach((set) => {
       delete set.cards;
     });
 
     res.status(200).json({
       success: true,
-      count: mappedSets.length,
-      data: mappedSets,
+      count: filteredSets.length,
+      data: filteredSets,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc Toggle sao (bookmark) cho bộ flashcard
+// @route POST /api/v1/flashcards/:id/star
+// @access Private
+export const toggleStarFlashcardSet = async (req, res, next) => {
+  try {
+    const flashcardSet = await Flashcard.findById(req.params.id);
+
+    if (!flashcardSet) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy bộ flashcard",
+        statusCode: 404,
+      });
+    }
+
+    const userId = req.user._id;
+    const isStarred = flashcardSet.starredBy.some((id) => id.equals(userId));
+
+    if (isStarred) {
+      flashcardSet.starredBy = flashcardSet.starredBy.filter(
+        (id) => !id.equals(userId),
+      );
+    } else {
+      flashcardSet.starredBy.push(userId);
+    }
+
+    const updatedSet = await flashcardSet.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...updatedSet.toObject(),
+        isStarred: !isStarred,
+      },
     });
   } catch (error) {
     next(error);
@@ -75,10 +137,16 @@ export const getTeacherFlashcardSets = async (req, res, next) => {
 
     const mappedSets = flashcardSets.map((set) => {
       const setObj = set.toObject();
+      const isStarred = Array.isArray(setObj.starredBy)
+        ? setObj.starredBy.some(
+            (userId) => userId.toString() === req.user._id.toString(),
+          )
+        : false;
       return {
         ...setObj,
         thumbnail: setObj.thumbnail || setObj.documentId?.thumbnail || null,
         cardCount: Array.isArray(setObj.cards) ? setObj.cards.length : 0,
+        isStarred,
       };
     });
 

@@ -23,6 +23,7 @@ const TienDo = () => {
       try {
         setLoading(true);
         // Gọi song song Dashboard, History và Profile
+        // Đảm bảo endpoint profile khớp với route định nghĩa trong backend (thường là /user/profile)
         const [dashRes, historyRes, profileRes] = await Promise.all([
           api.get("/progress/dashboard"),
           api.get("/quizzes/my-history"),
@@ -33,7 +34,7 @@ const TienDo = () => {
           const apiData = dashRes.data.data;
           const historyData = historyRes.data?.data || [];
           
-          // Lấy currentStreak từ data của profileRes theo cấu trúc trong image_e16911.png
+          // Truy xuất chính xác giá trị currentStreak từ dữ liệu Profile trả về
           const profileData = profileRes.data?.data || {};
           const studyStreakValue = profileData.currentStreak !== undefined ? profileData.currentStreak : 0;
 
@@ -55,7 +56,7 @@ const TienDo = () => {
               { 
                 id: 3, 
                 label: "Chuỗi ngày", 
-                // Hiển thị Chuỗi ngày học từ API Profile
+                // Gán giá trị currentStreak đã lấy được vào UI
                 value: `${studyStreakValue} Ngày`, 
                 sub: "Học liên tục", 
                 icon: <Activity size={18}/> 

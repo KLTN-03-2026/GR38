@@ -325,7 +325,15 @@ const SuCo = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-gray-700">Tiêu đề báo cáo</label>
-            <input name="tieuDe" value={formData.tieuDe} onChange={handleChange} placeholder="Nhập tiêu đề..." className={`w-full h-10 px-4 border rounded-md outline-none focus:border-orange-500 ${errors.tieuDe ? 'border-red-500' : 'border-[#E4E4E7]'}`} />
+            <input 
+              name="tieuDe" 
+              value={formData.tieuDe} 
+              onChange={handleChange} 
+              maxLength={50}
+              placeholder="Nhập tiêu đề (tối đa 50 ký tự)..." 
+              className={`w-full h-10 px-4 border rounded-md outline-none focus:border-orange-500 ${errors.tieuDe ? 'border-red-500' : 'border-[#E4E4E7]'}`} 
+            />
+            <div className="text-[10px] text-right text-gray-400">{formData.tieuDe.length}/50</div>
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-gray-700">Mô tả chi tiết</label>

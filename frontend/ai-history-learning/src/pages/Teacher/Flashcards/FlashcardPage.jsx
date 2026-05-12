@@ -38,6 +38,10 @@ function ConfirmDeleteModal({ title, onConfirm, onCancel }) {
 
 const Flashcards = () => {
   const navigate = useNavigate();
+  const basePath = (() => {
+    try { return (JSON.parse(localStorage.getItem("user") || "{}").role || "").toUpperCase() === "ADMIN" ? "/admin" : "/teacher"; }
+    catch { return "/teacher"; }
+  })();
   const [activeTab, setActiveTab] = useState("tat-ca");
   const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,46 +57,34 @@ const Flashcards = () => {
   useEffect(() => { setCurrentPage(1); }, [rightSearch, selectedDoc]);
   useEffect(() => { setSidebarPage(1); }, [sidebarSearch]);
 
-  const getCurrentUserId = () => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      return user?._id || user?.id || null;
-    } catch { return null; }
-  };
-
   const loadAll = async () => {
-    try {
-      setLoading(true);
-      try {
-        const res = await flashcardService.getMyFlashcards();
-        const raw = res?.data ?? res ?? [];
-        const list = Array.isArray(raw) ? raw : [];
-        const currentUserId = getCurrentUserId();
-        const ownedSets = list.filter((item) => {
-          const teacherId = typeof item.teacherId === "object" && item.teacherId !== null
-            ? item.teacherId?._id : item.teacherId;
-          return !currentUserId || String(teacherId) === String(currentUserId);
-        });
-        setAllData(ownedSets.map((item) => {
-          const docId = typeof item.documentId === "object" && item.documentId !== null
-            ? item.documentId?._id : item.documentId;
-          const cardArr = Array.isArray(item.cards) ? item.cards : [];
-          return {
-            id: item._id ?? item.id,
-            title: item.title ?? item.documentTitle ?? "Flashcard AI",
-            cards: cardArr,
-            cardCount: cardArr.length || item.cardCount || item.totalCards || item.count || 0,
-            progress: item.progress ?? 0,
-            image: item.thumbnail ?? imagesList[item._id?.charCodeAt(0) % imagesList.length]?.image ?? null,
-            source: item.isAiGenerated ? "ai" : "custom",
-            documentId: docId ?? null,
-            documentTitle: item.documentTitle ?? item.title ?? "Tài liệu AI",
-            createdAt: item.createdAt,
-          };
-        }));
-      } catch { /* API unavailable */ }
-    } finally { setLoading(false); }
-  };
+  try {
+    setLoading(true);
+    const res = await flashcardService.getAll();
+    const raw = res?.data ?? res ?? [];
+    const list = Array.isArray(raw) ? raw : [];
+
+    setAllData(list.map((item) => {
+      const docId = typeof item.documentId === "object" && item.documentId !== null
+        ? item.documentId?._id : item.documentId;
+      const cardArr = Array.isArray(item.cards) ? item.cards : [];
+      return {
+        id: item._id ?? item.id,
+        title: item.title ?? item.documentTitle ?? "Flashcard AI",
+        cards: cardArr,
+        cardCount: cardArr.length || item.cardCount || item.totalCards || item.count || 0,
+        progress: item.progress ?? 0,
+        image: item.thumbnail ?? null,
+        source: item.isAiGenerated ? "ai" : "custom",
+        documentId: docId ?? null,
+        documentTitle: item.documentTitle ?? item.title ?? "Tài liệu AI",
+        createdAt: item.createdAt,
+      };
+    }));
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDeleteClick = (e, item) => { e.stopPropagation(); setDeleteTarget(item); };
 
@@ -261,7 +253,7 @@ const Flashcards = () => {
               <button onClick={loadAll} className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-gray-200 bg-white text-[13px] text-gray-600 hover:bg-gray-50 transition font-medium">
                 <RefreshCw size={13} /> Làm mới
               </button>
-              <button onClick={() => navigate("/teacher/flashcards/add")}
+              <button onClick={() => navigate(`${basePath}/flashcards/add`)}
                 className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#F26739] text-white text-[13px] font-bold hover:bg-orange-600 transition shadow-sm">
                 <Plus size={14} /> Thêm Flashcard
               </button>
@@ -315,11 +307,11 @@ const Flashcards = () => {
                         Số thẻ: <span className="text-[#F26739]">{item.cardCount ?? 0} thẻ</span>
                       </p>
                       <div className="mt-auto flex flex-col gap-2">
-                        <button onClick={() => navigate(`/teacher/flashcards/${item.id}`, { state: { fromApi: item.source === "ai", documentId: item.documentId } })}
+                        <button onClick={() => navigate(`${basePath}/flashcards/${item.id}`, { state: { fromApi: item.source === "ai", documentId: item.documentId } })}
                           className="w-full bg-[#F26739] text-white py-2 rounded-xl font-bold text-[13px] hover:bg-[#d9562d] transition-colors">
                           Học ngay
                         </button>
-                        <button onClick={() => navigate(`/teacher/flashcards/edit/${item.id}`, { state: { item } })}
+                        <button onClick={() => navigate(`${basePath}/flashcards/edit/${item.id}`, { state: { item } })}
                           className="w-full py-2 rounded-xl border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-1.5 font-medium">
                           <PenLine size={12} /> Chỉnh sửa
                         </button>

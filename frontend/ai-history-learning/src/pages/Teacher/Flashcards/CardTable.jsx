@@ -1,5 +1,11 @@
 import { Plus, Trash2 } from "lucide-react";
 
+const DIFFICULTY = [
+  { key: "Dễ",         label: "Dễ",         cls: "text-green-600 hover:bg-green-50",   active: "bg-green-500 text-white shadow-sm"   },
+  { key: "Trung bình", label: "Trung bình", cls: "text-yellow-600 hover:bg-yellow-50", active: "bg-yellow-500 text-white shadow-sm"  },
+  { key: "Khó",        label: "Khó",        cls: "text-red-500 hover:bg-red-50",        active: "bg-red-500 text-white shadow-sm"     },
+];
+
 export default function CardTable({ cards, errors, updateCard, removeCard, addCard }) {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm mb-6">
@@ -12,7 +18,35 @@ export default function CardTable({ cards, errors, updateCard, removeCard, addCa
         {cards.map((card, index) => (
           <div key={index} className="grid grid-cols-2 gap-4 px-6 py-4 items-start hover:bg-[#FAFAFA] transition-colors group">
             <div className="col-span-2 flex items-center justify-between mb-1">
-              <span className="text-[11px] font-bold text-gray-300 uppercase tracking-widest">Thẻ {index + 1}</span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-[11px] font-bold text-gray-300 uppercase tracking-widest">Thẻ {index + 1}</span>
+
+                {/* ── Độ khó ── */}
+                <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                  {DIFFICULTY.map((d) => (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={() => updateCard(index, "difficulty", d.key)}
+                      className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all duration-150 ${
+                        card.difficulty === d.key
+                          ? d.active
+                          : `text-gray-400 hover:text-gray-600 bg-transparent ${d.cls}`
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* lỗi chưa chọn — chỉ hiện sau khi submit */}
+                {errors[`card_${index}_difficulty`] && (
+                  <span className="text-[10px] text-red-500 font-semibold flex items-center gap-1">
+                    ⚠ Chưa chọn độ khó
+                  </span>
+                )}
+              </div>
+
               <button
                 onClick={() => removeCard(index)}
                 disabled={cards.length === 1}
@@ -21,6 +55,7 @@ export default function CardTable({ cards, errors, updateCard, removeCard, addCa
                 <Trash2 size={13} />
               </button>
             </div>
+
             <div>
               <textarea
                 rows={2}
@@ -33,6 +68,7 @@ export default function CardTable({ cards, errors, updateCard, removeCard, addCa
               />
               {errors[`card_${index}_front`] && <p className="text-red-500 text-[11px] mt-1">{errors[`card_${index}_front`]}</p>}
             </div>
+
             <div>
               <textarea
                 rows={2}

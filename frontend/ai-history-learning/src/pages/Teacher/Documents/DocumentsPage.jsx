@@ -50,10 +50,9 @@ const STATUS_MAP = {
   ready:      { label: "Đã xử lý",      cls: "bg-green-100 text-green-700" },
   processing: { label: "Đang xử lý...", cls: "bg-orange-100 text-orange-600" },
 };
-
-const TAGS = [
-  { label: "Bài giảng",   cls: "bg-blue-100 text-blue-700",   route: (id) => `/teacher/baigiang/${id}` },
-  { label: "Bài kiểm tra", cls: "bg-orange-100 text-orange-700", route: (id) => `/teacher/baikiemtra/${id}` },
+const getTags = (rolePrefix) => [
+  { label: "Bài giảng",    cls: "bg-blue-100 text-blue-700",    route: (id) => `${rolePrefix}/baigiang/${id}` },
+  { label: "Bài kiểm tra", cls: "bg-orange-100 text-orange-700", route: (id) => `${rolePrefix}/baikiemtra/${id}` },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -75,7 +74,7 @@ const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
   </div>
 );
 
-function DocCard({ doc, idx, onDelete, onCardClick, onTagClick }) {
+function DocCard({ doc, idx, onDelete, onCardClick, onTagClick, tags }) {
   const status = STATUS_MAP[doc.status] ?? { label: "Lỗi", cls: "bg-red-100 text-red-500" };
   return (
     <div className="doc-card bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer"
@@ -97,14 +96,14 @@ function DocCard({ doc, idx, onDelete, onCardClick, onTagClick }) {
       <p className="text-xs text-gray-400 mb-3">{doc.flashcardCount ?? 0} flashcard · {doc.quizCount ?? 0} quiz</p>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1.5">
-        {TAGS.map(({ label, cls, route }) => (
-          <span key={label} onClick={(e) => { e.stopPropagation(); onTagClick(route(doc._id)); }}
-            className={`tag-chip text-xs px-2.5 py-0.5 rounded-full font-medium cursor-pointer ${cls}`}>
-            {label}
-          </span>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-1.5">
+        {tags.map(({ label, cls, route }) => (
+    <span key={label} onClick={(e) => { e.stopPropagation(); onTagClick(route(doc._id)); }}
+      className={`tag-chip text-xs px-2.5 py-0.5 rounded-full font-medium cursor-pointer ${cls}`}>
+      {label}
+    </span>
+  ))}
+</div>
       </div>
     </div>
   );
@@ -132,6 +131,8 @@ export default function DocumentsPage() {
   const [dragOver, setDragOver] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [gridKey, setGridKey] = useState(0);
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const rolePrefix = user.role === "ADMIN" ? "/admin" : "/teacher";
 
   const fetchDocs = async () => {
     try {
@@ -276,8 +277,9 @@ export default function DocumentsPage() {
               <div key={doc._id} style={{ animationDelay: `${i * 0.05}s` }}>
                 <DocCard doc={doc} idx={(safePage - 1) * ITEMS_PER_PAGE + i}
                   onDelete={(d) => setDeleteTarget({ id: d._id, title: d.title })}
-                  onCardClick={(d) => navigate(`/teacher/documents/${d._id}`, { state: { doc: d, activeTab: "Thông tin" } })}
+                  onCardClick={(d) => navigate(`${rolePrefix}/documents/${d._id}`, { state: { doc: d, activeTab: "Thông tin" } })}
                   onTagClick={(route) => navigate(route, { state: { doc } })}
+                    tags={getTags(rolePrefix)}
                 />
               </div>
             ))}

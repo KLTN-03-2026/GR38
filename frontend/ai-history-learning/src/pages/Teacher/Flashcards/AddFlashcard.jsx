@@ -13,8 +13,12 @@ const MIN_CARDS = 5;
 const AddFlashcard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams();
-  const isEdit = Boolean(id);
+const { id } = useParams();
+const basePath = (() => {
+  try { return (JSON.parse(localStorage.getItem("user") || "{}").role || "").toUpperCase() === "ADMIN" ? "/admin" : "/teacher"; }
+  catch { return "/teacher"; }
+})();
+const isEdit = Boolean(id);
 
   const [selectedDocId, setSelectedDocId] = useState(
     location.state?.documentId ?? ""
@@ -23,7 +27,7 @@ const AddFlashcard = () => {
   const [docsLoading, setDocsLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [imagePreview, setImagePreview] = useState("");
-  const [cards, setCards] = useState([{ front: "", back: "" }]);
+const [cards, setCards] = useState([{ front: "", back: "", difficulty: "" }]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
@@ -93,7 +97,7 @@ const AddFlashcard = () => {
     })();
   }, []);
 
-  const addCard = () => setCards((p) => [...p, { front: "", back: "" }]);
+const addCard = () => setCards((p) => [...p, { front: "", back: "", difficulty: "" }]);
   const removeCard = (i) => {
     if (cards.length > 1) setCards((p) => p.filter((_, idx) => idx !== i));
   };
@@ -113,10 +117,11 @@ const AddFlashcard = () => {
     if (!title.trim()) errs.title = "Vui lòng nhập tên bộ thẻ";
     if (cards.length < MIN_CARDS)
       errs.minCards = `Cần ít nhất ${MIN_CARDS} thẻ (hiện có ${cards.length})`;
-    cards.forEach((c, i) => {
-      if (!c.front.trim()) errs[`card_${i}_front`] = "Chưa nhập câu hỏi";
-      if (!c.back.trim()) errs[`card_${i}_back`] = "Chưa nhập đáp án";
-    });
+   cards.forEach((c, i) => {
+  if (!c.front.trim()) errs[`card_${i}_front`] = "Chưa nhập câu hỏi";
+  if (!c.back.trim()) errs[`card_${i}_back`] = "Chưa nhập đáp án";
+  if (!c.difficulty) errs[`card_${i}_difficulty`] = "Chưa chọn độ khó"; 
+});
     return errs;
   };
 
@@ -137,14 +142,12 @@ const AddFlashcard = () => {
       if (selectedDocId) {
         formData.append("documentId", selectedDocId);
       }
-
-      formData.append(
-        "cards",
-        JSON.stringify(
-          cards.map((c) => ({ front: c.front.trim(), back: c.back.trim() }))
-        )
-      );
-      
+formData.append(
+  "cards",
+  JSON.stringify(
+    cards.map((c) => ({ front: c.front.trim(), back: c.back.trim(), difficulty: c.difficulty ?? "Trung bình" }))
+  )
+);
       // Xử lý ảnh: Chuyển URL preview thành Blob để gửi đi
       if (imagePreview) {
         const fetchRes = await fetch(imagePreview); 
@@ -158,12 +161,10 @@ const AddFlashcard = () => {
       } else {
         res = await flashcardService.create(formData);
       }
-      console.log("full response:", res);
-
       const saved = res?.data ?? res;
       const newId = saved?._id;
 
-      navigate("/teacher/flashcards");
+      navigate(`${basePath}/flashcards`);
     } catch (err) {
       setSaveErr(
         err?.response?.data?.message ||
@@ -181,7 +182,7 @@ const AddFlashcard = () => {
         {/* Thanh trên */}
         <div className="w-full h-[53px] bg-white border border-gray-200 rounded-[10px] mb-8 flex items-center px-5 shadow-sm">
           <button
-            onClick={() => navigate("/teacher/flashcards")}
+            onClick={() => navigate(`${basePath}/flashcards`)}
             className="flex items-center gap-2 text-[14px] font-semibold text-gray-600 hover:text-[#F26739] transition-colors"
           >
             <ChevronLeft size={18} /> Quay lại danh sách
@@ -290,7 +291,7 @@ const AddFlashcard = () => {
         {/* Nút hành động */}
         <div className="flex gap-4 justify-end">
           <button
-            onClick={() => navigate("/teacher/flashcards")}
+            onClick={() => navigate(`${basePath}/flashcards`)}
             disabled={saving}
             className="h-[46px] px-8 border border-gray-200 rounded-xl text-[14px] font-semibold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >

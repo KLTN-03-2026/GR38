@@ -746,8 +746,9 @@ function ManualTab({ isTeacher, onStartQuiz, onHistory, onOpenAddModal, onOpenEd
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function QuizPage() {
   const navigate  = useNavigate();
-  const isTeacher = getUserRole() === "TEACHER";
-
+  const role = getUserRole();
+  const isTeacher = role === "TEACHER";
+  const canManage = role === "TEACHER" || role === "ADMIN"; 
   const [activeTab,     setActiveTab]     = useState("all");
   const [quizView,      setQuizView]      = useState(null);
   const [showAddModal,  setShowAddModal]  = useState(false);
@@ -761,26 +762,31 @@ export default function QuizPage() {
   const [manualLoading, setManualLoading] = useState(false);
 
   const fetchAllQuizzes = useCallback(async () => {
-    setAllLoading(true);
-    try {
-      const res  = await quizService.getTeacherQuizzes();
-      const raw  = res.data?.data ?? res.data ?? [];
-      const list = Array.isArray(raw) ? raw : (raw.quizzes ?? []);
-      setAllQuizzes(list.map(normalizeQuiz));
-    } catch(err) { console.error(err); }
-    finally { setAllLoading(false); }
-  }, []);
+  setAllLoading(true);
+  try {
+    // ✅ Admin dùng endpoint riêng, Teacher dùng endpoint cũ
+    const res = isTeacher
+      ? await quizService.getTeacherQuizzes()
+      : await quizService.getAllQuizzesAdmin();
+    const raw  = res.data?.data ?? res.data ?? [];
+    const list = Array.isArray(raw) ? raw : (raw.quizzes ?? []);
+    setAllQuizzes(list.map(normalizeQuiz));
+  } catch(err) { console.error(err); }
+  finally { setAllLoading(false); }
+}, [isTeacher]);
 
-  const fetchManualQuizzes = useCallback(async () => {
-    setManualLoading(true);
-    try {
-      const res  = await quizService.getTeacherQuizzes();
-      const raw  = res.data?.data ?? res.data ?? [];
-      const list = Array.isArray(raw) ? raw : (raw.quizzes ?? []);
-      setManualQuizzes(list.filter(q => !q.documentId).map(normalizeQuiz));
-    } catch(err) { console.error(err); }
-    finally { setManualLoading(false); }
-  }, []);
+const fetchManualQuizzes = useCallback(async () => {
+  setManualLoading(true);
+  try {
+    const res = isTeacher
+      ? await quizService.getTeacherQuizzes()
+      : await quizService.getAllQuizzesAdmin();
+    const raw  = res.data?.data ?? res.data ?? [];
+    const list = Array.isArray(raw) ? raw : (raw.quizzes ?? []);
+    setManualQuizzes(list.filter(q => !q.documentId).map(normalizeQuiz));
+  } catch(err) { console.error(err); }
+  finally { setManualLoading(false); }
+}, [isTeacher]);
 
   useEffect(() => {
     fetchAllQuizzes();
@@ -821,17 +827,16 @@ export default function QuizPage() {
     }
   };
 
-  const handleFinish = (result) => {
-    setQuizView(null);
-    navigate("/teacher/quiz-result", { state: result });
-  };
+const handleFinish = (result) => {
+  setQuizView(null);
+  navigate(isTeacher ? "/teacher/quiz-result" : "/admin/quiz-result", { state: result });
+};
 
-  const handleSaveQuiz = () => {
-    setShowAddModal(false); setEditTarget(null);
-    fetchAllQuizzes();
-    fetchManualQuizzes();
-    if (!addDocumentId) setActiveTab("manual");
-  };
+const handleSaveQuiz = () => {
+  setShowAddModal(false); setEditTarget(null);
+  fetchAllQuizzes();
+  fetchManualQuizzes();
+};
 
   const handleDeleteFromAll = (id) => {
     setAllQuizzes(p => p.filter(q => (q.id ?? q._id) !== id));
@@ -844,7 +849,7 @@ export default function QuizPage() {
     { key: "manual",   icon: <PenLine size={14}/>,  label: "Thủ công", badge: manualQuizzes.length || null },
   ];
 
-  const commonProps = { isTeacher, onStartQuiz: handleStartQuiz, onHistory: setHistoryQuiz, onOpenEditModal: setEditTarget };
+  const commonProps = { isTeacher: canManage, onStartQuiz: handleStartQuiz, onHistory: setHistoryQuiz, onOpenEditModal: setEditTarget };
   const openAddModal = (id) => { setAddDocumentId(id ?? null); setShowAddModal(true); };
 
   if (quizView) return (

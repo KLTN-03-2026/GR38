@@ -13,10 +13,15 @@ cloudinary.config({
 
 const documentPdfStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'DATN_History_Web/Documents_PDF', 
-    resource_type: 'raw', 
-    format: 'pdf', 
+  params: async (req, file) => {
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const fileName = originalName.replace(/\.pdf$/i, '');
+    return {
+      folder: 'DATN_History_Web/Documents_PDF',
+      resource_type: 'raw',
+      format: 'pdf',
+      public_id: fileName, 
+    };
   },
 });
 

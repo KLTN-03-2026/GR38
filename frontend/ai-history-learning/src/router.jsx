@@ -98,8 +98,7 @@ export default function AppRouter() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
       {/* ADMIN ROUTES */}
-      // ... (các import giữ nguyên) // ADMIN ROUTES - Sửa lại phần này
-      <Route element={<PrivateRoute allowedRole="ADMIN" />}>
+     <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="accounts" element={<AccountManagement />} />

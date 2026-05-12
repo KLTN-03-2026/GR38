@@ -385,7 +385,6 @@ export default function QuizPageInline({ quiz, onBack }) {
       </div>
     );
   }
-
   /* ══ RESULT ═════════════════════════════════════════════════════ */
   if (showResult) {
     const wrongCount = Object.keys(answers).length - correctCount;

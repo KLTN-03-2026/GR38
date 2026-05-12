@@ -64,7 +64,10 @@ getTeacherHistory: async () => {
     const res = await api.get(`/quizzes/quiz/${id}`, { params });
     return res;
   },
-
+getAllQuizzesAdmin: async () => {
+  const res = await api.get("/quizzes/admin/all");
+  return res;
+},
   // Tạo đề thi mới (Dùng FormData vì có upload ảnh bìa)
 create: async (data, thumbnailFile) => {
   const formData = new FormData();

@@ -256,5 +256,5 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
     </div>
   );
 };
-
+// Quizz 
 export default QuizzResult;

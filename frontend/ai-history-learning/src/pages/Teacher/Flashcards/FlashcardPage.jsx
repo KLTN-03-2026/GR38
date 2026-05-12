@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Search, Trash2, BookOpen, Sparkles, PenLine, Library, Plus, RefreshCw, AlertTriangle, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search, Loader2, ChevronLeft, ChevronRight, AlertCircle,
+  Trash2, Edit, Plus, RefreshCw, CheckCircle2, Clock, BarChart2, Star
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { flashcardService } from "@/services/flashcardSevice";
 import imagesList from "../../../images";
@@ -105,10 +108,11 @@ const Flashcards = () => {
   };
 
   const tabPool = React.useMemo(() => {
-    if (activeTab === "tai-lieu") return allData.filter((i) => i.source === "ai");
-    if (activeTab === "thu-cong") return allData.filter((i) => i.source === "custom");
-    return allData;
-  }, [allData, activeTab]);
+  if (activeTab === "tai-lieu")     return allData.filter((i) => i.source === "ai");
+  if (activeTab === "thu-cong")     return allData.filter((i) => i.source === "custom");
+  if (activeTab === "danh-dau-sao") return allData.filter((i) => i.starred === true || i.isStarred === true);
+  return allData;
+}, [allData, activeTab]);
 
   const sidebarDocs = React.useMemo(() => {
     const map = new Map();
@@ -147,18 +151,20 @@ const Flashcards = () => {
     window.scrollTo(0, 0);
   };
 
-  const rightHeading = selectedDoc ? selectedDoc.title
-    : activeTab === "tai-lieu" ? "Theo tài liệu"
-    : activeTab === "thu-cong" ? "Thủ công"
-    : "Tất cả Flashcard";
+ const rightHeading = selectedDoc ? selectedDoc.title
+  : activeTab === "tai-lieu"      ? "Theo tài liệu"
+  : activeTab === "thu-cong"      ? "Thủ công"
+  : activeTab === "danh-dau-sao"  ? "Đã đánh dấu sao"
+  : "Tất cả Flashcard";
 
   const showSidebar = activeTab === "tai-lieu";
 
   const TABS = [
-    { key: "tat-ca",   icon: <Library size={15} />,  label: "Tất cả" },
-    { key: "tai-lieu", icon: <FileText size={15} />, label: "Theo tài liệu" },
-    { key: "thu-cong", icon: <PenLine size={15} />,  label: "Thủ công" },
-  ];
+  { key: "tat-ca",       icon: <Library size={15} />,  label: "Tất cả" },
+  { key: "tai-lieu",     icon: <FileText size={15} />, label: "Theo tài liệu" },
+  { key: "thu-cong",     icon: <PenLine size={15} />,  label: "Thủ công" },
+  { key: "danh-dau-sao", icon: <Star size={15} />,     label: "Đã đánh dấu sao" },
+];
 
   return (
     <div className="flex flex-col min-h-screen bg-[#FAFAFA] p-8 font-['Inter']">

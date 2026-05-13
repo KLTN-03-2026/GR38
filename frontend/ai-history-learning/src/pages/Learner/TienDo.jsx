@@ -22,17 +22,22 @@ const TienDo = () => {
     const fetchProgressData = async () => {
       try {
         setLoading(true);
-        // Gọi song song Dashboard và History
-        const [dashRes, historyRes] = await Promise.all([
+        // Gọi song song Dashboard, History và Profile
+        // Đảm bảo endpoint profile khớp với route định nghĩa trong backend (thường là /user/profile)
+        const [dashRes, historyRes, profileRes] = await Promise.all([
           api.get("/progress/dashboard"),
-          api.get("/quizzes/my-history")
+          api.get("/quizzes/my-history"),
+          api.get("/user/profile") 
         ]);
         
         if (dashRes.data.success) {
           const apiData = dashRes.data.data;
           const historyData = historyRes.data?.data || [];
+          
+          // Truy xuất chính xác giá trị currentStreak từ dữ liệu Profile trả về
+          const profileData = profileRes.data?.data || {};
+          const studyStreakValue = profileData.currentStreak !== undefined ? profileData.currentStreak : 0;
 
-          // Đảm bảo lấy đúng các trường từ overview trong response API của bạn
           const formattedData = {
             stats: [
               { 
@@ -51,7 +56,8 @@ const TienDo = () => {
               { 
                 id: 3, 
                 label: "Chuỗi ngày", 
-                value: `${apiData.overview?.studyStreak || 0} Ngày`, 
+                // Gán giá trị currentStreak đã lấy được vào UI
+                value: `${studyStreakValue} Ngày`, 
                 sub: "Học liên tục", 
                 icon: <Activity size={18}/> 
               },

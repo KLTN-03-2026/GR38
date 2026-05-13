@@ -171,7 +171,6 @@ const ChatAI = ({ documentId }) => {
   const [language, setLanguage] = useState("vi"); // 'vi' or 'en'
   const [user, setUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  // State mới để lưu title tài liệu từ API
   const [docInfo, setDocInfo] = useState({ title: "Tài liệu chưa đặt tên" });
   
   const scrollRef = useRef(null);
@@ -183,24 +182,23 @@ const ChatAI = ({ documentId }) => {
       search: "Tìm kiếm chat", settings: "Cài đặt", placeholder: "Nhập câu hỏi...", send: "Gửi", 
       aiAssistant: "Trợ lý Giáo viên AI", ready: "Sẵn sàng hỗ trợ", noHistory: "Chưa có lịch sử", 
       typing: "AI đang xử lý...", sectionChat: "PHIÊN CHAT", initMsg: "Phiên chat mới. Hãy đặt câu hỏi hoặc chọn một hành động!",
-      sumAction: "Tóm tắt tài liệu", expAction: "Giải thích khái niệm", qaAction: "Hỏi đáp", sumLabel: "Tóm tắt", expLabel: "Giải thích"
+      sumAction: "Tóm tắt tài liệu", expAction: "Giải thích khái niệm", sumLabel: "Tóm tắt", expLabel: "Giải thích"
     },
     en: {
       newChat: "New Chat", currentSession: "Current Session", history: "RECENT HISTORY", tools: "TOOLS", system: "SYSTEM", 
       search: "Search chat", settings: "Settings", placeholder: "Type a question...", send: "Send", 
       aiAssistant: "AI Teacher Assistant", ready: "Ready to help", noHistory: "No history yet", 
       typing: "AI is processing...", sectionChat: "CHAT SESSIONS", initMsg: "New session. Ask a question or choose an action!",
-      sumAction: "Summarize document", expAction: "Explain concept", qaAction: "Q&A", sumLabel: "Summary", expLabel: "Explain"
+      sumAction: "Summarize document", expAction: "Explain concept", sumLabel: "Summary", expLabel: "Explain"
     }
   }[language];
 
+  // Đã xóa qaAction ở đây
   const QUICK_ACTIONS = [
     { label: dict.sumAction, cmd: "tóm tắt", Icon: FileText, color: "#10B981" },
-    { label: dict.expAction, cmd: "giải thích", Icon: BookOpen, color: "#DB2777" },
-    { label: dict.qaAction, cmd: "hỏi đáp", Icon: HelpCircle, color: "#F59E0B" }
+    { label: dict.expAction, cmd: "giải thích", Icon: BookOpen, color: "#DB2777" }
   ];
 
-  // API lấy chi tiết tài liệu
   const fetchDocumentDetail = async () => {
     try {
       const res = await api.get(`/documents/${documentId}`);
@@ -267,7 +265,7 @@ const ChatAI = ({ documentId }) => {
       } catch (err) { console.error("Lỗi lấy profile", err); }
     };
     fetchUserData();
-    fetchDocumentDetail(); // Gọi API lấy thông tin tài liệu
+    fetchDocumentDetail();
     fetchHistory();
     handleNewChat();
   }, [documentId]);
@@ -373,10 +371,8 @@ const ChatAI = ({ documentId }) => {
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.sbBorder}`, margin: 10, borderRadius: 12, background: T.chatBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 28, height: 28, background: '#FEE2E2', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              {/* Logo được đưa vào đây */}
               <img src={logoHistory} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            {/* Hiển thị title từ API docInfo */}
             <div style={{ fontSize: 12, fontWeight: 600, color: T.titleColor, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{docInfo.title}</div>
           </div>
           <ChevronUp size={14} color={T.sbTitle} />
@@ -430,7 +426,6 @@ const ChatAI = ({ documentId }) => {
         <header style={{ padding: '12px 20px', borderBottom: `1px solid ${T.sbBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, background: '#6366f1', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              {/* Thay icon Bot bằng Logo tại Header */}
               <img src={logoHistory} alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div>

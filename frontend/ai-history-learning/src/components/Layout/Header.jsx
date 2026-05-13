@@ -116,23 +116,30 @@ const Header = () => {
 
       <header className="h-16 fixed top-0 left-0 right-0 bg-white border-b border-gray-100 flex items-center px-5 z-20">
 
-        {/* ── LOGO bên trái ── */}
-        <div className="w-[220px] flex items-center gap-2.5 flex-shrink-0">
-          <div
-            className="w-[34px] h-[34px] rounded-[10px] overflow-hidden flex-shrink-0"
-            style={{ boxShadow: "0 2px 8px rgba(242,103,57,.25)" }}
-          >
-            <img src="/Logo.jpg" alt="Logo" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <div className="text-[13.5px] font-semibold text-gray-900 leading-tight">
-              Lịch Sử Việt Nam
-            </div>
-            <div className="text-[11.5px] font-medium" style={{ color: "#F26739" }}>
-              {roleLabel}
-            </div>
-          </div>
-        </div>
+       {/* ── LOGO bên trái ── */}
+<div
+  className="w-[220px] flex items-center gap-2.5 flex-shrink-0 cursor-pointer"
+  onClick={() => navigate(
+    userRole === "ADMIN" ? "/admin" :
+    userRole === "TEACHER" ? "/teacher" :
+    "/learner"
+  )}
+>
+  <div
+    className="w-[34px] h-[34px] rounded-[10px] overflow-hidden flex-shrink-0"
+    style={{ boxShadow: "0 2px 8px rgba(242,103,57,.25)" }}
+  >
+    <img src="/Logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+  </div>
+  <div>
+    <div className="text-[13.5px] font-semibold text-gray-900 leading-tight">
+      Lịch Sử Việt Nam
+    </div>
+    <div className="text-[11.5px] font-medium" style={{ color: "#F26739" }}>
+      {roleLabel}
+    </div>
+  </div>
+</div>
 
         {/* ── USER DROPDOWN bên phải ── */}
         <div className="flex-1 flex justify-end">

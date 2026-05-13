@@ -1,9 +1,7 @@
+// HocQuizz.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { 
-  ArrowLeft, ChevronLeft, ChevronRight, Loader2, 
-  Timer as TimerIcon, AlertCircle, Send, CheckCircle2
-} from "lucide-react";
+import { ArrowLeft, Send, AlertCircle, Loader2, Timer as TimerIcon } from "lucide-react";
 import api from "../../../lib/api";
 import QuizResult from "./QuizResult";
 
@@ -11,289 +9,373 @@ const HocQuizz = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({}); 
-  const [questions, setQuestions] = useState([]);
-  const [quizInfo, setQuizInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(600); 
-  const timerRef = useRef(null);
+  const [questions,            setQuestions]            = useState([]);
+  const [quizInfo,             setQuizInfo]             = useState(null);
+  const [loading,              setLoading]              = useState(true);
+  const [currentIdx,           setCurrentIdx]           = useState(0);
+  const [selectedAnswers,      setSelectedAnswers]      = useState({}); // { qId: { index, text } }
+  const [timeLeft,             setTimeLeft]             = useState(600);
+  const [isFinished,           setIsFinished]           = useState(false);
+  const [scoreData,            setScoreData]            = useState(null);
+  const [unansweredModal,      setUnansweredModal]      = useState({ show: false, list: [] });
+  const [showWarn,             setShowWarn]             = useState(false);
+  const [animDir,              setAnimDir]              = useState(null); // 'left' | 'right'
+  const timerRef  = useRef(null);
+  const animRef   = useRef(null);
+  const timeLimitRef = useRef(600);
 
-  const [isFinished, setIsFinished] = useState(false);
-  const [scoreData, setScoreData] = useState(null);
-  const [unansweredModal, setUnansweredModal] = useState({ show: false, list: [] });
-
+  // ── Fetch quiz ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchQuiz = async () => {
+    (async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/quizzes/${id}/play`);
+        const res  = await api.get(`/quizzes/${id}/play`);
         const data = res?.data?.data || res?.data;
         if (data) {
           setQuizInfo(data);
-          const fetchedQuestions = data.questions || [];
-          setQuestions(fetchedQuestions);
-
-          const totalQ = fetchedQuestions.length;
-          let calcMinutes = 10; 
-          if (totalQ > 5) {
-            calcMinutes = totalQ + 5;
-          } else if (totalQ > 0 && totalQ <= 5) {
-            calcMinutes = 10;
-          }
-          setTimeLeft(calcMinutes * 60);
+          const qs = data.questions || [];
+          setQuestions(qs);
+          const mins = (data.timeLimit ?? data.time_limit) > 0
+            ? (data.timeLimit ?? data.time_limit)
+            : qs.length > 5 ? qs.length + 5 : 10;
+          const secs = mins * 60;
+          timeLimitRef.current = secs;
+          setTimeLeft(secs);
         }
-      } catch (err) { 
-        console.error(err); 
-      } finally { 
-        setLoading(false); 
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-    };
-    fetchQuiz();
+    })();
   }, [id]);
 
+  // ── Timer ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isFinished && questions.length > 0) {
       timerRef.current = setInterval(() => {
         setTimeLeft(p => {
-          if (p <= 1) { 
-            if (timerRef.current) clearInterval(timerRef.current);
-            handleAutoSubmit(); 
-            return 0; 
+          if (p <= 1) {
+            clearInterval(timerRef.current);
+            doSubmit(true);
+            return 0;
           }
           return p - 1;
         });
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFinished, questions]);
 
-  const handleAutoSubmit = async () => {
-    try {
-      const userAnswers = questions.map(q => ({
-        questionId: q._id,
-        selectedAnswer: selectedAnswers[q._id]?.text || ""
-      }));
-      const resSubmit = await api.post(`/quizzes/${id}/submit`, { userAnswers });
-      const result = resSubmit.data?.data || resSubmit.data;
-      const rId = result.resultId || result._id || result.id;
-      if (rId) {
-        setScoreData({
-          resultId: rId,
-          score: result.score ?? 0,
-          correct: result.correctAnswersCount ?? 0,
-          total: result.totalQuestions ?? questions.length
-        });
-        setIsFinished(true);
-      }
-    } catch (err) { console.error(err); }
+  const formatTime = (sec) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
-  const handleSubmit = async () => {
-    const unanswered = questions.map((q, i) => !selectedAnswers[q._id] ? i + 1 : null).filter(n => n);
+  // ── Submit ──────────────────────────────────────────────────────────────────
+  const doSubmit = async (auto = false) => {
+    clearInterval(timerRef.current);
+    try {
+      if (!auto) setLoading(true);
+      const userAnswers = questions.map(q => ({
+        questionId: q._id,
+        selectedAnswer: selectedAnswers[q._id]?.text || "",
+      }));
+      const resSubmit = await api.post(`/quizzes/${id}/submit`, { userAnswers });
+      const result    = resSubmit.data?.data || resSubmit.data;
+      const rId       = result?.resultId || result?._id || result?.id;
+      setScoreData({
+        resultId: rId,
+        score:    result?.correctAnswersCount ?? result?.score ?? 0,
+        total:    result?.totalQuestions ?? questions.length,
+      });
+      setIsFinished(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (!auto) setLoading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    const unanswered = questions
+      .map((q, i) => (!selectedAnswers[q._id] ? i + 1 : null))
+      .filter(Boolean);
     if (unanswered.length > 0 && !unansweredModal.show) {
       setUnansweredModal({ show: true, list: unanswered });
       return;
     }
-    if (timerRef.current) clearInterval(timerRef.current);
-    try {
-      setLoading(true);
-      const userAnswers = questions.map(q => ({
-        questionId: q._id,
-        selectedAnswer: selectedAnswers[q._id]?.text || ""
-      }));
-      const resSubmit = await api.post(`/quizzes/${id}/submit`, { userAnswers });
-      const result = resSubmit.data?.data || resSubmit.data;
-      const rId = result.resultId || result._id || result.id;
-      if (rId) {
-        setScoreData({
-          resultId: rId,
-          score: result.score ?? 0,
-          correct: result.correctAnswersCount ?? 0,
-          total: result.totalQuestions ?? questions.length
-        });
-        setIsFinished(true);
-      }
-    } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
+    setUnansweredModal({ show: false, list: [] });
+    doSubmit();
   };
 
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  const goTo = (next, dir) => {
+    if (next < 0 || next >= questions.length) return;
+    setAnimDir(dir);
+    clearTimeout(animRef.current);
+    animRef.current = setTimeout(() => {
+      setCurrentIdx(next);
+      setAnimDir(null);
+      setShowWarn(false);
+    }, 180);
+  };
+
+  const handleNext = () => {
+    const q = questions[currentIdx];
+    if (!selectedAnswers[q?._id]) { setShowWarn(true); return; }
+    goTo(currentIdx + 1, "left");
+  };
+  const handlePrev = () => goTo(currentIdx - 1, "right");
+
+  const handleJump = (i) => {
+    if (i === currentIdx) return;
+    goTo(i, i > currentIdx ? "left" : "right");
+  };
+
+  // ── Finished ────────────────────────────────────────────────────────────────
   if (isFinished) {
     return (
-      <QuizResult 
+      <QuizResult
         quiz={quizInfo}
-        resultId={scoreData?.resultId} 
-        score={scoreData?.correct}
+        resultId={scoreData?.resultId}
+        score={scoreData?.score}
         total={scoreData?.total}
       />
     );
   }
 
-  const currentQ = questions[currentQuestionIndex];
-  const progressPercentage = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const currentQ     = questions[currentIdx];
+  const total        = questions.length;
+  const answeredCount = Object.keys(selectedAnswers).length;
+  const progress     = total > 0 ? (answeredCount / total) * 100 : 0;
+  const timeRatio  = timeLeft / timeLimitRef.current;
+  const isLow      = timeLeft <= 60;
+  const selectedIdx = currentQ ? selectedAnswers[currentQ._id]?.index : undefined;
+
+  const slideClass =
+    animDir === "left"  ? "anim-slide-left"  :
+    animDir === "right" ? "anim-slide-right" : "";
+
+  // Status của mỗi câu cho navigator: 'answered' | 'current' | 'unanswered'
+  const getStatus = (i) => {
+    const q = questions[i];
+    if (i === currentIdx) return "current";
+    if (q && selectedAnswers[q._id]) return "answered";
+    return "unanswered";
+  };
 
   return (
-    <div className="flex flex-col items-center w-full min-h-screen bg-[#F8FAFC] p-3 md:p-4 font-['Be_Vietnam_Pro'] selection:bg-blue-100">
-      
-      {unansweredModal.show && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[1.5rem] p-6 max-w-sm w-full text-center shadow-2xl scale-in-center border border-slate-100">
-            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-3">
-              <AlertCircle className="text-orange-500" size={32} />
+    <div className="h-full flex flex-col bg-gray-50 overflow-hidden" style={{ fontFamily: "inherit" }}>
+      <style>{`
+        @keyframes slideLeft  { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(-24px); } }
+        @keyframes slideRight { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(24px);  } }
+        @keyframes slideIn    { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0);     } }
+        @keyframes warnShake  { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 60%{transform:translateX(5px)} }
+
+        .anim-slide-left  { animation: slideLeft  0.18s ease forwards; }
+        .anim-slide-right { animation: slideRight 0.18s ease forwards; }
+        .slide-in         { animation: slideIn    0.2s ease forwards;  }
+        .warn-shake       { animation: warnShake  0.35s ease;          }
+
+        .option-btn { transition: all 0.15s ease; border: 2px solid #e5e7eb; background: white; }
+        .option-btn:hover:not(.selected) { border-color: #93c5fd; background: #eff6ff; }
+        .option-btn.selected { border-color: #3b82f6; background: #eff6ff; }
+
+        .tab-btn { border-bottom: 2px solid transparent; transition: all 0.15s; color: #9ca3af; }
+        .tab-btn:hover { color: #374151; }
+        .tab-btn.active { border-bottom-color: #f26739; color: #f26739; font-weight: 700; }
+
+        .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .nav-btn:not(:disabled):hover { background: #f3f4f6; }
+
+        .q-dot { transition: all 0.15s; cursor: pointer; border: 2px solid transparent; }
+        .q-dot:hover { transform: scale(1.12); }
+        .q-dot.current    { background: #f26739; color: white; border-color: #f26739; }
+        .q-dot.answered   { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .q-dot.unanswered { background: white;   color: #6b7280; border-color: #e5e7eb; }
+
+        .progress-bar { transition: width 0.4s ease; }
+        .time-bar     { transition: width 1s linear; }
+        .submit-btn   { transition: all 0.15s; }
+        .submit-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .back-btn { transition: color 0.15s; }
+        .back-btn:hover { color: #f26739; }
+      `}</style>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between shrink-0">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
+          <ArrowLeft size={16} />
+          Rời khỏi
+        </button>
+
+        {/* Timer */}
+        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono font-black text-base border-2 transition-all ${
+          isLow ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-orange-50 border-orange-100 text-orange-600"
+        }`}>
+          <TimerIcon size={16} />
+          <span>{formatTime(timeLeft)}</span>
+        </div>
+
+        <div className="text-right">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Đang thi</p>
+          <p className="text-xs font-black text-gray-700 uppercase truncate max-w-[200px]">{quizInfo?.title || "..."}</p>
+        </div>
+      </div>
+
+      {/* ── Body ───────────────────────────────────────────────────────────── */}
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="animate-spin text-orange-500" size={36} />
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-wide">Đang tải...</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-5xl mx-auto w-full">
+
+            {/* Progress bars */}
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-xs font-medium text-gray-500 tabular-nums whitespace-nowrap">{answeredCount} / {total}</span>
+              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-blue-500 rounded-full progress-bar" style={{ width: `${progress}%` }} />
+              </div>
+              <span className="text-xs text-gray-400 tabular-nums">{Math.round(progress)}%</span>
             </div>
-            <h4 className="text-lg font-black text-slate-800 mb-1">Chưa hoàn thành!</h4>
-            <p className="text-slate-500 text-xs mb-6 leading-relaxed">
-              Bạn còn câu <span className="font-bold text-orange-600">{unansweredModal.list.join(", ")}</span> chưa chọn đáp án. Bạn có muốn nộp luôn không?
+            <div className="flex items-center gap-3 mb-6">
+              <span className={`text-xs font-bold tabular-nums whitespace-nowrap ${isLow ? "text-red-500" : "text-orange-500"}`}>
+                {formatTime(timeLeft)}
+              </span>
+              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1.5 rounded-full time-bar" style={{
+                  width: `${timeRatio * 100}%`,
+                  background: isLow ? "#ef4444" : timeRatio <= 0.25 ? "#f97316" : "#f59e0b",
+                }} />
+              </div>
+            </div>
+
+            {/* Main grid: câu hỏi + navigator */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-5 items-start">
+
+              {/* ── Câu hỏi ── */}
+              <div className={`bg-white rounded-2xl border border-gray-200 p-6 shadow-sm overflow-hidden ${slideClass}`}
+                style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" }}>
+
+                <div className="flex items-start gap-3 mb-5">
+                  <span className="bg-blue-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap shrink-0">
+                    Câu {currentIdx + 1}/{total}
+                  </span>
+                  <p className="text-gray-800 text-sm font-medium leading-6 pt-0.5">{currentQ?.question}</p>
+                </div>
+
+                <p className="text-xs text-gray-400 mb-3">Chọn 1 đáp án đúng</p>
+
+                <div className="space-y-2.5">
+                  {currentQ?.options?.map((opt, i) => {
+                    const labelLetter = String.fromCharCode(65 + i);
+                    const isSelected  = selectedIdx === i;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setSelectedAnswers(p => ({ ...p, [currentQ._id]: { index: i, text: opt } }));
+                          setShowWarn(false);
+                        }}
+                        className={`option-btn w-full flex items-center gap-3 p-3.5 rounded-xl text-left ${isSelected ? "selected" : ""}`}
+                      >
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 transition-all ${
+                          isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500"
+                        }`}>{labelLetter}</span>
+                        <span className={`text-sm ${isSelected ? "text-blue-700 font-semibold" : "text-gray-700"}`}>{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Navigation footer */}
+                <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between gap-3">
+                  <button onClick={handlePrev} disabled={currentIdx === 0}
+                    className="nav-btn flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 font-medium">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Trước
+                  </button>
+
+                  {currentIdx < total - 1 ? (
+                    <button onClick={handleNext}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white submit-btn ${showWarn ? "warn-shake" : ""}`}
+                      style={{ background: showWarn ? "#ef4444" : selectedIdx !== undefined ? "#3b82f6" : "#d1d5db" }}>
+                      {showWarn ? (
+                        <><AlertCircle size={15} /> Chọn đáp án!</>
+                      ) : (
+                        <>Câu tiếp <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>
+                      )}
+                    </button>
+                  ) : (
+                    <button onClick={handleSubmit}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white submit-btn"
+                      style={{ background: selectedIdx !== undefined ? "#22c55e" : showWarn ? "#ef4444" : "#d1d5db" }}>
+                      {showWarn && selectedIdx === undefined
+                        ? <><AlertCircle size={15} /> Chọn đáp án!</>
+                        : <><Send size={14} /> Nộp bài</>}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Navigator panel ── */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm sticky top-4">
+                <p className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-3">Danh sách câu</p>
+                <div className="flex flex-wrap gap-2">
+                  {questions.map((q, i) => {
+                    const status = getStatus(i);
+                    return (
+                      <button key={i} onClick={() => handleJump(i)}
+                        className={`q-dot w-9 h-9 rounded-xl text-xs font-bold ${status}`}>
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Nộp bài */}
+                <button onClick={handleSubmit}
+                  className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black text-white submit-btn"
+                  style={{ background: "linear-gradient(135deg,#F26739,#FF8059)" }}>
+                  <Send size={13} /> Nộp bài
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Unanswered modal ───────────────────────────────────────────────── */}
+      {unansweredModal.show && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+            <div className="w-14 h-14 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <AlertCircle className="text-orange-500" size={28} />
+            </div>
+            <h4 className="text-base font-black text-gray-800 mb-1">Chưa hoàn thành!</h4>
+            <p className="text-gray-500 text-xs mb-5 leading-relaxed">
+              Bạn còn câu <span className="font-bold text-orange-600">{unansweredModal.list.join(", ")}</span> chưa chọn đáp án. Có muốn nộp luôn không?
             </p>
             <div className="flex flex-col gap-2">
-              <button onClick={() => setUnansweredModal({show:false, list:[]})} className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200">
+              <button onClick={() => setUnansweredModal({ show: false, list: [] })}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition">
                 Làm tiếp câu thiếu
               </button>
-              <button onClick={() => {setUnansweredModal({show:false, list:[]}); handleSubmit();}} className="text-slate-400 text-[10px] font-bold hover:text-red-500 transition-colors uppercase tracking-wider py-1">
+              <button onClick={() => { setUnansweredModal({ show: false, list: [] }); doSubmit(); }}
+                className="text-gray-400 text-[10px] font-bold hover:text-red-500 transition uppercase tracking-wider py-1">
                 Xác nhận nộp bài ngay
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Header - Thu nhỏ chiều cao h-20 -> h-16 */}
-      <div className="w-full max-w-4xl bg-white/80 backdrop-blur-md border border-white rounded-2xl flex items-center justify-between px-5 h-16 mb-4 shadow-lg shadow-slate-200/50 sticky top-2 z-50">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="group flex items-center gap-2 font-bold text-xs text-slate-500 hover:text-red-500 transition-all"
-        >
-          <div className="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
-            <ArrowLeft size={16} />
-          </div>
-          <span className="hidden sm:inline">Rời khỏi</span>
-        </button>
-
-        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono font-black text-lg border-2 transition-all ${timeLeft < 60 ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-blue-50 border-blue-100 text-blue-700"}`}>
-          <TimerIcon size={18} className={timeLeft < 60 ? "text-red-500" : "text-blue-600"}/>
-          <span>{Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}</span>
-        </div>
-
-        <div className="flex flex-col items-end">
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Đang thi</span>
-          <div className="font-black text-slate-800 text-xs uppercase truncate max-w-[120px] md:max-w-[200px]">
-            {quizInfo?.title || "Đang tải..."}
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-3">
-          <div className="relative">
-            <Loader2 className="animate-spin text-blue-600" size={40} />
-            <div className="absolute inset-0 blur-xl bg-blue-400/20 animate-pulse rounded-full"></div>
-          </div>
-          <p className="text-slate-500 text-xs font-bold tracking-wide animate-pulse uppercase">ĐANG CHUẨN BỊ...</p>
-        </div>
-      ) : (
-        <div className="w-full max-w-3xl animate-in slide-in-from-bottom-4 duration-500">
-          {/* Progress Bar - Thu hẹp mb-8 -> mb-4 */}
-          <div className="w-full h-1.5 bg-slate-200 rounded-full mb-4 overflow-hidden shadow-inner">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {/* Main Content - Giảm padding p-10 -> p-6/p-8, giảm bo góc */}
-            <div className="md:col-span-12 bg-white rounded-[1.5rem] p-5 md:p-8 shadow-xl shadow-slate-200/60 border border-slate-50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none">
-                <CheckCircle2 size={80} />
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <span className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-md shadow-blue-200">
-                  Câu hỏi {currentQuestionIndex + 1}
-                </span>
-                <span className="text-slate-400 font-bold text-[10px] uppercase tracking-tighter">
-                  /{questions.length} CÂU
-                </span>
-              </div>
-
-              {/* Thu nhỏ font chữ câu hỏi text-2xl -> text-xl */}
-              <h3 className="text-lg md:text-xl font-black text-slate-800 mb-6 leading-relaxed">
-                {currentQ?.question}
-              </h3>
-              
-              <div className="grid grid-cols-1 gap-3">
-                {currentQ?.options.map((opt, idx) => {
-                  const isSelected = selectedAnswers[currentQ._id]?.index === idx;
-                  const labelLetter = String.fromCharCode(65 + idx);
-                  return (
-                    <label 
-                      key={idx} 
-                      className={`group flex items-center p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-300 transform active:scale-[0.99] ${
-                        isSelected 
-                        ? "border-blue-600 bg-blue-50/50 shadow-sm translate-x-1" 
-                        : "bg-slate-50/50 border-transparent hover:bg-white hover:border-slate-200 hover:shadow-md"
-                      }`}
-                    >
-                      <input 
-                        type="radio" 
-                        className="hidden" 
-                        name={`question-${currentQ._id}`}
-                        checked={isSelected}
-                        onChange={() => setSelectedAnswers(prev => ({...prev, [currentQ._id]: {index: idx, text: opt}}))} 
-                      />
-                      {/* Thu nhỏ box chữ cái w-11 -> w-9 */}
-                      <span className={`w-9 h-9 flex items-center justify-center rounded-xl mr-3 text-sm font-black transition-all duration-300 ${
-                        isSelected 
-                        ? "bg-blue-600 text-white scale-105 shadow-md shadow-blue-300" 
-                        : "bg-white text-slate-400 group-hover:text-slate-600 shadow-sm"
-                      }`}>
-                        {labelLetter}
-                      </span>
-                      <span className={`text-sm font-bold transition-colors ${isSelected ? "text-blue-800" : "text-slate-600"}`}>
-                        {opt}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              {/* Navigation Footer - Giảm margin mt-12 -> mt-8 */}
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-6">
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <button 
-                    disabled={currentQuestionIndex === 0} 
-                    onClick={() => setCurrentQuestionIndex(prev => prev-1)} 
-                    className="group flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-slate-100 rounded-xl hover:bg-slate-50 disabled:opacity-30 transition-all font-bold text-xs text-slate-600"
-                  >
-                    <ChevronLeft size={16} />
-                    Trước
-                  </button>
-                  <button 
-                    disabled={currentQuestionIndex === questions.length-1} 
-                    onClick={() => setCurrentQuestionIndex(prev => prev+1)} 
-                    className="group flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-slate-100 rounded-xl hover:bg-slate-50 disabled:opacity-30 transition-all font-bold text-xs text-slate-600"
-                  >
-                    Sau
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-
-                <button 
-                  onClick={handleSubmit} 
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-[#F26739] to-[#FF8059] hover:from-[#e0562d] text-white px-8 py-3 rounded-xl font-black text-xs uppercase shadow-lg shadow-orange-100 transition-all active:scale-95"
-                >
-                  <Send size={16} />
-                  Nộp bài
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!loading && (
-        <div className="mt-4 text-slate-400 text-[9px] font-medium uppercase tracking-[0.2em] opacity-50">
-          Smart Quiz System v2.0
         </div>
       )}
     </div>

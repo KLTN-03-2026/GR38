@@ -20,9 +20,9 @@ export default function ProfilePage() {
 
   return (
     <div className="flex gap-4 items-start">
-      <div className="flex-1 bg-white border border-gray-100 rounded-2xl overflow-hidden">
-        <div className="h-16 bg-gradient-to-r from-[#F26739] to-[#f08260] relative">
-          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+      <div className="flex-1 bg-white border border-gray-100 rounded-2xl">
+        <div className="h-16 bg-gradient-to-r from-[#F26739] to-[#f08260] relative rounded-t-2xl">
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 z-10">
             <AvatarUpload
               avatarUrl={avatarUrl}
               initials={initials}
@@ -31,7 +31,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="pt-12 pb-5 px-10">
+        <div className="pt-14 pb-5 px-10">
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-8">
               <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import { quizService } from "@/services/quizService";
 import {
   Bell,
   BookOpen,
@@ -66,9 +67,8 @@ export default function LearnerDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [docRes, histRes, flashRes] = await Promise.allSettled([
+        const [docRes, flashRes] = await Promise.allSettled([
           api.get("/documents"),
-          api.get("/quizzes/my-history"),
           api.get("/flashcards"),
         ]);
 
@@ -83,53 +83,47 @@ export default function LearnerDashboard() {
             setDocs([]);
           }
         }
-        if (histRes.status === "fulfilled") {
-          const all = histRes.value.data?.data ?? histRes.value.data ?? [];
 
-          if (Array.isArray(all)) {
-            const bestAttemptsMap = new Map();
-
-            for (const item of all) {
-              const qId = item.quizId?._id || item.quizId || item.quiz?._id;
-              if (!qId) continue;
-
-              const currentBest = bestAttemptsMap.get(qId.toString());
-              
-              if (!currentBest) {
-                bestAttemptsMap.set(qId.toString(), item);
-              } else {
-                const scoreA = currentBest.score ?? 0;
-                const scoreB = item.score ?? 0;
-                
-                if (scoreB > scoreA) {
-                  bestAttemptsMap.set(qId.toString(), item);
-                } else if (scoreB === scoreA) {
-                  const dateA = new Date(currentBest.createdAt);
-                  const dateB = new Date(item.createdAt);
-                  if (dateB > dateA) {
-                    bestAttemptsMap.set(qId.toString(), item);
-                  }
-                }
-              }
-            }
-
-            const uniqueHistory = Array.from(bestAttemptsMap.values()).sort((a, b) => {
-                const scoreA = a.score ?? 0;
-                const scoreB = b.score ?? 0;
-                if (scoreB !== scoreA) return scoreB - scoreA;
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            });
-
-            setHistory(uniqueHistory);
-          } else {
-            setHistory([]);
-          }
-        }
         if (flashRes.status === "fulfilled") {
           const all = flashRes.value.data?.data ?? flashRes.value.data ?? [];
           setFlashCount(
             Array.isArray(all) ? all.length : (flashRes.value.data?.count ?? 0),
           );
+        }
+
+        // Dùng quizService.getMyHistory() — giống trang Quizzes / HistoryModal
+        const histRes = await quizService.getMyHistory();
+        const raw = histRes.data?.data ?? histRes.data ?? [];
+        if (Array.isArray(raw)) {
+          // Best attempt per quiz (giữ logic cũ để hiển thị), sort by score desc
+          const bestAttemptsMap = new Map();
+          for (const item of raw) {
+            const qId = item.quizId?._id || item.quizId || item.quiz?._id;
+            if (!qId) continue;
+            const currentBest = bestAttemptsMap.get(qId.toString());
+            if (!currentBest) {
+              bestAttemptsMap.set(qId.toString(), item);
+            } else {
+              const scoreA = currentBest.correctAnswersCount ?? currentBest.score ?? 0;
+              const scoreB = item.correctAnswersCount ?? item.score ?? 0;
+              if (scoreB > scoreA) {
+                bestAttemptsMap.set(qId.toString(), item);
+              } else if (scoreB === scoreA) {
+                if (new Date(item.createdAt) > new Date(currentBest.createdAt)) {
+                  bestAttemptsMap.set(qId.toString(), item);
+                }
+              }
+            }
+          }
+          const uniqueHistory = Array.from(bestAttemptsMap.values()).sort((a, b) => {
+            const scoreA = a.correctAnswersCount ?? a.score ?? 0;
+            const scoreB = b.correctAnswersCount ?? b.score ?? 0;
+            if (scoreB !== scoreA) return scoreB - scoreA;
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          });
+          setHistory(uniqueHistory);
+        } else {
+          setHistory([]);
         }
       } catch (err) {
         console.error("Lỗi tải dashboard:", err);
@@ -144,6 +138,23 @@ export default function LearnerDashboard() {
     { label: "Bài kiểm tra", value: history.length, Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
     { label: "Bộ Flashcard", value: flashCount, Icon: LayoutGrid, color: "#8B5CF6", bg: "#F3F0FF" },
   ];
+
+  /**
+   * Click vào 1 attempt → navigate sang /learner/quizzes
+   * kèm state để Quizzes.jsx tự mở HistoryModal của quiz đó
+   */
+  const handleAttemptClick = (item) => {
+    const quizId =
+      typeof item.quizId === "object" ? item.quizId?._id : item.quizId
+      ?? item.quiz?._id;
+    const quizTitle =
+      (typeof item.quizId === "object" ? item.quizId?.title : null)
+      ?? item.quiz?.title
+      ?? "";
+    navigate("/learner/quizzes", {
+      state: { openHistoryQuiz: { _id: quizId, title: quizTitle } },
+    });
+  };
 
   if (loading)
     return (
@@ -165,10 +176,9 @@ export default function LearnerDashboard() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
       `}</style>
 
-      {/* Tăng max-width lên 7xl và tăng padding ngang px-6 */}
       <div className="max-w-7xl mx-auto px-6 pt-8">
         
-        {/* HEADER - Font to hơn 1 xíu */}
+        {/* HEADER */}
         <div className="mb-8">
           <p className="text-[12px] text-gray-400 font-bold uppercase tracking-wider mb-1">
             {new Date().toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
@@ -178,7 +188,7 @@ export default function LearnerDashboard() {
           </h1>
         </div>
 
-        {/* STAT CARDS - Card to hơn, Icon to hơn */}
+        {/* STAT CARDS */}
         <div className="grid grid-cols-3 gap-5 mb-8">
           {stats.map((s) => (
             <div key={s.label} className="stat-card bg-white rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all border border-gray-100">
@@ -198,7 +208,7 @@ export default function LearnerDashboard() {
 
         <div className="flex flex-col gap-8">
           
-          {/* HÀNG 1: TÀI LIỆU VÀ BÀI KIỂM TRA (Tăng chiều cao tối đa) */}
+          {/* HÀNG 1: TÀI LIỆU VÀ BÀI KIỂM TRA */}
           <div className="grid gap-8" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
             
             {/* CỘT TRÁI - TÀI LIỆU GỢI Ý */}
@@ -240,7 +250,7 @@ export default function LearnerDashboard() {
               )}
             </div>
 
-            {/* CỘT PHẢI - BÀI KIỂM TRA ĐÃ LÀM */}
+            {/* CỘT PHẢI - LỊCH SỬ LÀM BÀI */}
             <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col border border-gray-100 max-h-[400px]">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
@@ -262,14 +272,18 @@ export default function LearnerDashboard() {
                 ) : (
                   <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-3">
                     {history.map((item, idx) => {
-                      const score = item.score ?? 0;
+                      const score = item.correctAnswersCount ?? item.score ?? 0;
                       const title = item.quizId?.title ?? item.quiz?.title ?? `Bài kiểm tra ${idx + 1}`;
                       const date = item.createdAt;
-                      const resultId = item._id;
                       const badgeColor = SCORE_COLORS[idx] || SCORE_COLORS[3];
 
                       return (
-                        <div key={resultId ?? idx} className="quiz-row flex items-center gap-3 p-3 rounded-xl border border-gray-50 cursor-pointer" onClick={() => resultId && navigate(`/learner/quizzes/result/${resultId}`)}>
+                        // ← onClick giờ mở HistoryModal thay vì navigate result
+                        <div
+                          key={item._id ?? idx}
+                          className="quiz-row flex items-center gap-3 p-3 rounded-xl border border-gray-50 cursor-pointer transition-colors"
+                          onClick={() => handleAttemptClick(item)}
+                        >
                           <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: badgeColor + "15" }}>
                             <Medal size={18} color={badgeColor} />
                           </div>
@@ -308,7 +322,7 @@ export default function LearnerDashboard() {
               </div>
             </div>
 
-            {/* Flashcard - Padding to hơn 1 xíu */}
+            {/* Flashcard */}
             <div className="rounded-2xl p-6 flex items-center justify-between shadow-md" style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
               <div>
                 <p className="text-lg font-black text-white">Ôn tập Flashcard</p>

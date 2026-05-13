@@ -274,12 +274,12 @@ export default function TeacherDashboard() {
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <Trophy size={16} color="#F59E0B" strokeWidth={2.5} /> Xếp hạng bài kiểm tra
             </h2>
-            <span
-              className="text-xs text-blue-600 font-semibold cursor-pointer"
-              onClick={() => navigate("/teacher/statistics")}
-            >
-              Chi tiết →
-            </span>
+           <span
+  className="text-xs text-blue-600 font-semibold cursor-pointer"
+  onClick={() => navigate("/teacher/stats")}
+>
+  Chi tiết →
+</span>
           </div>
 
           <div className="flex flex-col gap-3">

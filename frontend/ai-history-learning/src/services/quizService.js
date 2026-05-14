@@ -86,15 +86,15 @@ create: async (data, thumbnailFile) => {
 update: async (id, data, thumbnailFile) => {
   const formData = new FormData();
   if (data.title)       formData.append("title",       data.title);
-  if (data.description) formData.append("description", data.description);
+  if (data.description !== undefined) formData.append("description", data.description);
   if (data.tags)        formData.append("tags",        JSON.stringify(data.tags));
+  if (data.questions)   formData.append("questions",   JSON.stringify(data.questions)); 
+  if (data.documentId)  formData.append("documentId",  data.documentId);              
+  if (data.timeLimit)   formData.append("timeLimit",   data.timeLimit);             
   if (thumbnailFile)    formData.append("thumbnail",   thumbnailFile);
-
   const res = await api.put(`/quizzes/${id}`, formData);
-  // Không set Content-Type — để axios tự set boundary
   return res;
 },
-
   // Sửa chi tiết nội dung của MỘT câu hỏi cụ thể trong đề
   updateQuestion: async (quizId, questionId, questionData) => {
     const res = await api.put(`/quizzes/${quizId}/questions/${questionId}`, questionData);

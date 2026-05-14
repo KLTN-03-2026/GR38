@@ -50,13 +50,38 @@ function ThumbnailPicker({ preview, name, onChange, onRemove, error, maxMb }) {
 
 export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) {
   const isEdit = !!editQuiz;
+  const editId = editQuiz?._id ?? editQuiz?.id ?? null;
+  const cacheKey = isEdit && editId ? `quiz_q_${editId}` : null;
+
   const [step, setStep] = useState(1);
   const [quizTitle, setQuizTitle] = useState("");
   const [description, setDesc] = useState("");
   const [difficulty, setDiff] = useState("EASY");
   const [timeLimit, setTime] = useState(30);
   const [titleErr, setTitleErr] = useState("");
-  const [questions, setQuestions] = useState([]);
+
+  const [questions, setQuestions] = useState(() => {
+    // Thử lấy từ sessionStorage trước (sống sót qua remount)
+    if (cacheKey) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    // Lần đầu: parse từ editQuiz
+    if (!editQuiz?.questions?.length) return [];
+    return editQuiz.questions.map((q, i) => {
+      const idx = q.correctAnswerIndex ?? q.options?.indexOf(q.correctAnswer) ?? 0;
+      return {
+        id: q._id ?? q.id ?? `q-${Date.now()}-${i}`,
+        question: q.question,
+        options: q.options ?? [],
+        correctAnswer: q.options?.[idx] ?? q.correctAnswer ?? "",
+        correctAnswerIndex: idx,
+      };
+    });
+  });
+
   const [currentQ, setCurrentQ] = useState(EMPTY_Q);
   const [qErrors, setQErrors] = useState({});
   const [editIdx, setEditIdx] = useState(null);
@@ -68,32 +93,53 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   const [thumbErr, setThumbErr] = useState("");
   const [docs, setDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(documentId ?? "");
+  const [selectedDoc, setSelectedDoc] = useState("");
+
+  // Sync vào sessionStorage mỗi khi questions thay đổi
+  useEffect(() => {
+    if (cacheKey) {
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(questions)); } catch {}
+    }
+  }, [questions]);
+
+  const clearCache = () => {
+    if (cacheKey) sessionStorage.removeItem(cacheKey);
+  };
+
+  const handleClose = () => {
+    clearCache();
+    onClose();
+  };
 
   useEffect(() => {
     (async () => {
       try {
         setDocsLoading(true);
         const res = await api.get("/documents");
-        setDocs(Array.isArray(res?.data?.data ?? res?.data) ? (res?.data?.data ?? res?.data) : []);
-      } catch { setDocs([]); }
-      finally { setDocsLoading(false); }
+        const list = Array.isArray(res?.data?.data ?? res?.data)
+          ? (res?.data?.data ?? res?.data) : [];
+        setDocs(list);
+        const rawDocId = editQuiz?.documentId ?? documentId ?? "";
+        const docId = rawDocId?._id ?? rawDocId?.id ?? rawDocId ?? "";
+        setSelectedDoc(String(docId));
+      } catch {
+        setDocs([]);
+        const rawDocId = editQuiz?.documentId ?? documentId ?? "";
+        const docId = rawDocId?._id ?? rawDocId?.id ?? rawDocId ?? "";
+        setSelectedDoc(String(docId));
+      } finally {
+        setDocsLoading(false);
+      }
     })();
-  }, []);
 
-  useEffect(() => {
-    if (!editQuiz) return;
-    setQuizTitle(editQuiz.title ?? "");
-    setDesc(editQuiz.description ?? "");
-    setDiff(editQuiz.difficulty ?? "EASY");
-    setTime(editQuiz.timeLimit ?? editQuiz.time_limit ?? 30);
-    if (editQuiz.thumbnail) setThumbPrev(editQuiz.thumbnail);
-    setSelectedDoc(String(editQuiz.documentId ?? documentId ?? ""));
-    setQuestions((editQuiz.questions ?? []).map((q) => {
-      const idx = q.correctAnswerIndex ?? q.options?.indexOf(q.correctAnswer) ?? 0;
-      return { question: q.question, options: q.options ?? [], correctAnswer: q.options?.[idx] ?? q.correctAnswer ?? "", correctAnswerIndex: idx };
-    }));
-  }, [editQuiz]);
+    if (editQuiz) {
+      setQuizTitle(editQuiz.title ?? "");
+      setDesc(editQuiz.description ?? "");
+      setDiff(editQuiz.difficulty ?? "EASY");
+      setTime(editQuiz.timeLimit ?? editQuiz.time_limit ?? 30);
+      if (editQuiz.thumbnail) setThumbPrev(editQuiz.thumbnail);
+    }
+  }, []);
 
   const handleThumbChange = (e) => {
     const file = e.target.files?.[0];
@@ -122,7 +168,13 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     const options = LETTERS.map((l) => currentQ[`option${l}`]);
     const ci = Number(currentQ.correctAnswer);
     if (!options[ci]) { setQErrors((p) => ({ ...p, correctAnswer: "Đáp án đúng không hợp lệ" })); return; }
-    const built = { question: currentQ.question, options, correctAnswer: options[ci], correctAnswerIndex: ci };
+    const built = {
+      id: editIdx !== null ? questions[editIdx].id : `q-${Date.now()}`,
+      question: currentQ.question,
+      options,
+      correctAnswer: options[ci],
+      correctAnswerIndex: ci,
+    };
     setQuestions((p) => editIdx !== null ? p.map((q, i) => (i === editIdx ? built : q)) : [...p, built]);
     setEditIdx(null); setListErr(""); setCurrentQ(EMPTY_Q); setQErrors({});
   };
@@ -130,16 +182,30 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   const handleEdit = (i) => {
     const q = questions[i];
     const ci = q.correctAnswerIndex ?? q.options.indexOf(q.correctAnswer);
-    setCurrentQ({ question: q.question, ...Object.fromEntries(LETTERS.map((l, j) => [`option${l}`, q.options[j] ?? ""])), correctAnswer: String(ci === -1 ? 0 : ci) });
+    setCurrentQ({
+      question: q.question,
+      ...Object.fromEntries(LETTERS.map((l, j) => [`option${l}`, q.options[j] ?? ""])),
+      correctAnswer: String(ci === -1 ? 0 : ci),
+    });
     setEditIdx(i);
   };
 
-  // ✅ Chỉ xóa trong state, lưu toàn bộ khi bấm "Lưu thay đổi"
-  const handleRemoveQ = (i) => {
-    setQuestions((p) => p.filter((_, j) => j !== i));
-    if (editIdx === i) { setEditIdx(null); setCurrentQ(EMPTY_Q); }
-    setListErr("");
-  };
+ const handleRemoveQ = (i) => {
+  setQuestions((p) => {
+    const updated = p.filter((_, j) => j !== i); // ← filter, không phải map
+    if (cacheKey) {
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(updated)); } catch {}
+    }
+    return updated;
+  });
+  if (editIdx === i) {
+    setEditIdx(null);
+    setCurrentQ(EMPTY_Q);
+  } else if (editIdx !== null && i < editIdx) {
+    setEditIdx((idx) => idx - 1);
+  }
+  setListErr("");
+};
 
   const handleFinish = async () => {
     if (questions.length < MIN_Q) { setListErr(`Cần ít nhất ${MIN_Q} câu hỏi`); return; }
@@ -149,11 +215,14 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
         title: quizTitle, description, difficulty,
         timeLimit: Number(timeLimit),
         documentId: selectedDoc || null,
-        questions: questions.map(({ question, options, correctAnswer, correctAnswerIndex }) => ({ question, options, correctAnswer, correctAnswerIndex })),
+        questions: questions.map(({ question, options, correctAnswer, correctAnswerIndex }) => ({
+          question, options, correctAnswer, correctAnswerIndex,
+        })),
       };
       const result = isEdit
         ? await quizService.update(editQuiz._id ?? editQuiz.id, data, thumb ?? undefined)
         : await quizService.create(data, thumb ?? undefined);
+      clearCache();
       onSave(result, isEdit, questions);
     } catch (err) {
       setSaveErr(err?.response?.data?.message || `Lỗi ${isEdit ? "cập nhật" : "tạo"} Quiz, vui lòng thử lại.`);
@@ -185,7 +254,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
               ))}
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all text-xl">×</button>
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all text-xl">×</button>
         </div>
 
         {/* Body */}
@@ -210,7 +279,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
               </Field>
               <ThumbnailPicker preview={thumbPreview} name={thumb?.name} maxMb={MAX_MB}
                 onChange={handleThumbChange} onRemove={() => { setThumb(null); setThumbPrev(""); setThumbErr(""); }} error={thumbErr} />
-              <div className="grid gap-3">           
+              <div className="grid gap-3">
                 <Field label="Thời gian (phút)">
                   <input type="number" min={1} value={timeLimit} onChange={(e) => setTime(e.target.value)} className={cls(false)} />
                 </Field>
@@ -221,7 +290,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
               {questions.length > 0 && (
                 <div className="space-y-1.5">
                   {questions.map((q, i) => (
-                    <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-gray-100 bg-gray-50">
+                    <div key={q.id} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-gray-100 bg-gray-50">
                       <span className="text-[11px] font-semibold text-gray-400 shrink-0 w-5">#{i + 1}</span>
                       <p className="text-xs text-gray-600 flex-1 truncate">{q.question}</p>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">{LETTERS[q.correctAnswerIndex]}</span>
@@ -282,7 +351,7 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
 
         {/* Footer */}
         <div className="flex justify-end gap-2.5 px-6 pb-5 pt-3.5 border-t border-gray-100 shrink-0">
-          <button onClick={onClose} className={`${btnBase} border border-gray-200 text-gray-600 ghost-btn`}>Huỷ</button>
+          <button onClick={handleClose} className={`${btnBase} border border-gray-200 text-gray-600 ghost-btn`}>Huỷ</button>
           {step === 1 ? (
             <button onClick={() => { if (!quizTitle.trim()) { setTitleErr("Vui lòng nhập tên Quiz"); return; } setStep(2); }}
               className={`${btnBase} text-white primary-btn`} style={{ background: "#F26739" }}>

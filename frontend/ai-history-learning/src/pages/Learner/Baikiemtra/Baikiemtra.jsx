@@ -5,30 +5,6 @@ import { useNavigate } from "react-router-dom";
 const Baikiemtra = () => {
   const navigate = useNavigate();
   
-  // --- DATA GIẢ ---
-  const questionsData = [
-    { id: 1, question: "Chiến dịch Điện Biên Phủ kết thúc vào năm nào?", options: ["Năm 1999", "Năm 2026", "Năm 1954", "Năm 1991"], correct: "Năm 1954" },
-    { id: 2, question: "Chiến thắng Điện Biên Phủ kết thúc vào ngày nào?", options: ["6/5/1954", "7/5/1954", "8/5/1954", "9/5/1954"], correct: "7/5/1954" },
-    { id: 3, question: "Ai là Tổng chỉ huy quân đội Việt Nam trong chiến dịch?", options: ["Trường Chinh", "Võ Nguyên Giáp", "Hồ Chí Minh", "Phạm Văn Đồng"], correct: "Võ Nguyên Giáp" },
-    { id: 4, question: "Đối thủ chính của quân đội Việt Nam là nước nào?", options: ["Mỹ", "Pháp", "Nhật", "Anh"], correct: "Pháp" },
-    { id: 5, question: "Tướng chỉ huy quân Pháp tại Điện Biên Phủ là ai?", options: ["Salan", "De Castries", "Navarre", "Bigeard"], correct: "De Castries" },
-    { id: 6, question: "Chiến dịch Điện Biên Phủ thuộc cuộc kháng chiến nào?", options: ["Kháng chiến chống Mỹ", "Kháng chiến chống Pháp", "Kháng chiến chống Nhật", "Nội chiến"], correct: "Kháng chiến chống Pháp" },
-    { id: 7, question: "Điện Biên Phủ thuộc khu vực nào của Việt Nam?", options: ["Đồng bằng Bắc Bộ", "Tây Nguyên", "Tây Bắc", "Nam Bộ"], correct: "Tây Bắc" },
-    { id: 8, question: "Phương châm tác chiến của ta trong chiến dịch là gì?", options: ["Đánh nhanh thắng nhanh", "Đánh chắc tiến chắc", "Phòng thủ là chính", "Rút lui chiến lược"], correct: "Đánh chắc tiến chắc" },
-    { id: 9, question: "Chiến dịch Điện Biên Phủ kéo dài bao nhiêu ngày?", options: ["45 ngày", "56 ngày", "60 ngày", "30 ngày"], correct: "56 ngày" },
-    { id: 10, question: "Chiến thắng Điện Biên Phủ có ý nghĩa gì?", options: ["Mở đầu chiến tranh", "Kết thúc chiến tranh Đông Dương lần thứ nhất", "Thống nhất đất nước", "Bắt đầu công nghiệp hóa"], correct: "Kết thúc chiến tranh Đông Dương lần thứ nhất" },
-    { id: 11, question: "Hội nghị nào được ký kết sau chiến thắng?", options: ["Hội nghị Paris", "Hội nghị Genève", "Hội nghị Potsdam", "Hội nghị Versailles"], correct: "Hội nghị Genève" },
-    { id: 12, question: "Ai là Chủ tịch nước Việt Nam thời điểm đó?", options: ["Hồ Chí Minh", "Tôn Đức Thắng", "Võ Nguyên Giáp", "Lê Duẩn"], correct: "Hồ Chí Minh" },
-    { id: 13, question: "Chiến dịch Điện Biên Phủ gồm mấy đợt tấn công?", options: ["2 đợt", "3 đợt", "4 đợt", "5 đợt"], correct: "3 đợt" },
-    { id: 14, question: "Cứ điểm quan trọng nhất của Pháp là gì?", options: ["Him Lam", "Độc Lập", "Mường Thanh", "Hồng Cúm"], correct: "Mường Thanh" },
-    { id: 15, question: "Lực lượng tham gia chiến dịch chủ yếu là gì?", options: ["Hải quân", "Không quân", "Bộ binh", "Cảnh sát"], correct: "Bộ binh" },
-    { id: 16, question: "Chiến thuật nổi bật của quân ta là gì?", options: ["Đánh du kích", "Không chiến", "Bao vây, đánh lấn", "Rút lui"], correct: "Bao vây, đánh lấn" },
-    { id: 17, question: "Chiến thắng Điện Biên Phủ được gọi là gì?", options: ["Trận chiến thế kỷ", "Lừng lẫy năm châu, chấn động địa cầu", "Cuộc chiến vĩ đại", "Trận đánh cuối cùng"], correct: "Lừng lẫy năm châu, chấn động địa cầu" },
-    { id: 18, question: "Mục tiêu chính của Pháp khi xây dựng cứ điểm này?", options: ["Phòng thủ", "Tiêu diệt chủ lực Việt Minh", "Chiếm miền Nam", "Bảo vệ thủ đô"], correct: "Tiêu diệt chủ lực Việt Minh" },
-    { id: 19, question: "Yếu tố góp phần quan trọng vào chiến thắng?", options: ["Vũ khí hiện đại", "Tinh thần chiến đấu và chiến thuật", "Hỗ trợ từ Mỹ", "Thời tiết thuận lợi"], correct: "Tinh thần chiến đấu và chiến thuật" },
-    { id: 20, question: "Chiến thắng ảnh hưởng thế nào đến thế giới?", options: ["Không ảnh hưởng", "Chỉ trong nước", "Cổ vũ giải phóng dân tộc", "Gây chiến tranh thế giới"], correct: "Cổ vũ giải phóng dân tộc" },
-  ];
-
   const [currentIdx, setCurrentIdx] = useState(0);
   const [tempAnswer, setTempAnswer] = useState(null);
   const [answers, setAnswers] = useState({});

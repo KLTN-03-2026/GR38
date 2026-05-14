@@ -285,7 +285,7 @@ const Quizzes = () => {
   const [historyQuiz, setHistoryQuiz] = useState(null);
   const itemsPerPage = 8;
   const navigate = useNavigate();
-  const location = useLocation();          // ← đọc state từ dashboard
+  const location = useLocation();
   const { role } = useAuth();
   const baseURL = api.defaults.baseURL.replace("/api/v1", "");
 
@@ -306,7 +306,7 @@ const Quizzes = () => {
         const unique = Array.from(new Set(allQuizzes.map(q => q._id)))
           .map(id => allQuizzes.find(q => q._id === id)).filter(Boolean);
         setQuizData(unique);
-        return unique;   // trả về để dùng ngay sau khi fetch xong
+        return unique;
       } else {
         setQuizData([]);
         return [];
@@ -321,14 +321,10 @@ const Quizzes = () => {
 
   useEffect(() => {
     fetchAllQuizzes().then((quizzes) => {
-      // Sau khi load xong quiz list, kiểm tra có state từ dashboard không
       const openTarget = location.state?.openHistoryQuiz;
       if (openTarget?._id && quizzes.length > 0) {
-        // Tìm quiz đầy đủ trong danh sách vừa fetch
         const found = quizzes.find(q => q._id === openTarget._id);
-        // Nếu có thì dùng object đầy đủ, không thì dùng object tối giản từ state
         setHistoryQuiz(found ?? openTarget);
-        // Xoá state để reload trang không mở lại modal
         window.history.replaceState({}, document.title);
       }
     });
@@ -337,6 +333,16 @@ const Quizzes = () => {
   const filtered     = quizData.filter(q => q.title?.toLowerCase().includes(searchTerm.toLowerCase()));
   const totalPages   = Math.ceil(filtered.length / itemsPerPage) || 1;
   const currentItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Xử lý báo cáo sự cố - Điều hướng về trang báo cáo
+  const handleReportIssue = (quiz) => {
+    navigate("/learner/SuCo", { 
+      state: { 
+        reportTarget: "quizzes", 
+        targetId: quiz._id 
+      } 
+    });
+  };
 
   return (
     <div className="flex-1 bg-[#FDFDFD] min-h-screen p-6 font-sans">
@@ -372,8 +378,20 @@ const Quizzes = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
               {currentItems.length > 0 ? currentItems.map(quiz => (
                 <div key={quiz._id}
-                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col h-[340px]"
+                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col h-[340px] relative group"
                   style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                  
+                  {/* Nút Báo cáo Sự Cố - Nằm đè lên thumbnail */}
+                  <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleReportIssue(quiz);
+                    }}
+                    title="Báo cáo sự cố"
+                    className="absolute top-3 right-3 z-10 p-2 bg-white/90 hover:bg-red-50 rounded-full shadow-md text-red-500 transition-all border border-red-100"
+                  >
+                    <AlertCircle size={18} />
+                  </button>
 
                   <div className="relative overflow-hidden shrink-0">
                     {quiz.thumbnail ? (
@@ -460,4 +478,5 @@ const Quizzes = () => {
     </div>
   );
 };
+
 export default Quizzes;

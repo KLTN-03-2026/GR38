@@ -46,7 +46,6 @@ import TienDo from "./pages/Learner/TienDo";
 //Shared
 import KetQuaQuizz from "./components/features/quizResults/QuizResultDetail";
 
-// PrivateRoute logic
 function PrivateRoute({ allowedRole }) {
   const { user, role, loading } = useAuth();
   if (loading)
@@ -62,7 +61,6 @@ function PrivateRoute({ allowedRole }) {
   return role === allowedRole ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-// PublicRoute logic
 function PublicRoute() {
   const { user, role, loading } = useAuth();
   if (loading) return null;
@@ -72,7 +70,6 @@ function PublicRoute() {
   return <Navigate to="/learner" replace />;
 }
 
-// App Layout
 function AppLayout() {
   return (
     <div className="flex min-h-screen bg-[#FAFAFA]">
@@ -91,14 +88,14 @@ export default function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-      {/* AUTH ROUTES */}
+      
       <Route element={<PublicRoute />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
-      {/* ADMIN ROUTES */}
-     <Route element={<PrivateRoute allowedRole="ADMIN" />}>
+
+      <Route element={<PrivateRoute allowedRole="ADMIN" />}>
         <Route path="/admin" element={<AppLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="accounts" element={<AccountManagement />} />
@@ -117,7 +114,7 @@ export default function AppRouter() {
           <Route path="quizzes/result/:resultId" element={<KetQuaQuizz />} />
         </Route>
       </Route>
-      {/* TEACHER ROUTES */}
+
       <Route element={<PrivateRoute allowedRole="TEACHER" />}>
         <Route path="/teacher" element={<AppLayout />}>
           <Route index element={<Teacher />} />
@@ -136,7 +133,7 @@ export default function AppRouter() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
-      {/* LEARNER ROUTES */}
+
       <Route element={<PrivateRoute allowedRole="LEARNER" />}>
         <Route path="/learner" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
@@ -155,7 +152,7 @@ export default function AppRouter() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
-      {/* FALLBACK */}
+
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

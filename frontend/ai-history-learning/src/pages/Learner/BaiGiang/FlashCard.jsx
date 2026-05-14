@@ -117,6 +117,18 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
     setIsFlipped(false);
   };
 
+  // Hàm xử lý khi nhấn nút Tiếp theo / Hoàn thành
+  const handleNext = () => {
+    if (currentIndex === questions.length - 1) {
+      // Nếu là thẻ cuối cùng -> Hoàn thành -> Quay lại danh sách
+      setIsStudying(false);
+    } else {
+      // Nếu chưa phải thẻ cuối -> Chuyển thẻ tiếp theo
+      setIsFlipped(false);
+      setCurrentIndex((p) => (p + 1) % questions.length);
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center p-20 text-[#f26739]">
       <Loader2 className="animate-spin" size={40} />
@@ -176,6 +188,7 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
   // GIAO DIỆN 2: CHẾ ĐỘ HỌC
   const currentCard = questions[currentIndex];
   const progressPercent = questions.length > 0 ? Math.round((memorizedIds.size / questions.length) * 100) : 0;
+  const isLastCard = currentIndex === questions.length - 1;
 
   return (
     <div className="w-full flex flex-col items-center p-6 bg-white min-h-[600px]">
@@ -275,17 +288,19 @@ const FlashCard = ({ documentId, lectureTitle, thumbnail: defaultThumbnail }) =>
         <div className="flex gap-4">
           <button
             onClick={() => { setIsFlipped(false); setCurrentIndex((p) => (p - 1 + questions.length) % questions.length); }}
-            disabled={questions.length <= 1}
-            className="flex-1 py-4 rounded-2xl border-2 border-gray-900 font-bold text-sm hover:bg-gray-50 disabled:opacity-30"
+            disabled={questions.length <= 1 || currentIndex === 0}
+            className="flex-1 py-4 rounded-2xl border-2 border-gray-900 font-bold text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             TRƯỚC ĐÓ
           </button>
           <button
-            onClick={() => { setIsFlipped(false); setCurrentIndex((p) => (p + 1) % questions.length); }}
+            onClick={handleNext}
             disabled={questions.length <= 1}
-            className="flex-[2] py-4 rounded-2xl bg-[#f26739] text-white font-bold text-sm shadow-lg hover:scale-[1.02] transition-all disabled:opacity-30"
+            className={`flex-[2] py-4 rounded-2xl font-bold text-sm shadow-lg hover:scale-[1.02] transition-all disabled:opacity-30 text-white ${
+              isLastCard ? "bg-green-600" : "bg-[#f26739]"
+            }`}
           >
-            THẺ TIẾP THEO
+            {isLastCard ? "HOÀN THÀNH" : "THẺ TIẾP THEO"}
           </button>
         </div>
       </div>

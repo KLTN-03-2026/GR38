@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Eye, Home, CheckCircle, XCircle, Info, ClipboardCheck, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Eye, Home, CheckCircle, XCircle, Info, ClipboardCheck, X, Clock } from "lucide-react";
 import api from "../../../lib/api";
 
 const QuizzResult = ({ result, onRetry, onBack }) => {
@@ -44,7 +44,9 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
           score: raw?.correctAnswersCount ?? 0,
           total: raw?.totalQuestions ?? 0,
           questions: processedQs,
-          percent: raw?.percent || 0
+          percent: raw?.percent || 0,
+          duration: raw?.duration ?? 0, // Call API lấy thời gian đã làm bài
+          createdAt: raw?.createdAt // Thêm ngày làm bài tương tự QuizzResultDetail
         });
       } catch (err) {
         console.error("Lỗi lấy chi tiết kết quả:", err);
@@ -61,19 +63,30 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins} phút ${secs} giây`;
+  };
+
   const fScore = apiDetail?.score ?? result?.score ?? 0;
   const fTotal = apiDetail?.total ?? result?.total ?? 0;
   const fWrong = Math.max(0, fTotal - fScore);
+  const fUnanswered = apiDetail?.questions?.filter(q => q.userIdx === -1).length || 0;
   
-  // SỬA Ở ĐÂY: Luôn ép UI tự tính toán % dựa trên số câu đúng và tổng số câu để tránh lỗi API trả về 0
   const pct = fTotal > 0 ? Math.round((fScore / fTotal) * 100) : 0;
-  
-  // Màu sắc theo %
   const color = pct >= 80 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
-  
-  // Sửa lỗi UI 0%: Nếu pct = 0, cho một giá trị cực nhỏ (0.1) để vòng tròn màu đỏ vẫn hiển thị viền
   const strokeValue = pct === 0 ? 0.1 : pct;
   const strokeDasharray = `${strokeValue}, 100`;
+
+  // Hàm xử lý làm lại bài thi (quay lại QuizzView thông qua callback onRetry)
+  const handleRetryClick = () => {
+    if (onRetry) {
+      onRetry();
+    } else {
+      window.location.reload();
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -151,6 +164,10 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
                     <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> Sai</div>
                     <span className="text-red-600">{fWrong}</span>
                   </div>
+                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase">
+                    <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-yellow-400"></div> Chưa khoanh</div>
+                    <span className="text-yellow-600">{fUnanswered}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -195,7 +212,20 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
             <h2 className="text-xl font-black text-gray-800 mb-1">
               {pct >= 80 ? "Xuất sắc quá!" : pct >= 50 ? "Làm tốt lắm!" : "Cần cố gắng thêm!"}
             </h2>
-            <p className="text-[12px] text-gray-400">
+            <div className="flex flex-col items-center justify-center gap-1">
+                {apiDetail?.duration !== undefined && (
+                  <div className="flex items-center gap-2 text-[12px] text-gray-400">
+                    <Clock size={12} />
+                    <span>Thời gian: {formatDuration(apiDetail.duration)}</span>
+                  </div>
+                )}
+                {apiDetail?.createdAt && (
+                  <div className="text-[10px] text-gray-400 font-medium">
+                    Ngày làm: {new Date(apiDetail.createdAt).toLocaleDateString('vi-VN')}
+                  </div>
+                )}
+            </div>
+            <p className="text-[12px] text-gray-400 mt-1">
               {pct >= 50 ? "Bạn đã vượt qua bài kiểm tra rồi 🎉" : "Xem lại bài và thử lại bạn nhé 🔄"}
             </p>
         </div>
@@ -244,9 +274,7 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
           </button>
 
           <div className="flex justify-center gap-6 pt-2">
-            <button onClick={onRetry} className="text-[10px] font-black text-orange-500 uppercase flex items-center gap-1.5 hover:opacity-70 transition-all">
-                <RefreshCw size={12} /> Làm lại
-            </button>
+            
             <button onClick={onBack} className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-1.5 hover:opacity-70 transition-all">
                 <Home size={12} /> Thoát
             </button>
@@ -256,5 +284,5 @@ const QuizzResult = ({ result, onRetry, onBack }) => {
     </div>
   );
 };
-// Quizz 
+
 export default QuizzResult;

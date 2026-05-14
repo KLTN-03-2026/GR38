@@ -9,19 +9,18 @@ const HocQuizz = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [questions,            setQuestions]            = useState([]);
-  const [quizInfo,             setQuizInfo]             = useState(null);
-  const [loading,              setLoading]              = useState(true);
-  const [currentIdx,           setCurrentIdx]           = useState(0);
-  const [selectedAnswers,      setSelectedAnswers]      = useState({}); // { qId: { index, text } }
-  const [timeLeft,             setTimeLeft]             = useState(600);
-  const [isFinished,           setIsFinished]           = useState(false);
-  const [scoreData,            setScoreData]            = useState(null);
-  const [unansweredModal,      setUnansweredModal]      = useState({ show: false, list: [] });
-  const [showWarn,             setShowWarn]             = useState(false);
-  const [animDir,              setAnimDir]              = useState(null); // 'left' | 'right'
-  const timerRef  = useRef(null);
-  const animRef   = useRef(null);
+  const [questions,       setQuestions]       = useState([]);
+  const [quizInfo,        setQuizInfo]        = useState(null);
+  const [loading,         setLoading]         = useState(true);
+  const [currentIdx,      setCurrentIdx]      = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [timeLeft,        setTimeLeft]        = useState(600);
+  const [isFinished,      setIsFinished]      = useState(false);
+  const [scoreData,       setScoreData]       = useState(null);
+  const [showConfirm,     setShowConfirm]     = useState(false);
+  const [animDir,         setAnimDir]         = useState(null);
+  const timerRef     = useRef(null);
+  const animRef      = useRef(null);
   const timeLimitRef = useRef(600);
 
   // ── Fetch quiz ──────────────────────────────────────────────────────────────
@@ -55,11 +54,7 @@ const HocQuizz = () => {
     if (!isFinished && questions.length > 0) {
       timerRef.current = setInterval(() => {
         setTimeLeft(p => {
-          if (p <= 1) {
-            clearInterval(timerRef.current);
-            doSubmit(true);
-            return 0;
-          }
+          if (p <= 1) { clearInterval(timerRef.current); doSubmit(true); return 0; }
           return p - 1;
         });
       }, 1000);
@@ -68,11 +63,8 @@ const HocQuizz = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFinished, questions]);
 
-  const formatTime = (sec) => {
-    const m = Math.floor(sec / 60).toString().padStart(2, "0");
-    const s = (sec % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
+  const formatTime = (sec) =>
+    `${Math.floor(sec / 60).toString().padStart(2, "0")}:${(sec % 60).toString().padStart(2, "0")}`;
 
   // ── Submit ──────────────────────────────────────────────────────────────────
   const doSubmit = async (auto = false) => {
@@ -99,67 +91,34 @@ const HocQuizz = () => {
     }
   };
 
-  const handleSubmit = () => {
-    const unanswered = questions
-      .map((q, i) => (!selectedAnswers[q._id] ? i + 1 : null))
-      .filter(Boolean);
-    if (unanswered.length > 0 && !unansweredModal.show) {
-      setUnansweredModal({ show: true, list: unanswered });
-      return;
-    }
-    setUnansweredModal({ show: false, list: [] });
-    doSubmit();
-  };
-
   // ── Navigation ──────────────────────────────────────────────────────────────
   const goTo = (next, dir) => {
     if (next < 0 || next >= questions.length) return;
     setAnimDir(dir);
     clearTimeout(animRef.current);
-    animRef.current = setTimeout(() => {
-      setCurrentIdx(next);
-      setAnimDir(null);
-      setShowWarn(false);
-    }, 180);
+    animRef.current = setTimeout(() => { setCurrentIdx(next); setAnimDir(null); }, 180);
   };
 
-  const handleNext = () => {
-    const q = questions[currentIdx];
-    if (!selectedAnswers[q?._id]) { setShowWarn(true); return; }
-    goTo(currentIdx + 1, "left");
-  };
+  const handleNext = () => goTo(currentIdx + 1, "left");
   const handlePrev = () => goTo(currentIdx - 1, "right");
-
-  const handleJump = (i) => {
-    if (i === currentIdx) return;
-    goTo(i, i > currentIdx ? "left" : "right");
-  };
+  const handleJump = (i) => { if (i !== currentIdx) goTo(i, i > currentIdx ? "left" : "right"); };
 
   // ── Finished ────────────────────────────────────────────────────────────────
   if (isFinished) {
-    return (
-      <QuizResult
-        quiz={quizInfo}
-        resultId={scoreData?.resultId}
-        score={scoreData?.score}
-        total={scoreData?.total}
-      />
-    );
+    return <QuizResult quiz={quizInfo} resultId={scoreData?.resultId} score={scoreData?.score} total={scoreData?.total} />;
   }
 
-  const currentQ     = questions[currentIdx];
-  const total        = questions.length;
+  const currentQ      = questions[currentIdx];
+  const total         = questions.length;
   const answeredCount = Object.keys(selectedAnswers).length;
-  const progress     = total > 0 ? (answeredCount / total) * 100 : 0;
-  const timeRatio  = timeLeft / timeLimitRef.current;
-  const isLow      = timeLeft <= 60;
-  const selectedIdx = currentQ ? selectedAnswers[currentQ._id]?.index : undefined;
+  const progress      = total > 0 ? (answeredCount / total) * 100 : 0;
+  const timeRatio     = timeLeft / timeLimitRef.current;
+  const isLow         = timeLeft <= 60;
+  const selectedIdx   = currentQ ? selectedAnswers[currentQ._id]?.index : undefined;
 
   const slideClass =
-    animDir === "left"  ? "anim-slide-left"  :
-    animDir === "right" ? "anim-slide-right" : "";
+    animDir === "left" ? "anim-slide-left" : animDir === "right" ? "anim-slide-right" : "";
 
-  // Status của mỗi câu cho navigator: 'answered' | 'current' | 'unanswered'
   const getStatus = (i) => {
     const q = questions[i];
     if (i === currentIdx) return "current";
@@ -173,20 +132,14 @@ const HocQuizz = () => {
         @keyframes slideLeft  { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(-24px); } }
         @keyframes slideRight { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(24px);  } }
         @keyframes slideIn    { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0);     } }
-        @keyframes warnShake  { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 60%{transform:translateX(5px)} }
 
         .anim-slide-left  { animation: slideLeft  0.18s ease forwards; }
         .anim-slide-right { animation: slideRight 0.18s ease forwards; }
         .slide-in         { animation: slideIn    0.2s ease forwards;  }
-        .warn-shake       { animation: warnShake  0.35s ease;          }
 
         .option-btn { transition: all 0.15s ease; border: 2px solid #e5e7eb; background: white; }
         .option-btn:hover:not(.selected) { border-color: #93c5fd; background: #eff6ff; }
         .option-btn.selected { border-color: #3b82f6; background: #eff6ff; }
-
-        .tab-btn { border-bottom: 2px solid transparent; transition: all 0.15s; color: #9ca3af; }
-        .tab-btn:hover { color: #374151; }
-        .tab-btn.active { border-bottom-color: #f26739; color: #f26739; font-weight: 700; }
 
         .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
         .nav-btn:not(:disabled):hover { background: #f3f4f6; }
@@ -194,7 +147,7 @@ const HocQuizz = () => {
         .q-dot { transition: all 0.15s; cursor: pointer; border: 2px solid transparent; }
         .q-dot:hover { transform: scale(1.12); }
         .q-dot.current    { background: #f26739; color: white; border-color: #f26739; }
-        .q-dot.answered   { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .q-dot.answered   { background: #fb923c; color: white; border-color: #fb923c; }
         .q-dot.unanswered { background: white;   color: #6b7280; border-color: #e5e7eb; }
 
         .progress-bar { transition: width 0.4s ease; }
@@ -208,18 +161,14 @@ const HocQuizz = () => {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between shrink-0">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
-          <ArrowLeft size={16} />
-          Rời khỏi
+          <ArrowLeft size={16} /> Rời khỏi
         </button>
-
-        {/* Timer */}
         <div className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono font-black text-base border-2 transition-all ${
           isLow ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-orange-50 border-orange-100 text-orange-600"
         }`}>
           <TimerIcon size={16} />
           <span>{formatTime(timeLeft)}</span>
         </div>
-
         <div className="text-right">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Đang thi</p>
           <p className="text-xs font-black text-gray-700 uppercase truncate max-w-[200px]">{quizInfo?.title || "..."}</p>
@@ -256,35 +205,27 @@ const HocQuizz = () => {
               </div>
             </div>
 
-            {/* Main grid: câu hỏi + navigator */}
+            {/* Main grid */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-5 items-start">
 
               {/* ── Câu hỏi ── */}
               <div className={`bg-white rounded-2xl border border-gray-200 p-6 shadow-sm overflow-hidden ${slideClass}`}
                 style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" }}>
-
                 <div className="flex items-start gap-3 mb-5">
                   <span className="bg-blue-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap shrink-0">
                     Câu {currentIdx + 1}/{total}
                   </span>
                   <p className="text-gray-800 text-sm font-medium leading-6 pt-0.5">{currentQ?.question}</p>
                 </div>
-
                 <p className="text-xs text-gray-400 mb-3">Chọn 1 đáp án đúng</p>
-
                 <div className="space-y-2.5">
                   {currentQ?.options?.map((opt, i) => {
                     const labelLetter = String.fromCharCode(65 + i);
                     const isSelected  = selectedIdx === i;
                     return (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setSelectedAnswers(p => ({ ...p, [currentQ._id]: { index: i, text: opt } }));
-                          setShowWarn(false);
-                        }}
-                        className={`option-btn w-full flex items-center gap-3 p-3.5 rounded-xl text-left ${isSelected ? "selected" : ""}`}
-                      >
+                      <button key={i}
+                        onClick={() => setSelectedAnswers(p => ({ ...p, [currentQ._id]: { index: i, text: opt } }))}
+                        className={`option-btn w-full flex items-center gap-3 p-3.5 rounded-xl text-left ${isSelected ? "selected" : ""}`}>
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 transition-all ${
                           isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500"
                         }`}>{labelLetter}</span>
@@ -306,21 +247,18 @@ const HocQuizz = () => {
 
                   {currentIdx < total - 1 ? (
                     <button onClick={handleNext}
-                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white submit-btn ${showWarn ? "warn-shake" : ""}`}
-                      style={{ background: showWarn ? "#ef4444" : selectedIdx !== undefined ? "#3b82f6" : "#d1d5db" }}>
-                      {showWarn ? (
-                        <><AlertCircle size={15} /> Chọn đáp án!</>
-                      ) : (
-                        <>Câu tiếp <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>
-                      )}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white submit-btn"
+                      style={{ background: "#3b82f6" }}>
+                      Câu tiếp
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   ) : (
-                    <button onClick={handleSubmit}
+                    <button onClick={() => setShowConfirm(true)}
                       className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white submit-btn"
-                      style={{ background: selectedIdx !== undefined ? "#22c55e" : showWarn ? "#ef4444" : "#d1d5db" }}>
-                      {showWarn && selectedIdx === undefined
-                        ? <><AlertCircle size={15} /> Chọn đáp án!</>
-                        : <><Send size={14} /> Nộp bài</>}
+                      style={{ background: "#22c55e" }}>
+                      <Send size={14} /> Nộp bài
                     </button>
                   )}
                 </div>
@@ -330,19 +268,14 @@ const HocQuizz = () => {
               <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm sticky top-4">
                 <p className="text-[11px] font-black text-gray-500 uppercase tracking-wider mb-3">Danh sách câu</p>
                 <div className="flex flex-wrap gap-2">
-                  {questions.map((q, i) => {
-                    const status = getStatus(i);
-                    return (
-                      <button key={i} onClick={() => handleJump(i)}
-                        className={`q-dot w-9 h-9 rounded-xl text-xs font-bold ${status}`}>
-                        {i + 1}
-                      </button>
-                    );
-                  })}
+                  {questions.map((q, i) => (
+                    <button key={i} onClick={() => handleJump(i)}
+                      className={`q-dot w-9 h-9 rounded-xl text-xs font-bold ${getStatus(i)}`}>
+                      {i + 1}
+                    </button>
+                  ))}
                 </div>
-
-                {/* Nộp bài */}
-                <button onClick={handleSubmit}
+                <button onClick={() => setShowConfirm(true)}
                   className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black text-white submit-btn"
                   style={{ background: "linear-gradient(135deg,#F26739,#FF8059)" }}>
                   <Send size={13} /> Nộp bài
@@ -354,25 +287,32 @@ const HocQuizz = () => {
         </div>
       )}
 
-      {/* ── Unanswered modal ───────────────────────────────────────────────── */}
-      {unansweredModal.show && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-            <div className="w-14 h-14 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-3">
-              <AlertCircle className="text-orange-500" size={28} />
+      {/* ── Popup xác nhận nộp bài ─────────────────────────────────────────── */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
+                <AlertCircle className="text-orange-500" size={24} />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-800">Xác nhận nộp bài?</h3>
+              <p className="text-xs text-gray-500 leading-5">
+                Bạn đã trả lời <strong className="text-gray-700">{answeredCount}/{total}</strong> câu.
+                {answeredCount < total && (
+                  <span className="text-orange-500"> Còn {total - answeredCount} câu chưa trả lời.</span>
+                )}
+              </p>
             </div>
-            <h4 className="text-base font-black text-gray-800 mb-1">Chưa hoàn thành!</h4>
-            <p className="text-gray-500 text-xs mb-5 leading-relaxed">
-              Bạn còn câu <span className="font-bold text-orange-600">{unansweredModal.list.join(", ")}</span> chưa chọn đáp án. Có muốn nộp luôn không?
-            </p>
-            <div className="flex flex-col gap-2">
-              <button onClick={() => setUnansweredModal({ show: false, list: [] })}
-                className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition">
-                Làm tiếp câu thiếu
+            <div className="flex gap-2.5 mt-5">
+              <button onClick={() => setShowConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+                Làm tiếp
               </button>
-              <button onClick={() => { setUnansweredModal({ show: false, list: [] }); doSubmit(); }}
-                className="text-gray-400 text-[10px] font-bold hover:text-red-500 transition uppercase tracking-wider py-1">
-                Xác nhận nộp bài ngay
+              <button onClick={() => { setShowConfirm(false); doSubmit(); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ background: "#f26739" }}>
+                Nộp bài
               </button>
             </div>
           </div>

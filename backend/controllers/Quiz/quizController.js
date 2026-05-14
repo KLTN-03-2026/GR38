@@ -149,7 +149,6 @@ export const updateQuiz = async (req, res, next) => {
         ? { _id: req.params.id }
         : { _id: req.params.id, teacherId: req.user._id };
 
-    // Tìm quiz và đảm bảo người sửa phải là người tạo ra quiz đó (trừ Admin)
     const quiz = await Quiz.findOne(quizFilter);
 
     if (!quiz) {
@@ -164,6 +163,15 @@ export const updateQuiz = async (req, res, next) => {
     if (description !== undefined) quiz.description = description;
     if (tags !== undefined)
       quiz.tags = typeof tags === "string" ? JSON.parse(tags) : tags;
+
+    // ← CHỈ THÊM ĐOẠN NÀY
+    if (req.body.questions !== undefined) {
+      let questions = req.body.questions;
+      if (typeof questions === "string") questions = JSON.parse(questions);
+      if (Array.isArray(questions) && questions.length >= 5) {
+        quiz.questions = questions;
+      }
+    }
 
     if (req.file) {
       quiz.thumbnail = req.file.path;

@@ -134,41 +134,6 @@ const ReportManagement = () => {
     });
   }, [reports, searchQuery, filterType]);
 
-  // ... (các phần code phía trên giữ nguyên)
-
-  const handleDelete = (id) => {
-    Swal.fire({
-      title: "Xác nhận xóa báo cáo?",
-      text: "Dữ liệu này sẽ bị xóa vĩnh viễn và không thể khôi phục!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33", // Đổi màu đỏ cho nút xóa
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Xóa ngay",
-      cancelButtonText: "Hủy",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        confirmDelete(id);
-      }
-    });
-  };
-
-  const confirmDelete = async (reportId) => {
-    try {
-      await api.delete(`/reports/${reportId}`);
-      Swal.fire("Đã xóa!", "Báo cáo đã được loại bỏ khỏi hệ thống.", "success");
-      fetchReports(currentPage, filterStatus);
-      fetchAllStats();
-    } catch (error) {
-      console.error("Lỗi khi xóa:", error);
-      Swal.fire(
-        "Lỗi!",
-        "Không thể xóa báo cáo này. Vui lòng thử lại.",
-        "error",
-      );
-    }
-  };
-
   const handleUpdateStatus = async (reportId, newStatus) => {
     try {
       await api.patch(`/reports/${reportId}/status`, {
@@ -368,12 +333,6 @@ const ReportManagement = () => {
                           className="p-1.5 border border-gray-300 rounded hover:border-[#F26739] hover:text-[#F26739] shadow-sm"
                         >
                           <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(report._id)}
-                          className="p-1.5 border border-gray-300 rounded hover:border-red-500 hover:text-red-500 shadow-sm"
-                        >
-                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>

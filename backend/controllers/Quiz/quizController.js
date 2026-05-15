@@ -3,6 +3,7 @@ import QuizResult from "#models/QuizResult.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
 import { logActivity } from "#utils/activityLogger.js";
+import { createNotification } from "#utils/notificationService.js";
 
 //@desc Lấy danh sách quiz cho một tài liệu
 //@route GET /api/v1/quizzes/:documentId
@@ -130,6 +131,12 @@ export const createQuizManual = async (req, res, next) => {
 
     if (req.user.role === USER_ROLES.TEACHER) {
       await logActivity(req.user._id, "CREATE", "QUIZ", newQuiz.title);
+      await createNotification(
+        "Quiz mới",
+        `Giáo viên vừa thêm quiz ${newQuiz.title}`,
+        "QUIZ",
+        newQuiz._id,
+      );
     }
 
     res.status(201).json({

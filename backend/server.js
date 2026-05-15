@@ -20,6 +20,7 @@ import progressRoutes from "./routes/progressRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import activityRoutes from "./routes/activityRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,6 +60,7 @@ app.use("/api/v1/progress", progressRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/activities", activityRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 app.use(errorHandler);
 

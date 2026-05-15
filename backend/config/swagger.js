@@ -80,6 +80,10 @@ const swaggerOptions = {
         name: "Report",
         description: "Các API báo cáo tổng quan dành cho Giáo viên",
       },
+      {
+        name: "Notification",
+        description: "Các API thông báo hệ thống dành cho Học sinh",
+      },
      
     ],
     components: {

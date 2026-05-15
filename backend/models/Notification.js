@@ -21,6 +21,14 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
+    createdByUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    createdByName: {
+      type: String,
+      trim: true,
+    },
     readBy: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
       default: [],

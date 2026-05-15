@@ -63,6 +63,8 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
       const raw = res.data?.data ?? res.data;
       const fullQs = raw?.quizId?.questions || [];
       const qs = fullQs.map(q => {
+         console.log("question fields:", Object.keys(q)); // ← thêm dòng này
+  console.log("explanation value:", q.explanation);
         let correctIdx = q.options.findIndex(opt => opt === q.correctAnswer);
         if (correctIdx === -1) correctIdx = Number(q.correctAnswer ?? q.answer);
         let userIdx = null;
@@ -73,7 +75,7 @@ function HistoryModal({ quiz, onClose, onStartQuiz }) {
             if (userIdx === -1) userIdx = Number(ans.selectedAnswer);
           }
         }
-        return { ...q, answer: correctIdx, userAnswer: userIdx, explanation: q.explanation ?? "" };
+        return { ...q, answer: correctIdx, userAnswer: userIdx, explanation: q.explanation ?? q.note ?? q.explain ?? q.desc ?? "" };
       });
       setDetail({
         score: raw?.correctAnswersCount ?? raw?.score ?? 0,

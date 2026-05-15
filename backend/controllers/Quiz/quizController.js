@@ -133,9 +133,11 @@ export const createQuizManual = async (req, res, next) => {
       await logActivity(req.user._id, "CREATE", "QUIZ", newQuiz.title);
       await createNotification(
         "Quiz mới",
-        `Giáo viên vừa thêm quiz ${newQuiz.title}`,
+        `${req.user.fullName} vừa thêm quiz ${newQuiz.title}`,
         "QUIZ",
         newQuiz._id,
+        req.user._id,
+        req.user.fullName,
       );
     }
 

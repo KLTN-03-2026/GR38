@@ -78,11 +78,15 @@ const HocQuizz = () => {
       const resSubmit = await api.post(`/quizzes/${id}/submit`, { userAnswers });
       const result    = resSubmit.data?.data || resSubmit.data;
       const rId       = result?.resultId || result?._id || result?.id;
-      setScoreData({
-        resultId: rId,
-        score:    result?.correctAnswersCount ?? result?.score ?? 0,
-        total:    result?.totalQuestions ?? questions.length,
-      });
+     const correct = result?.correctAnswersCount ?? result?.score ?? 0;
+    const total   = result?.totalQuestions ?? questions.length;
+const scoreOn10 = total > 0 ? parseFloat(((correct / total) * 10).toFixed(1)) : 0;
+
+setScoreData({
+  resultId: rId,
+  score:    scoreOn10,   // ← giờ là thang 10
+  total:    total,
+});
       setIsFinished(true);
     } catch (err) {
       console.error(err);

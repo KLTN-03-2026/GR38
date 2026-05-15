@@ -1,0 +1,211 @@
+tags:
+  - name: Progress
+    description: API thống kê tiến độ học tập của người dùng
+
+components:
+  schemas:
+    ProgressOverview:
+      type: object
+      properties:
+        totalStudyDays:
+          type: integer
+          description: Tổng số ngày có tham gia học/làm bài
+          example: 365
+        completedQuizzes:
+          type: integer
+          description: Tổng số bài tập/quiz đã hoàn thành
+          example: 2350
+        studyStreak:
+          type: integer
+          description: Chuỗi ngày học liên tiếp hiện tại
+          example: 12
+        averageScore:
+          type: number
+          format: float
+          description: Điểm trung bình của tất cả các bài đã làm
+          example: 8.5
+        totalDocuments:
+          type: integer
+          example: 12
+        totalFlashcardSets:
+          type: integer
+          example: 8
+        totalFlashcards:
+          type: integer
+          example: 160
+        reviewedFlashcards:
+          type: integer
+          example: 95
+        starredFlashcards:
+          type: integer
+          example: 21
+
+    ProgressChartData:
+      type: object
+      properties:
+        month:
+          type: string
+          description: Tên tháng(VD:T1,T2,...,T12)
+          example: T1
+        exercises:
+          type: integer
+          description: Số lượng bài hoàn thành trong tháng đó
+          example: 1400
+
+    ProgressRecentDocument:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f12340001
+        title:
+          type: string
+          example: Lịch sử Việt Nam lớp 12
+        fileName:
+          type: string
+          example: lich_su_12.pdf
+        lastAccessed:
+          type: string
+          format: date-time
+          example: '2026-04-17T07:40:00.000Z'
+        status:
+          type: string
+          enum: [processing, ready, failed]
+          example: ready
+
+    ProgressRecentQuiz:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 66a1f2c9b8d4e01f12349999
+        title:
+          type: string
+          example: Kháng chiến chống Mỹ
+        score:
+          type: number
+          format: float
+          example: 8.5
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-04-17T07:55:00.000Z'
+
+    ProgressDashboardData:
+      type: object
+      properties:
+        overview:
+          $ref: '#/components/schemas/ProgressOverview'
+        chartData:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressChartData'
+        recent:
+          type: object
+          properties:
+            documents:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProgressRecentDocument'
+            quizzes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProgressRecentQuiz'
+
+    ProgressDashboardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ProgressDashboardData'
+
+    ProgressErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Không có token, truy cập bị từ chối
+        statusCode:
+          type: integer
+          example: 401
+
+paths:
+  /api/v1/progress/dashboard:
+    get:
+      summary: Lấy thống kê dashboard tiến độ học tập
+      description: Trả về tổng quan học tập, biểu đồ hoạt động và lịch sử làm bài gần đây của người dùng hiện tại.
+      tags: [Progress]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lấy dashboard thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressDashboardResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      overview:
+                        totalStudyDays: 365
+                        completedQuizzes: 2350
+                        studyStreak: 12
+                        averageScore: 8.5
+                        totalDocuments: 12
+                        totalFlashcardSets: 8
+                        totalFlashcards: 160
+                        reviewedFlashcards: 95
+                        starredFlashcards: 21
+                      chartData:
+                        - month: T1
+                          exercises: 1400
+                        - month: T2
+                          exercises: 4800
+                        - month: T3
+                          exercises: 2400
+                        - month: T4
+                          exercises: 5100
+                        - month: T5
+                          exercises: 1800
+                      recent:
+                        documents:
+                          - _id: 66a1f2c9b8d4e01f12340001
+                            title: Lịch sử Việt Nam lớp 12
+                            fileName: lich_su_12.pdf
+                            lastAccessed: '2026-04-17T07:40:00.000Z'
+                            status: ready
+                        quizzes:
+                          - id: 66a1f2c9b8d4e01f12349999
+                            title: Kháng chiến chống Mỹ
+                            score: 9.0
+                            createdAt: '2026-04-17T07:55:00.000Z'
+                          - id: 66a1f2c9b8d4e01f12349998
+                            title: Chiến tranh giải phóng miền Nam
+                            score: 8.5
+                            createdAt: '2026-04-16T10:15:00.000Z'
+        '401':
+          description: Không có token, token không hợp lệ hoặc token đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'
+        '403':
+          description: Không có quyền truy cập tài nguyên
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'
+        '500':
+          description: Lỗi máy chủ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressErrorResponse'

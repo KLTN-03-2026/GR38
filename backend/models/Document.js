@@ -12,6 +12,10 @@ const documentSchema = new mongoose.Schema(
       required: [true, "Vui lòng nhập tiêu đề tài liệu"],
       trim: true,
     },
+    thumbnail: {
+      type: String,
+      default: null, 
+    },
     fileName: {
       type: String,
       required: true,
@@ -19,6 +23,9 @@ const documentSchema = new mongoose.Schema(
     filePath: {
       type: String,
       required: true,
+    },
+    localPath: {
+      type: String, 
     },
     fileSize: {
       type: Number,
@@ -44,28 +51,21 @@ const documentSchema = new mongoose.Schema(
         },
       },
     ],
-    uploadDate: {
-      type: Date,
-      default: Date.now,
-    },
     lastAccessed: {
       type: Date,
       default: Date.now,
     },
     status: {
       type: String,
-      enum: ["Xử lý", "Đã xử lý", "Lỗi xử lý"],
-      default: "Xử lý",
+      enum: ["processing", "ready", "failed"],  
+      default: "processing",
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-//Index for faster queries
-documentSchema.index({userId: 1, uploadDate: -1});
-
-const Document = mongoose.model('Document', documentSchema);
-
+documentSchema.index({ userId: 1, createdAt: -1 });
+const Document = mongoose.model("Document", documentSchema);
 export default Document;

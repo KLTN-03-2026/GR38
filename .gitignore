@@ -1,2 +1,21 @@
+# Node modules
 node_modules/
+npm-debug.log
+yarn-error.log
+
+# Biến môi trường 
 .env
+.env.*
+!.env.example
+
+# Thư mục build của Frontend (React/Vite)
+dist/
+build/
+
+# Thư mục lưu trữ ảnh/file upload của Backend
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Các file rác của hệ điều hành
+.DS_Store
+Thumbs.db

@@ -1,64 +1,118 @@
-import mongoose from 'mongoose'
-import bcrypt from 'bcryptjs'
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
-const userSchema = new mongoose.Schema({
-    username: {
-        type: String,
-        required: [true, 'vui lòng nhập tên người dùng'],
-        unique: true,
-        trim: true,
-        minlength: [3, 'Tên người dùng phải có ít nhất 3 ký tự']
+export const USER_ROLES = Object.freeze({
+  ADMIN: "ADMIN",
+  TEACHER: "TEACHER",
+  LEARNER: "LEARNER",
+});
+
+export const TEACHER_APPROVAL_STATUS = Object.freeze({
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+});
+
+const userSchema = new mongoose.Schema(
+  {
+    fullName: {
+      type: String,
+      required: [true, "Vui lòng nhập họ tên"],
+      trim: true,
+      minlength: [3, "Họ tên phải có ít nhất 3 ký tự"],
     },
     email: {
-        type: String,
-        required: [true, 'vui lòng nhập email'],
-        unique: true,
-        trim: true,
-        lowercase: true,
-        match: [/\S+@\S+\.\S+/, 'Vui lòng nhập địa chỉ email hợp lệ']
+      type: String,
+      required: [true, "Vui lòng nhập email"],
+      unique: true,
+      trim: true,
+      lowercase: true,
+      match: [/\S+@\S+\.\S+/, "Vui lòng nhập địa chỉ email hợp lệ"],
     },
     password: {
-        type: String,
-        required: [true, 'vui lòng nhập mật khẩu'],
-        minlength: [6, 'Mật khẩu phải có ít nhất 6 ký tự'],
-        select: false
+      type: String,
+      required: function () {
+        return this.authType === "local";
+      },
+      minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
+      select: false,
     },
     role: {
-        type: String,
-        enum: ['student', 'teacher', 'admin'],
-        default: 'student'
+      type: String,
+      enum: Object.values(USER_ROLES),
+      default: USER_ROLES.LEARNER,
     },
-    isApproved: {
-        type: Boolean,
-        default: function() {
-            if (this.role === 'student') return true;
-            if (this.role === 'teacher') return false;
-            return false;
-        }
+    teacherApprovalStatus: {
+      type: String,
+      enum: Object.values(TEACHER_APPROVAL_STATUS),
+      default: function () {
+        return this.role === USER_ROLES.TEACHER
+          ? TEACHER_APPROVAL_STATUS.PENDING
+          : TEACHER_APPROVAL_STATUS.APPROVED;
+      },
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     profileImage: {
-        type: String,
-        default: null
-    }, 
-}, {
-    timestamps: true
-});
+      type: String,
+      default:
+        "https://res.cloudinary.com/dynbuqe3g/image/upload/v1777091786/user-a-solid-svgrepo-com_qsu3s6.png",
+    },
+    currentStreak: {
+      type: Number,
+      default: 0,
+    },
+    lastStudyDate: {
+      type: Date,
+      default: null,
+    },
+    googleId: {
+      type: String,
+      default: null,
+    },
+    authType: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
+    resetPasswordOtp: {
+      type: String,
+      default: null,
+    },
+    resetPasswordOtpExpires: {
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-// Hash password trước khi lưu
-userSchema.pre('save', async function (next) {
-    if(!this.isModified('password')){
-        return;
-    }
-    
+userSchema.pre("save", async function (next) {
+  
+if (!this.isModified("password") || !this.password) {
+    return;
+  }
+
+  try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+  } catch (error) {
+    next(error);
+  }
 });
 
-// Phương thức kiểm tra mật khẩu
-userSchema.methods.matchPassword = async function(enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);  
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  if (!this.password) return false;
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
-const User = mongoose.model('User', userSchema);
+// Đánh index để tăng tốc truy vấn
+userSchema.index({ role: 1, teacherApprovalStatus: 1, isActive: 1 });
+
+const User = mongoose.model("User", userSchema);
 
 export default User;

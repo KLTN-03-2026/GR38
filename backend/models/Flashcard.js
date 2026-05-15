@@ -1,45 +1,71 @@
 import mongoose from "mongoose";
 
 const flashcardSchema = new mongoose.Schema({
-    userId: {
+    documentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Document',
+        default: null
+    },
+    teacherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    documentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Document',
-        required: true
+    title: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    thumbnail: {
+        type: String, 
+        default: null
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+
+    isAiGenerated: {
+        type: Boolean,
+        default: false
     },
     cards: [
         {
-            question: {type: String, required: true},
-            answer: {type: String, required: true},
+            front: {type: String, required: true},
+            back: {type: String, required: true},
             difficulty: {
                 type: String,
-                enum: [ "Dễ", "Trung bình", "Khó"],
+                enum: ["Dễ", "Trung bình", "Khó"],
                 default: "Trung bình"
-            },
-            lastReviewed: {
-                type: Date,
-                default: null,
-            },
-            reviewCount: {
-                type: Number,
-                default: 0
-            },
-            isStarred: {
-                type: Boolean,
-                default: false
-            },
+            }
         },
     ],
+    isPublished: {
+        type: Boolean,
+        default: false
+    },
+    tags: [{
+        type: String,
+        trim: true
+    }],
+    starredBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: []
+    }],
+    stats: {
+        enrolledLearners: {
+            type: Number,
+            default: 0
+        }
+    }
 }, {
     timestamps: true,
 });
 
-flashcardSchema.index({ userId: 1, documentId: 1});
+flashcardSchema.index({ teacherId: 1, createdAt: -1 });
+flashcardSchema.index({ teacherId: 1, isPublished: 1 });
 
-const flashcard = mongoose.model("Flashcard", flashcardSchema);
+const Flashcard = mongoose.model("Flashcard", flashcardSchema);
 
-export default flashcard;
+export default Flashcard;

@@ -1,23 +1,35 @@
-import fs from 'fs/promises';
-import { PDFParse } from 'pdf-parse';
-
-/** 
-Xuat van ban tu file PDF
-*@param {string} filePath - Path to PDF file
-*@returns {Promise<{text : string, numPages: number}>}
-*/
-export const extractTextFromPDF = async (filePath) => {
-    try{
-        const dataBuffer = await fs.readFile(filePath);
-        // Sử dụng pdf-parse để trích xuất văn bản
-        const parser = new PDFParse(new Uint8Array(dataBuffer));
-        const data = await parser.getText();
+export const extractTextFromPDF = async (pdfUrl) => {
+    try {
+        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        
+        // 1. Tải file PDF từ Cloudinary URL 
+        const response = await fetch(pdfUrl);
+        if (!response.ok) throw new Error(`Không thể tải PDF từ URL: ${response.statusText}`);
+        
+        // 2. Chuyển đổi dữ liệu tải về thành Uint8Array cho pdfjs
+        const arrayBuffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // 3. Tiến hành phân tích PDF 
+        const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+        const pdfDoc = await loadingTask.promise;
+        
+        let fullText = '';
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+            const page = await pdfDoc.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' '); 
+            fullText += pageText + '\n';
+        }
+        
+        console.log("Text length:", fullText.length);
+        
         return {
-            text: data.text,
-            numPages: data.numpages,
-            info: data.info,
+            text: fullText,
+            numPages: pdfDoc.numPages,
+            info: {},
         };
-    }catch (error) {
+    } catch (error) {
         console.error("PDF phân tích lỗi:", error);
         throw new Error("Phân tích PDF thất bại");
     }

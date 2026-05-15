@@ -40,7 +40,7 @@ const chatHistorySchema = new mongoose.Schema(
 );
 
 //Index for faster queries
-chatHistorySchema.index({ userId: 1, documentId: 1 });
+chatHistorySchema.index({ userId: 1, documentId: 1 }, { unique: true });
 
 const chatHistory = mongoose.model("ChatHistory", chatHistorySchema);
 

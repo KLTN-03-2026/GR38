@@ -1,0 +1,274 @@
+tags:
+  - name: Document
+    description: Các API quản lý tài liệu PDF (Tải lên, xem danh sách, chi tiết, xóa, sửa)
+
+components:
+  schemas:
+    DocumentSummary:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+          example: "Lịch sử lớp 12 - Kháng chiến chống Pháp"
+        thumbnail:
+          type: string
+          description: "URL ảnh bìa lưu trên Cloudinary"
+          example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg"
+        fileName:
+          type: string
+          example: "lich_su_12.pdf"
+        filePath:
+          type: string
+          example: "http://localhost:8000/uploads/documents/lich_su_12.pdf"
+        localPath:
+          type: string
+          description: "Đường dẫn vật lý trên server (Dùng nội bộ để xóa file)"
+          example: "D:/DATN/AIHistoryLearning/backend/upload/documents/lich_su_12.pdf"
+        fileSize:
+          type: integer
+          description: Kích thước file (bytes)
+        status:
+          type: string
+          enum: [processing, ready, failed]
+          example: ready
+        flashcardCount:
+          type: integer
+          example: 5
+        quizCount:
+          type: integer
+          example: 2
+        createdAt:
+          type: string
+          format: date-time
+
+    DocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/DocumentSummary'
+        - type: object
+          properties:
+            extractedText:
+              type: string
+              description: Toàn bộ văn bản thô trích xuất từ PDF
+            chunks:
+              type: array
+              items:
+                type: object
+                properties:
+                  content:
+                    type: string
+                  pageNumber:
+                    type: integer
+                  chunkIndex:
+                    type: integer
+            lastAccessed:
+              type: string
+              format: date-time
+
+paths:
+  /api/v1/documents/upload-thumbnail:
+    post:
+      summary: Tải lên ảnh bìa cho tài liệu
+      description: API này tải ảnh lên Cloudinary và trả về URL. Dùng URL này để truyền vào biến `thumbnail` khi gọi API upload-pdf.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - thumbnail
+              properties:
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: File ảnh bìa (jpg, jpeg, png, webp)
+      responses:
+        '200':
+          description: Tải ảnh lên thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  url:
+                    type: string
+                    example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg"
+        '400':
+          description: Thiếu file ảnh
+        '401':
+          description: Chưa đăng nhập
+
+  /api/v1/documents/upload-pdf:
+    post:
+      summary: Tải lên tài liệu PDF mới
+      description: Tải lên file PDF và tạo mới tài liệu. Có thể truyền kèm URL ảnh bìa đã upload từ API upload-thumbnail.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Tiêu đề của tài liệu
+                  example: "Tài liệu ôn tập Lịch sử"
+                thumbnail:
+                  type: string
+                  description: URL ảnh bìa (lấy từ API upload-thumbnail)
+                  example: "https://res.cloudinary.com/dynbuqe3g/image/upload/v12345/doc_thumbnail.jpg"
+                file:
+                  type: string
+                  format: binary
+                  description: File PDF cần tải lên
+      responses:
+        '201':
+          description: Tải lên thành công, tài liệu đang được xử lý
+        '400':
+          description: Thiếu file hoặc thiếu tiêu đề
+        '401':
+          description: Chưa đăng nhập
+
+  /api/v1/documents:
+    get:
+      summary: Lấy danh sách tài liệu
+      description: Phân quyền - Giáo viên chỉ thấy tài liệu của mình tải lên. Học sinh thấy tất cả tài liệu đã sẵn sàng (ready).
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentSummary'
+        '401':
+          description: Chưa đăng nhập
+
+  /api/v1/documents/{id}:
+    get:
+      summary: Xem chi tiết tài liệu (kèm nội dung PDF đã trích xuất)
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của tài liệu
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DocumentDetail'
+        '401':
+          description: Chưa đăng nhập
+        '404':
+          description: Không tìm thấy tài liệu
+          
+    put:
+      summary: Chỉnh sửa thông tin tài liệu
+      description: Chỉnh sửa tiêu đề hoặc cập nhật ảnh bìa mới cho tài liệu. Gửi dữ liệu bằng form-data. Chỉ Giáo viên sở hữu tài liệu mới có quyền sửa.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của tài liệu cần sửa
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Tiêu đề mới của tài liệu
+                  example: "Tài liệu ôn tập Lịch sử (Bản cập nhật)"
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Chọn file ảnh mới để thay thế ảnh bìa hiện tại
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Đã cập nhật thông tin tài liệu thành công"
+                  data:
+                    $ref: '#/components/schemas/DocumentSummary'
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền truy cập
+        '404':
+          description: Không tìm thấy tài liệu hoặc không có quyền chỉnh sửa
+
+    delete:
+      summary: Xóa tài liệu
+      description: Giáo viên chỉ được phép xóa tài liệu do chính mình tải lên. File vật lý cũng sẽ bị xóa khỏi server.
+      tags: [Document]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID của tài liệu cần xóa
+      responses:
+        '200':
+          description: Xóa tài liệu thành công
+        '401':
+          description: Chưa đăng nhập
+        '404':
+          description: Không tìm thấy tài liệu hoặc không có quyền xóa

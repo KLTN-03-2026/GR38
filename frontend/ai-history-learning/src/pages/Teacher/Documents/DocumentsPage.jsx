@@ -1,0 +1,453 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { documentService } from "../../../services/documentService";
+import api from "../../../lib/api";
+
+const ITEMS_PER_PAGE = 6;
+
+const DEFAULT_COVERS = ["/anh1.jpg","/anh2.jpg","/anh3.jpg","/anh4.jpg","/anh5.jpg","/anh6.jpg"];
+const getCover = (doc, idx) =>
+  doc?.thumbnail && doc.thumbnail.trim() !== "" && doc.thumbnail !== "null"
+    ? doc.thumbnail
+    : DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
+
+// ─── CSS animations (inject once) ───────────────────────────────────────────
+if (typeof document !== "undefined" && !document.getElementById("docs-anim")) {
+  const el = Object.assign(document.createElement("style"), { id: "docs-anim" });
+  el.textContent = `
+@keyframes fadeInUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.93)}to{opacity:1;transform:scale(1)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.doc-card{animation:fadeInUp .45s cubic-bezier(.22,1,.36,1) both;transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s ease}
+.doc-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.10)}
+.doc-card .delete-btn{opacity:0;transform:scale(.8);transition:opacity .2s,transform .2s cubic-bezier(.34,1.56,.64,1)}
+.doc-card:hover .delete-btn{opacity:1;transform:scale(1)}
+.doc-card .card-img{transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.doc-card:hover .card-img{transform:scale(1.05)}
+.modal-overlay{animation:fadeIn .2s ease both}
+.modal-box{animation:scaleIn .25s cubic-bezier(.34,1.56,.64,1) both}
+.tag-chip{transition:background .15s,color .15s,transform .15s}
+.tag-chip:hover{transform:scale(1.06)}
+.btn-primary{transition:background .18s,transform .15s,box-shadow .18s}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(242,103,57,.35)}
+.pg-doc-btn{transition:all .15s}
+.pg-doc-btn:hover:not(:disabled){transform:scale(1.08)}
+.page-header{animation:slideDown .4s cubic-bezier(.22,1,.36,1) both}
+`;
+  document.head.appendChild(el);
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getPageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
+const STATUS_MAP = {
+  ready:      { label: "Đã xử lý",      cls: "bg-green-100 text-green-700" },
+  processing: { label: "Đang xử lý...", cls: "bg-orange-100 text-orange-600" },
+};
+const getTags = (rolePrefix) => [
+  { label: "Bài giảng",    cls: "bg-blue-100 text-blue-700",    route: (id) => `${rolePrefix}/baigiang/${id}` },
+  { label: "Bài kiểm tra", cls: "bg-orange-100 text-orange-700", route: (id) => `${rolePrefix}/baikiemtra/${id}` },
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
+  <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+    <div className="modal-box bg-white rounded-2xl shadow-xl w-[300px] p-7 text-center" onClick={(e) => e.stopPropagation()}>
+      <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-100">
+        <TrashIcon className="w-6 h-6 text-red-500" />
+      </div>
+      <p className="text-base font-semibold text-gray-800 mb-1">Xoá tài liệu?</p>
+      <p className="text-sm text-gray-400 mb-6 leading-relaxed line-clamp-2">
+        Bạn có chắc muốn xoá <span className="font-medium text-gray-600">"{title}"</span>? Hành động này không thể hoàn tác.
+      </p>
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Huỷ</button>
+        <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-500 font-medium hover:bg-red-100 transition-colors">Xoá</button>
+      </div>
+    </div>
+  </div>
+);
+
+function DocCard({ doc, idx, onDelete, onCardClick, onTagClick, tags }) {
+  const status = STATUS_MAP[doc.status] ?? { label: "Lỗi", cls: "bg-red-100 text-red-500" };
+  return (
+    <div className="doc-card bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer"
+      onClick={() => onCardClick(doc)}>
+      {/* Cover image */}
+      <div className="relative overflow-hidden">
+        <img src={getCover(doc, idx)} alt={doc.title} className="card-img w-full h-36 object-cover bg-gray-100" />
+        <button onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
+          className="delete-btn absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow">
+          <TrashIcon className="w-3.5 h-3.5 text-gray-400 hover:text-red-500 transition-colors" />
+        </button>
+        <span className={`absolute top-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>
+      </div>
+
+      <div className="p-3">
+      {/* Info */}
+      <p className="text-sm font-medium text-gray-800 mb-1.5 line-clamp-2">{doc.title}</p>
+      <p className="text-xs text-gray-400 mb-1.5 truncate">📄 {doc.fileName}</p>
+      <p className="text-xs text-gray-400 mb-3">{doc.flashcardCount ?? 0} flashcard · {doc.quizCount ?? 0} quiz</p>
+
+      {/* Tags */}
+    <div className="flex flex-wrap gap-1.5">
+        {tags.map(({ label, cls, route }) => (
+    <span key={label} onClick={(e) => { e.stopPropagation(); onTagClick(route(doc._id)); }}
+      className={`tag-chip text-xs px-2.5 py-0.5 rounded-full font-medium cursor-pointer ${cls}`}>
+      {label}
+    </span>
+  ))}
+</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline SVG icons ─────────────────────────────────────────────────────────
+const TrashIcon = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function DocumentsPage() {
+  const navigate = useNavigate();
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({ title: "", file: null, thumbFile: null, thumbPreview: null });
+  const [addErrors, setAddErrors] = useState({});
+  const [addLoading, setAddLoading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [gridKey, setGridKey] = useState(0);
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const rolePrefix = user.role === "ADMIN" ? "/admin" : "/teacher";
+
+  const fetchDocs = async () => {
+    try {
+      setLoading(true);
+      const res = await documentService.getAll();
+      setDocs(res.data ?? []);
+    } catch { /* silently fail */ }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchDocs(); }, []);
+
+  // ── Delete ──
+  const handleDeleteConfirm = async () => {
+    try {
+      await documentService.delete(deleteTarget.id);
+      setDocs((prev) => prev.filter((d) => d._id.toString() !== deleteTarget.id.toString()));
+      setDeleteTarget(null);
+    } catch (err) {
+      alert(err.response?.data?.error ?? "Lỗi khi xoá tài liệu");
+    }
+  };
+
+  // ── Add ──
+  const closeModal = () => {
+    setShowAddModal(false);
+    setAddForm({ title: "", file: null, thumbFile: null, thumbPreview: null });
+    setAddErrors({});
+    setDragOver(false);
+  };
+
+  const handleFileChange = (file) => {
+    if (file?.type === "application/pdf") {
+      setAddForm((prev) => ({ ...prev, file }));
+      setAddErrors((prev) => ({ ...prev, file: "" }));
+    } else if (file) {
+      setAddErrors((prev) => ({ ...prev, file: "Chỉ chấp nhận file PDF" }));
+    }
+  };
+
+  const handleThumbChange = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setAddErrors((p) => ({ ...p, thumb: "Chỉ chấp nhận file ảnh" })); return; }
+    if (file.size > 5 * 1024 * 1024) { setAddErrors((p) => ({ ...p, thumb: "Ảnh không được vượt quá 5MB" })); return; }
+    setAddErrors((p) => ({ ...p, thumb: "" }));
+    setAddForm((p) => ({ ...p, thumbFile: file, thumbPreview: URL.createObjectURL(file) }));
+  };
+
+  const handleAddSubmit = async () => {
+    const err = {};
+    if (!addForm.title.trim()) err.title = "Vui lòng nhập tên tài liệu";
+    if (!addForm.file) err.file = "Vui lòng chọn file PDF";
+    else if (addForm.file.size > 10 * 1024 * 1024) err.file = "File PDF không được vượt quá 10MB";
+    if (Object.keys(err).length) { setAddErrors(err); return; }
+
+    setAddLoading(true);
+    try {
+      let thumbnailUrl = null;
+      if (addForm.thumbFile) {
+        const thumbForm = new FormData();
+        thumbForm.append("thumbnail", addForm.thumbFile);
+        const thumbRes = await api.post("/documents/upload-thumbnail", thumbForm, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        thumbnailUrl = thumbRes.data?.url ?? null;
+      }
+      await documentService.upload(addForm.file, {
+        title: addForm.title,
+        ...(thumbnailUrl && { thumbnail: thumbnailUrl }),
+      });
+      await fetchDocs();
+      closeModal();
+      setGridKey((k) => k + 1);
+    } catch (err) {
+      setAddErrors({ file: err.response?.data?.error ?? "Lỗi khi upload tài liệu" });
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  // ── Pagination / filter ──
+  const filtered = docs.filter((d) => d.title.toLowerCase().includes(search.toLowerCase()));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageNums = getPageNumbers(safePage, totalPages);
+  const pageDocs = filtered.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
+  const handleSearch = (val) => { setSearch(val); setCurrentPage(1); setGridKey((k) => k + 1); };
+  const handlePageChange = (p) => {
+    if (typeof p !== "number" || p < 1 || p > totalPages) return;
+    setCurrentPage(p); setGridKey((k) => k + 1); window.scrollTo(0, 0);
+  };
+
+  return (
+    <div className="flex-1 bg-gray-50 overflow-y-auto">
+
+      {/* ── Toolbar ── */}
+      <div className="page-header px-6 pt-5 pb-3">
+        <div className="w-full h-[53px] bg-white border border-gray-200 rounded-[10px] flex items-center px-5 justify-between shadow-sm">
+          <div className="flex items-center bg-[#F9F9F9] border border-gray-200 rounded-[6px] px-3 h-[38px] w-full max-w-[500px] gap-2">
+            <svg width="16" height="16" className="text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input type="text" placeholder="Tìm kiếm tài liệu..." value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="bg-transparent border-none outline-none text-[14px] w-full text-gray-700" />
+            {search && <button onClick={() => handleSearch("")} className="text-gray-400 hover:text-gray-600">×</button>}
+          </div>
+          <button onClick={() => setShowAddModal(true)}
+            className="bg-[#F26739] text-white text-[14px] font-semibold rounded-[6px] px-6 h-[36px] hover:bg-orange-600 transition-colors shadow-sm">
+            + Thêm tài liệu
+          </button>
+        </div>
+      </div>
+
+      {/* ── List ── */}
+      <div className="px-6 pb-6 mt-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-800">
+            Tài liệu của tôi
+            {filtered.length > 0 && <span className="ml-2 text-sm font-normal text-gray-400">({filtered.length})</span>}
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/3" />
+                <div className="h-4 bg-gray-200 rounded w-3/4" />
+                <div className="h-3 bg-gray-200 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-gray-400 text-sm">
+            {search ? `Không tìm thấy tài liệu nào cho "${search}"` : "Chưa có tài liệu nào. Hãy thêm tài liệu đầu tiên!"}
+          </div>
+        ) : (
+          <div key={gridKey} className="grid grid-cols-3 gap-4">
+            {pageDocs.map((doc, i) => (
+              <div key={doc._id} style={{ animationDelay: `${i * 0.05}s` }}>
+                <DocCard doc={doc} idx={(safePage - 1) * ITEMS_PER_PAGE + i}
+                  onDelete={(d) => setDeleteTarget({ id: d._id, title: d.title })}
+                  onCardClick={(d) => navigate(`${rolePrefix}/documents/${d._id}`, { state: { doc: d, activeTab: "Thông tin" } })}
+                  onTagClick={(route) => navigate(route, { state: { doc } })}
+                    tags={getTags(rolePrefix)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <span className="text-xs text-gray-500">
+              Hiển thị {(safePage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(safePage * ITEMS_PER_PAGE, filtered.length)} / {filtered.length} tài liệu
+            </span>
+            <div className="flex items-center gap-1">
+              {[
+                { content: <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 18l-6-6 6-6"/></svg>, action: () => handlePageChange(safePage - 1), disabled: safePage === 1 },
+              ].map(({ content, action, disabled }, i) => (
+                <button key={i} onClick={action} disabled={disabled}
+                  className="pg-doc-btn flex items-center justify-center w-7 h-7 border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                  {content}
+                </button>
+              ))}
+
+              {pageNums.map((p, i) =>
+                p === "..." ? (
+                  <span key={`d${i}`} className="w-7 h-7 flex items-center justify-center text-xs text-gray-400">…</span>
+                ) : (
+                  <button key={p} onClick={() => handlePageChange(p)}
+                    className={`pg-doc-btn w-7 h-7 text-xs rounded-md border font-medium ${
+                      safePage === p ? "bg-[#F26739] text-white border-[#F26739] shadow-sm" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}>{p}</button>
+                )
+              )}
+
+              <button onClick={() => handlePageChange(safePage + 1)} disabled={safePage === totalPages}
+                className="pg-doc-btn flex items-center justify-center w-7 h-7 border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Modal xoá ── */}
+      {deleteTarget && (
+        <ConfirmDeleteModal title={deleteTarget.title} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteTarget(null)} />
+      )}
+
+      {/* ── Modal thêm ── */}
+      {showAddModal && (
+        <div className="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="modal-box bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between px-6 pt-5 pb-3">
+              <div>
+                <h2 className="text-base font-semibold text-gray-800">Thêm tài liệu</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Upload file PDF để AI xử lý</p>
+              </div>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 text-xl leading-none mt-0.5">×</button>
+            </div>
+
+            <div className="px-6 pb-4 space-y-4">
+              {/* Tên */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">Tên tài liệu</label>
+                <input type="text" placeholder="VD: Chiến tranh chống Mỹ cứu nước"
+                  value={addForm.title} onChange={(e) => {
+                    setAddForm((p) => ({ ...p, title: e.target.value }));
+                    if (addErrors.title) setAddErrors((p) => ({ ...p, title: "" }));
+                  }}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-all ${
+                    addErrors.title ? "border-red-400 bg-red-50" : "border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                  }`} />
+                {addErrors.title && <p className="text-xs text-red-500 mt-1">{addErrors.title}</p>}
+              </div>
+
+              {/* Ảnh bìa */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-1.5">
+                  Ảnh bìa <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
+                </label>
+                <div className="relative w-full h-32 rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 mb-2 group cursor-pointer"
+                  onClick={() => document.getElementById("thumb-input-add")?.click()}>
+                  {addForm.thumbPreview ? (
+                    <>
+                      <img src={addForm.thumbPreview} alt="preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <p className="text-xs text-white font-medium">Đổi ảnh</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-gray-400 group-hover:text-orange-400 transition">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                      <p className="text-xs font-medium">Nhấn để chọn ảnh bìa</p>
+                      <p className="text-[10px] text-gray-300">JPG, PNG, WEBP · Tối đa 5MB</p>
+                    </div>
+                  )}
+                </div>
+                <input id="thumb-input-add" type="file" accept="image/*" className="hidden"
+                  onChange={(e) => handleThumbChange(e.target.files?.[0])} />
+                {addForm.thumbFile && (
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-[10px] text-gray-400">📎 {addForm.thumbFile.name} · {(addForm.thumbFile.size / 1024).toFixed(0)} KB</p>
+                    <button onClick={() => setAddForm((p) => ({ ...p, thumbFile: null, thumbPreview: null }))}
+                      className="text-[10px] text-red-400 hover:text-red-600 transition">Xoá ảnh</button>
+                  </div>
+                )}
+                {addErrors.thumb && <p className="text-xs text-red-500 mt-1">{addErrors.thumb}</p>}
+              </div>
+
+              {/* File PDF */}
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">File PDF</label>
+                <label className="inline-flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition mb-3">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0L8 8m4-4l4 4" />
+                  </svg>
+                  Chọn file
+                  <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileChange(e.target.files?.[0])} />
+                </label>
+
+                <div onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileChange(e.dataTransfer.files?.[0]); }}
+                  className={`w-full h-36 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${
+                    dragOver ? "border-orange-400 bg-orange-50 scale-[1.01]" : "border-gray-200"
+                  }`}>
+                  {addForm.file ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-700 font-medium max-w-xs truncate">{addForm.file.name}</p>
+                      <p className="text-xs text-gray-400">{(addForm.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <button onClick={() => setAddForm((p) => ({ ...p, file: null }))}
+                        className="text-xs text-red-400 hover:text-red-600 transition-colors">Xoá file</button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-sm font-medium">Kéo thả file PDF vào đây</p>
+                      <p className="text-xs">hoặc bấm "Chọn file" bên trên</p>
+                    </div>
+                  )}
+                </div>
+                {addErrors.file && <p className="text-xs text-red-500 mt-1">{addErrors.file}</p>}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 px-6 pb-5 mt-1">
+              <button onClick={closeModal} className="px-5 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition">Huỷ</button>
+              <button onClick={handleAddSubmit} disabled={addLoading}
+                className="btn-primary px-5 py-2 text-sm bg-[#F26739] text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                {addLoading ? "Đang upload..." : "Thêm tài liệu"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

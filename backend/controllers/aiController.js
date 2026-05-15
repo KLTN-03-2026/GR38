@@ -32,7 +32,7 @@ const handleGeminiError = (error, res, next) => {
 //@access Private
 export const generateFlashcards = async (req, res, next) => {
   try {
-    const { documentId, count = 10 } = req.body;
+    const { documentId, count = 10, title } = req.body;
 
     if (!documentId) {
       return res.status(400).json({
@@ -66,7 +66,7 @@ export const generateFlashcards = async (req, res, next) => {
     const flashcardSet = await Flashcard.create({
       teacherId: req.user._id,
       documentId: document._id,
-      title: `${document.title} - Flashcards`,
+      title: title || `${document.title} - Flashcards`,
       thumbnail: document.thumbnail, 
       description: `Bộ flashcard được tạo tự động từ tài liệu ${document.title}`,
       cards: cards.map(card => ({

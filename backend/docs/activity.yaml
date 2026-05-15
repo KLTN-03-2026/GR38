@@ -1,0 +1,62 @@
+tags:
+  - name: Activity
+    description: Activity log endpoints for teachers
+
+components:
+  schemas:
+    ActivityItem:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 66a1f2c9b8d4e01f1234abcd
+        teacherId:
+          type: string
+          example: 66a1f2c9b8d4e01f12340002
+        actionType:
+          type: string
+          enum: [CREATE, UPDATE, DELETE]
+          example: CREATE
+        targetType:
+          type: string
+          enum: [DOCUMENT, QUIZ, FLASHCARD]
+          example: DOCUMENT
+        targetName:
+          type: string
+          example: History Notes Chapter 1
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-05-15T08:30:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-05-15T08:30:00.000Z'
+
+paths:
+  /api/v1/activities:
+    get:
+      summary: Get recent activities for teacher
+      description: Returns the latest 5 activity records for the authenticated teacher.
+      tags: [Activity]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Recent activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActivityItem'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden

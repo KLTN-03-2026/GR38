@@ -2,6 +2,7 @@ import Quiz from "#models/Quiz.js";
 import QuizResult from "#models/QuizResult.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
+import { logActivity } from "#utils/activityLogger.js";
 
 //@desc Lấy danh sách quiz cho một tài liệu
 //@route GET /api/v1/quizzes/:documentId
@@ -127,6 +128,10 @@ export const createQuizManual = async (req, res, next) => {
       timeLimit: timeLimit || 30,
     });
 
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "CREATE", "QUIZ", newQuiz.title);
+    }
+
     res.status(201).json({
       success: true,
       data: newQuiz,
@@ -178,6 +183,10 @@ export const updateQuiz = async (req, res, next) => {
     }
 
     await quiz.save();
+
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "UPDATE", "QUIZ", quiz.title);
+    }
 
     res.status(200).json({
       success: true,
@@ -308,6 +317,10 @@ export const deleteQuiz = async (req, res, next) => {
     await quiz.deleteOne();
     // (Tùy chọn) Xóa luôn các QuizResult liên quan để nhẹ Database
     await QuizResult.deleteMany({ quizId: req.params.id });
+
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "DELETE", "QUIZ", quiz.title);
+    }
 
     res.status(200).json({
       success: true,

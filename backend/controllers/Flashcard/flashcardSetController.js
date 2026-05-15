@@ -2,6 +2,7 @@ import Flashcard from "#models/Flashcard.js";
 import FlashcardProgress from "#models/FlashcardProgress.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
+import { logActivity } from "#utils/activityLogger.js";
 
 //@desc Tải tất cả bộ flashcard (Có thể lọc theo giáo viên)
 // @route GET /api/v1/flashcards
@@ -235,6 +236,10 @@ export const createManualFlashcardSet = async (req, res, next) => {
       isAiGenerated: false 
     });
 
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "CREATE", "FLASHCARD", newFlashcardSet.title);
+    }
+
     res.status(201).json({
       success: true,
       message: "Đã tạo bộ flashcard thủ công thành công",
@@ -310,6 +315,10 @@ export const updateFlashcardSet = async (req, res, next) => {
       });
     }
 
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "UPDATE", "FLASHCARD", updatedFlashcardSet.title);
+    }
+
     // 4. Trả về Response
     res.status(200).json({
       success: true,
@@ -366,6 +375,10 @@ export const updateFlashcard = async (req, res, next) => {
 
     await flashcardSet.save();
 
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "UPDATE", "FLASHCARD", flashcardSet.title);
+    }
+
     res.status(200).json({
       success: true,
       message: "Đã cập nhật thẻ flashcard thành công",
@@ -397,6 +410,10 @@ export const deleteFlashcardSet = async (req, res, next) => {
     }
 
     await flashcardSet.deleteOne();
+
+    if (req.user.role === USER_ROLES.TEACHER) {
+      await logActivity(req.user._id, "DELETE", "FLASHCARD", flashcardSet.title);
+    }
 
     res.status(200).json({
       success: true,

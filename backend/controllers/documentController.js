@@ -4,6 +4,7 @@ import Flashcard from "../models/Flashcard.js";
 import Quiz from "../models/Quiz.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 
 // @desc Tải lên tài liệu PDF mới
@@ -42,6 +43,10 @@ export const uploadsDocument = async (req, res, next) => {
     });
 
     await document.save();
+
+    if (req.user?.role?.toUpperCase() === "TEACHER") {
+      await logActivity(req.user._id, "CREATE", "DOCUMENT", document.title);
+    }
 
     // Xử lý PDF chạy ngầm 
     processPDF(document.id, req.file.path).catch((err) => {
@@ -102,6 +107,10 @@ export const updateDocument = async (req, res, next) => {
     if (req.file) document.thumbnail = req.file.path;
 
     await document.save();
+
+    if (req.user?.role?.toUpperCase() === "TEACHER") {
+      await logActivity(req.user._id, "UPDATE", "DOCUMENT", document.title);
+    }
 
     res.status(200).json({
       success: true,
@@ -212,6 +221,10 @@ export const deleteDocument = async (req, res, next) => {
     await document.deleteOne();
     await Flashcard.deleteMany({ documentId: document._id });
     await Quiz.deleteMany({ documentId: document._id });
+
+    if (req.user?.role?.toUpperCase() === "TEACHER") {
+      await logActivity(req.user._id, "DELETE", "DOCUMENT", document.title);
+    }
 
     res.status(200).json({
       success: true,

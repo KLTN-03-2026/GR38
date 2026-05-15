@@ -12,6 +12,7 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
   const [tabAnim, setTabAnim] = useState(null);
   const [displayedTab, setDisplayedTab] = useState("Quizz");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false); // 👈 THÊM MỚI
   const animRef = useRef(null);
   const tabRef = useRef(null);
   const timerRef = useRef(null);
@@ -91,11 +92,23 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
     }, 140);
   };
 
+  // 👇 THÊM MỚI: handler cho nút Trở về
+  const handleBack = () => {
+    setShowExitConfirm(true);
+  };
+
+  const handleConfirmExit = () => {
+    clearInterval(timerRef.current);
+    setShowExitConfirm(false);
+    onBack();
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center shrink-0">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
+        {/* 👇 SỬA: onClick từ onBack → handleBack */}
+        <button onClick={handleBack} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -208,35 +221,35 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                   </div>
                 </div>
 
-           {/* Sidebar */}
-<div className="w-44 shrink-0 bg-white rounded-2xl border border-gray-200 p-4 sticky top-0"
-  style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Danh sách câu</p>
-  <div className="grid grid-cols-4 gap-1.5">
-    {Array.from({ length: total }, (_, i) => (
-      <button key={i} onClick={() => setCurrentQ(i)}
-        className={`w-8 h-8 text-xs rounded-lg border font-medium transition-all ${
-          currentQ === i
-            ? "bg-orange-500 border-orange-500 text-white"
-            : answers[i] !== undefined
-              ? "bg-orange-400 border-orange-400 text-white"
-              : "border-gray-200 text-gray-500 hover:border-gray-300"
-        }`}>
-        {i + 1}
-      </button>
-    ))}
-  </div>
-  <button onClick={() => setShowConfirm(true)}
-    className="mt-4 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold text-white"
-    style={{ background: "#f26739" }}>
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-    </svg>
-    Nộp bài
-  </button>
-</div>
-</div>
-)}
+                {/* Sidebar */}
+                <div className="w-44 shrink-0 bg-white rounded-2xl border border-gray-200 p-4 sticky top-0"
+                  style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Danh sách câu</p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {Array.from({ length: total }, (_, i) => (
+                      <button key={i} onClick={() => setCurrentQ(i)}
+                        className={`w-8 h-8 text-xs rounded-lg border font-medium transition-all ${
+                          currentQ === i
+                            ? "bg-orange-500 border-orange-500 text-white"
+                            : answers[i] !== undefined
+                              ? "bg-orange-400 border-orange-400 text-white"
+                              : "border-gray-200 text-gray-500 hover:border-gray-300"
+                        }`}>
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowConfirm(true)}
+                    className="mt-4 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold text-white"
+                    style={{ background: "#f26739" }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Nộp bài
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── Tab: Thông tin ── */}
             {displayedTab === "Thông tin" && (
@@ -310,6 +323,40 @@ export default function QuizView({ quiz, questions, onBack, onFinish }) {
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
                 style={{ background: "#f26739" }}>
                 Nộp bài
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 👇 THÊM MỚI: Popup xác nhận thoát bài */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-gray-800">Bạn muốn thoát bài kiểm tra?</h3>
+              <p className="text-xs text-gray-500 leading-5">
+                Tiến trình làm bài sẽ <strong className="text-red-500">không được lưu</strong> nếu bạn thoát ngay bây giờ.
+                {answeredCount > 0 && (
+                  <span className="block mt-1 text-gray-400">Bạn đã trả lời {answeredCount}/{total} câu.</span>
+                )}
+              </p>
+            </div>
+            <div className="flex gap-2.5 mt-5">
+              <button onClick={() => setShowExitConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+                Tiếp tục làm bài
+              </button>
+              <button onClick={handleConfirmExit}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ background: "#ef4444" }}>
+                Thoát
               </button>
             </div>
           </div>

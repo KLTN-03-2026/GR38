@@ -63,7 +63,6 @@ function SkeletonRow() {
   );
 }
 
-// Generate page numbers with ellipsis
 function getPageNumbers(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages = [];
@@ -89,14 +88,19 @@ export default function AssignmentStatistics() {
     try {
       const res = await api.get("/quizzes/statistics");
       const raw = res.data?.data ?? [];
-      const rows = raw.map((q) => ({
-        ma:       q._id,
-        ten:      q.quizTitle    ?? "Không có tên",
-        nguoiLam: q.learnerName  ?? q.learnerEmail ?? "—",
-        ngay:     q.createdAt ? new Date(q.createdAt).toLocaleDateString("vi-VN") : "—",
-        sl:       q.totalQuestions ?? "—",
-        diem:     q.score != null ? String(q.score) : "—",
-      }));
+      const rows = raw.map((q) => {
+        const scoreOn10 = q.score != null && q.totalQuestions > 0
+          ? parseFloat(((q.score / q.totalQuestions) * 10).toFixed(1))
+          : q.score ?? null;
+        return {
+          ma:       q._id,
+          ten:      q.quizTitle    ?? "Không có tên",
+          nguoiLam: q.learnerName  ?? q.learnerEmail ?? "—",
+          ngay:     q.createdAt ? new Date(q.createdAt).toLocaleDateString("vi-VN") : "—",
+          sl:       q.totalQuestions ?? "—",
+          diem:     scoreOn10 != null ? String(scoreOn10) : "—",
+        };
+      });
       setData(rows);
     } catch (err) {
       console.error(">>> [statistics] ERROR:", err?.response?.data ?? err.message);
@@ -106,8 +110,6 @@ export default function AssignmentStatistics() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Reset to page 1 when filters change
   useEffect(() => { setPage(1); }, [search, filterScore]);
 
   const filtered = data.filter((row) => {
@@ -177,7 +179,6 @@ export default function AssignmentStatistics() {
       `}</style>
 
       <div className="stats-page">
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>Thống kê bài làm</h1>
@@ -191,7 +192,6 @@ export default function AssignmentStatistics() {
           </button>
         </div>
 
-        {/* Filter */}
         <div className="filter-bar" style={{ marginBottom: 20 }}>
           <div className="search-wrap">
             <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +216,6 @@ export default function AssignmentStatistics() {
           )}
         </div>
 
-        {/* Table */}
         <div className="table-wrapper">
           <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid #F3F4F6" }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>
@@ -242,8 +241,8 @@ export default function AssignmentStatistics() {
               {loading && [1,2,3,4,5,6,7,8].map((i) => <SkeletonRow key={i} />)}
 
               {!loading && pageRows.map((row) => {
-                const scoreNum  = parseFloat(row.diem);
-                const scorePct  = isNaN(scoreNum) ? 0 : (scoreNum / 10) * 100;
+                const scoreNum   = parseFloat(row.diem);
+                const scorePct   = isNaN(scoreNum) ? 0 : (scoreNum / 10) * 100;
                 const scoreColor = scoreNum >= 8 ? "#16A34A" : scoreNum >= 5 ? "#D97706" : "#DC2626";
                 const barColor   = scoreNum >= 8 ? "#22C55E" : scoreNum >= 5 ? "#F59E0B" : "#EF4444";
                 return (
@@ -265,7 +264,9 @@ export default function AssignmentStatistics() {
                     </td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 600, fontSize: 13, color: scoreColor }}>{row.diem}</span>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: scoreColor }}>
+                          {row.diem}<span style={{ fontSize: 10, opacity: 0.6 }}>/10</span>
+                        </span>
                         <div className="score-bar-wrap">
                           <div className="score-bar" style={{ width: `${scorePct}%`, background: barColor }} />
                         </div>
@@ -298,7 +299,6 @@ export default function AssignmentStatistics() {
             </tbody>
           </table>
 
-          {/* Pagination */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid #F3F4F6", flexWrap: "wrap", gap: 8 }}>
             <span style={{ fontSize: 12, color: "#9CA3AF" }}>
               {loading ? "..." : (
@@ -307,31 +307,23 @@ export default function AssignmentStatistics() {
                   : `Hiển thị ${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} / ${filtered.length} bài làm`
               )}
             </span>
-
             {!loading && totalPages > 1 && (
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {/* Prev */}
-                <button className="pg-btn" disabled={safePage === 1} onClick={() => goTo(safePage - 1)}
-                  title="Trang trước">
+                <button className="pg-btn" disabled={safePage === 1} onClick={() => goTo(safePage - 1)}>
                   <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 18l-6-6 6-6"/>
                   </svg>
                 </button>
-
                 {pageNums.map((p, i) =>
                   p === "..." ? (
                     <span key={`dots-${i}`} className="pg-dots">…</span>
                   ) : (
-                    <button key={p} className={`pg-btn${p === safePage ? " active" : ""}`}
-                      onClick={() => goTo(p)}>
+                    <button key={p} className={`pg-btn${p === safePage ? " active" : ""}`} onClick={() => goTo(p)}>
                       {p}
                     </button>
                   )
                 )}
-
-                {/* Next */}
-                <button className="pg-btn" disabled={safePage === totalPages} onClick={() => goTo(safePage + 1)}
-                  title="Trang sau">
+                <button className="pg-btn" disabled={safePage === totalPages} onClick={() => goTo(safePage + 1)}>
                   <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 18l6-6-6-6"/>
                   </svg>

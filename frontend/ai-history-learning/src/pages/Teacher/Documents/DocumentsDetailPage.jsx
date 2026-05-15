@@ -97,18 +97,26 @@ const loadFlashList = useCallback(async () => {
   }
 };
 
-  const handleGenerateFlash = async (n) => {
-    try {
-      setGeneratingFlash(true);
-      await api.post("/ai/generate-flashcards", { documentId: id, numQuestions: n });
-      setShowFlashModal(false);
-      await loadFlashList(); 
-    } catch (err) {
-      alert(err.response?.data?.error ?? "Lỗi tạo flashcard");
-    } finally {
-      setGeneratingFlash(false);
-    }
-  };
+ const handleGenerateFlash = async ({ count, title: inputTitle }) => {
+  try {
+    setGeneratingFlash(true);
+    const existingCount = flashList.length;
+    const baseName = `${doc.title} - Flashcard`;
+    const title = inputTitle || (existingCount === 0 ? baseName : `${baseName} v${existingCount + 1}.0`);
+
+    await api.post("/ai/generate-flashcards", { 
+      documentId: id, 
+      numQuestions: count,
+      title,
+    });
+    setShowFlashModal(false);
+    await loadFlashList();
+  } catch (err) {
+    alert(err.response?.data?.error ?? "Lỗi tạo flashcard");
+  } finally {
+    setGeneratingFlash(false);
+  }
+};
 
   useEffect(() => { 
     if (!doc) loadDoc(); 

@@ -137,10 +137,11 @@ export default function QuizResultPage({ quiz: pQuiz, resultId: pResultId, score
       .finally(() => setLoading(false));
   }, [resultId]);
 
-  const fScore = apiDetail?.score ?? score ?? 0;
-  const fTotal = apiDetail?.total ?? total ?? 0;
-  const fWrong = fTotal - fScore;
-  const pct = apiDetail?.percent ?? (fTotal > 0 ? Math.round((fScore/fTotal)*100) : 0);
+const fScore = apiDetail?.score ?? score ?? 0;
+const fTotal = apiDetail?.total ?? total ?? 0;
+const fWrong = fTotal - fScore;
+const pct = apiDetail?.percent ?? (fTotal > 0 ? Math.round((fScore/fTotal)*100) : 0);
+const scoreOn10 = fTotal > 0 ? parseFloat(((fScore / fTotal) * 10).toFixed(1)) : 0;
   const color = pct >= 80 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
 
   const scrollToQuestion = (index) => {
@@ -184,6 +185,10 @@ export default function QuizResultPage({ quiz: pQuiz, resultId: pResultId, score
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase" }}>Tổng</div>
                 <div style={{ fontSize: 20, fontWeight: 900, color: "#475569" }}>{fTotal}</div>
               </div>
+                <div style={{ flex: 1, background: "#FFF7ED", border: "1.5px solid #FED7AA", padding: "12px", borderRadius: 16 }}>
+    <div style={{ fontSize: 11, fontWeight: 700, color: "#C2410C", textTransform: "uppercase" }}>Điểm</div>
+    <div style={{ fontSize: 20, fontWeight: 900, color: "#C2410C" }}>{scoreOn10}/10</div>
+  </div>
             </div>
           </div>
 

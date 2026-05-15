@@ -63,6 +63,8 @@ const QuizResultDetail = () => {
 
   // Destructure dữ liệu từ API
   const { quizId, score, correctAnswers, totalQuestions, results = [] } = data;
+  const scoreOn10 = totalQuestions > 0 ? parseFloat(((correctAnswers / totalQuestions) * 10).toFixed(1)) : 0;
+
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20">

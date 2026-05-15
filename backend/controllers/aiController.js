@@ -82,9 +82,11 @@ export const generateFlashcards = async (req, res, next) => {
     if (req.user?.role === USER_ROLES.TEACHER) {
       await createNotification(
         "Flashcard mới",
-        `Giáo viên vừa thêm bộ flashcard ${flashcardSet.title}`,
+        `${req.user.fullName} vừa thêm bộ flashcard ${flashcardSet.title}`,
         "FLASHCARD",
         flashcardSet._id,
+        req.user._id,
+        req.user.fullName,
       );
     }
 
@@ -175,9 +177,11 @@ export const generateQuiz = async (req, res, next) => {
     if (req.user?.role === USER_ROLES.TEACHER) {
       await createNotification(
         "Quiz mới",
-        `Giáo viên vừa thêm quiz ${quizSet.title}`,
+        `${req.user.fullName} vừa thêm quiz ${quizSet.title}`,
         "QUIZ",
         quizSet._id,
+        req.user._id,
+        req.user.fullName,
       );
     }
 

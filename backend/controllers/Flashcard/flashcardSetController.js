@@ -241,9 +241,11 @@ export const createManualFlashcardSet = async (req, res, next) => {
       await logActivity(req.user._id, "CREATE", "FLASHCARD", newFlashcardSet.title);
       await createNotification(
         "Flashcard mới",
-        `Giáo viên vừa thêm bộ flashcard ${newFlashcardSet.title}`,
+        `${req.user.fullName} vừa thêm bộ flashcard ${newFlashcardSet.title}`,
         "FLASHCARD",
         newFlashcardSet._id,
+        req.user._id,
+        req.user.fullName,
       );
     }
 

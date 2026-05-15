@@ -3,6 +3,7 @@
 <div align="center">
 
 **Hệ thống hỗ trợ ôn tập Lịch sử Việt Nam tích hợp Trí tuệ nhân tạo**
+
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-green.svg)](https://nodejs.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-v5+-brightgreen.svg)](https://www.mongodb.com)
 [![React](https://img.shields.io/badge/React-v18+-blue.svg)](https://react.dev)
@@ -20,11 +21,10 @@
 - [Hướng dẫn cài đặt & chạy](#hướng-dẫn-cài-đặt--chạy)
 - [Cấu hình biến môi trường](#cấu-hình-biến-môi-trường-env)
 - [Cấu trúc thư mục chính](#cấu-trúc-thư-mục-chính)
-- [Hướng dẫn sử dụng API](#hướng-dẫn-sử-dụng-api)
 - [Quy trình làm việc với Git](#quy-trình-làm-việc-với-git)
 - [Định hướng phát triển tương lai](#định-hướng-phát-triển-tương-lai)
 - [Thông tin đồ án](#thông-tin-đồ-án)
-
+- [Liên hệ & hỗ trợ](#liên-hệ--hỗ-trợ)
 
 ---
 
@@ -437,11 +437,7 @@ AIHistoryLearning/
 │       │   │   └── api.js            # Cấu hình đối tượng Axios
 │       │   │
 │       │   ├── utils/                # Các hàm tiện ích Frontend
-│       │   │   └── auth.js
-│       │   │
 │       │   ├── assets/               # Hình ảnh, phông chữ (Tài nguyên)
-│       │   │   └── img/
-│       │   │
 │       │   ├── App.jsx               # Thành phần ứng dụng chính
 │       │   ├── main.jsx              # Điểm bắt đầu chạy React
 │       │   ├── router.jsx            # Định nghĩa các tuyến đường (Router)
@@ -456,7 +452,8 @@ AIHistoryLearning/
 ├── docker-compose.yml                # Cấu hình Docker Compose
 ├── setup.bat                         # Kịch bản cài đặt cho Windows
 ├── README.md                         # Tài liệu giới thiệu dự án
-└── .gitignore                        
+└── .gitignore
+```                       
 ---
 
 

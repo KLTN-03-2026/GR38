@@ -82,13 +82,13 @@ const processPDF = async (documentId, pdfUrl) => {
     );
 
     if (updatedDocument?.title) {
-      const creatorUser = await User.findById(updatedDocument.teacherId);
+      const creatorUser = await User.findById(updatedDocument.userId);
       await createNotification(
         "Tài liệu mới",
         `${creatorUser?.fullName || "Giáo viên"} vừa thêm tài liệu ${updatedDocument.title}`,
         "DOCUMENT",
         updatedDocument._id,
-        updatedDocument.teacherId,
+        updatedDocument.userId,
         creatorUser?.fullName,
       );
     }

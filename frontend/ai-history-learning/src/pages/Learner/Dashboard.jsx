@@ -60,27 +60,35 @@ export default function LearnerDashboard() {
   const [docs, setDocs]           = useState([]);
   const [history, setHistory]     = useState([]);
   const [flashCount, setFlashCount] = useState(0);
+  const [quizCount, setQuizCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [docRes, flashRes] = await Promise.allSettled([
+        const [docRes, flashRes, quizRes] = await Promise.allSettled([
           api.get("/documents"),
           api.get("/flashcards"),
+          quizService.getAllQuizzes({ page: 1, limit: 1 }),
         ]);
 
         if (docRes.status === "fulfilled") {
           const all = docRes.value.data?.data ?? docRes.value.data ?? [];
           if (Array.isArray(all)) {
-            setDocs([...all].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4));
+            setDocs([...all].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
           }
         }
 
         if (flashRes.status === "fulfilled") {
           const all = flashRes.value.data?.data ?? flashRes.value.data ?? [];
           setFlashCount(Array.isArray(all) ? all.length : (flashRes.value.data?.count ?? 0));
+        }
+
+        if (quizRes.status === "fulfilled") {
+          const total = quizRes.value.data?.pagination?.total;
+          const data = quizRes.value.data?.data ?? quizRes.value.data ?? [];
+          setQuizCount(Number.isFinite(total) ? total : (Array.isArray(data) ? data.length : 0));
         }
 
         const histRes = await quizService.getMyHistory();
@@ -136,7 +144,7 @@ export default function LearnerDashboard() {
 
   const stats = [
     { label: "Tài liệu",     value: docs.length,     Icon: BookOpen,     color: "#1473E6", bg: "#EEF4FF" },
-    { label: "Bài kiểm tra", value: history.length,  Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
+    { label: "Bài kiểm tra", value: quizCount,     Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
     { label: "Bộ Flashcard", value: flashCount,       Icon: LayoutGrid,   color: "#8B5CF6", bg: "#F3F0FF" },
   ];
 

@@ -15,7 +15,7 @@ components:
           example: Tai lieu moi
         message:
           type: string
-          example: Giao vien vua them tai lieu Chien dich Dien Bien Phu
+          example: Nguyen Van A vua them tai lieu Chien dich Dien Bien Phu
         type:
           type: string
           enum: [DOCUMENT, QUIZ, FLASHCARD, SYSTEM]
@@ -23,6 +23,12 @@ components:
         referenceId:
           type: string
           example: 66a1f2c9b8d4e01f1234a111
+        createdByUserId:
+          type: string
+          example: 66a1f2c9b8d4e01f1234b333
+        createdByName:
+          type: string
+          example: Nguyen Van A
         readBy:
           type: array
           items:
@@ -31,6 +37,7 @@ components:
         isRead:
           type: boolean
           example: false
+          description: Trang thai doc cua thong bao doi voi nguoi dung hien tai (dua tren readBy)
         createdAt:
           type: string
           format: date-time
@@ -41,7 +48,7 @@ components:
 paths:
   /api/v1/notifications:
     get:
-      summary: Lấy danh sách thông báo của giáo viên
+      summary: Lấy danh sách thông báo
       tags: [Notification]
       security:
         - bearerAuth: []

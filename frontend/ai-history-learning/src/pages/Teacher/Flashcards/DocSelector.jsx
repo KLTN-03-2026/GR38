@@ -1,83 +1,127 @@
-import { useState } from "react";
+import React from "react";
+import Select from "react-select";
+import { FileText } from "lucide-react";
 
-export default function DocSelector({ documents, docsLoading, selectedDocId, setSelectedDocId }) {
-  const [search, setSearch] = useState("");
+const DocSelector = ({ documents, selectedDocId, setSelectedDocId, loading }) => {
+  const options = [
+    { value: "", label: "-- Không gắn tài liệu --" },
+    ...documents.map((doc) => ({
+      value: doc._id ?? doc.id ?? "",
+      label: doc.title ?? doc.name ?? "Không có tiêu đề",
+    })),
+  ];
 
-  const filtered = documents.filter((doc) => {
-    const name = (doc.title ?? doc.fileName ?? "").toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const selectedOption =
+    options.find((opt) => opt.value === selectedDocId) ?? options[0];
 
-  const selectedDoc = documents.find((d) => (d._id ?? d.id) === selectedDocId);
+  const customStyles = {
+    control: (base, state) => ({
+      ...base,
+      minHeight: "46px",
+      borderRadius: "12px",
+      borderColor: state.isFocused ? "#F26739" : "#E5E7EB",
+      boxShadow: state.isFocused ? "0 0 0 2px rgba(242,103,57,0.15)" : "none",
+      backgroundColor: "#FAFAFA",
+      fontSize: "15px",
+      color: "#18181B",
+      cursor: "pointer",
+      transition: "border-color 0.15s",
+      "&:hover": { borderColor: "#F26739" },
+    }),
+    menu: (base) => ({
+      ...base,
+      borderRadius: "12px",
+      border: "1px solid #E5E7EB",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+      overflow: "hidden",
+      zIndex: 50,
+    }),
+    menuList: (base) => ({
+      ...base,
+      padding: "4px",
+      maxHeight: "260px",
+    }),
+    option: (base, state) => ({
+      ...base,
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontWeight: state.data.value === "" ? 600 : 400,
+      color: state.data.value === "" ? "#9CA3AF" : "#18181B",
+      backgroundColor: state.isSelected
+        ? "#FFF4EF"
+        : state.isFocused
+        ? "#F9FAFB"
+        : "transparent",
+      cursor: "pointer",
+      padding: "10px 12px",
+      "&:active": { backgroundColor: "#FFF4EF" },
+    }),
+    singleValue: (base, state) => ({
+      ...base,
+      color: state.data.value === "" ? "#9CA3AF" : "#18181B",
+      fontWeight: state.data.value === "" ? 500 : 400,
+    }),
+    placeholder: (base) => ({
+      ...base,
+      color: "#9CA3AF",
+      fontSize: "15px",
+    }),
+    input: (base) => ({
+      ...base,
+      color: "#18181B",
+      fontSize: "15px",
+    }),
+    indicatorSeparator: () => ({ display: "none" }),
+    dropdownIndicator: (base, state) => ({
+      ...base,
+      color: state.isFocused ? "#F26739" : "#9CA3AF",
+      transition: "color 0.15s, transform 0.2s",
+      transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : "rotate(0deg)",
+      "&:hover": { color: "#F26739" },
+    }),
+    loadingMessage: (base) => ({
+      ...base,
+      fontSize: "14px",
+      color: "#9CA3AF",
+    }),
+    noOptionsMessage: (base) => ({
+      ...base,
+      fontSize: "14px",
+      color: "#9CA3AF",
+    }),
+  };
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-6">
       <label className="block text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-        Tài liệu gắn với bộ thẻ <span className="text-gray-300 font-normal">(tuỳ chọn)</span>
+        <span className="flex items-center gap-1.5">
+          <FileText size={13} className="text-gray-400" />
+          Gắn với tài liệu
+        </span>
       </label>
 
-      {docsLoading ? (
-        <div className="flex items-center gap-2 h-[46px] text-sm text-gray-400">
-          <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-          Đang tải danh sách tài liệu...
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {/* Ô tìm kiếm */}
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm tài liệu..."
-              className="w-full h-[42px] pl-9 pr-4 rounded-xl border border-gray-200 text-[14px] text-gray-700 outline-none bg-[#FAFAFA] focus:border-[#F26739] transition-colors"
-            />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
+      <Select
+        options={options}
+        value={selectedOption}
+        onChange={(opt) => setSelectedDocId(opt?.value ?? "")}
+        isLoading={loading}
+        isSearchable
+        placeholder="-- Không gắn tài liệu --"
+        loadingMessage={() => "Đang tải tài liệu..."}
+        noOptionsMessage={({ inputValue }) =>
+          inputValue ? `Không tìm thấy "${inputValue}"` : "Không có tài liệu"
+        }
+        styles={customStyles}
+        classNamePrefix="doc-select"
+      />
 
-          {/* Select */}
-          <select
-            value={selectedDocId}
-            onChange={(e) => setSelectedDocId(e.target.value)}
-            className="w-full h-[46px] px-4 rounded-xl border border-gray-200 text-[15px] text-[#18181B] outline-none transition-colors bg-[#FAFAFA] focus:border-[#F26739]"
-          >
-            <option value="">-- Không gắn tài liệu --</option>
-            {filtered.map((doc) => {
-              const id   = doc._id ?? doc.id;
-              const name = doc.title ?? doc.fileName ?? "Không có tên";
-              return <option key={id} value={id}>{name}</option>;
-            })}
-          </select>
-
-          {/* Hiển thị đang chọn */}
-          {selectedDocId && selectedDoc && (
-            <div className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl">
-              <span className="text-xs text-orange-700 font-medium truncate">
-                📎 {selectedDoc.title ?? selectedDoc.fileName}
-              </span>
-              <button onClick={() => setSelectedDocId("")} className="text-orange-400 hover:text-orange-600 ml-2 shrink-0">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          )}
-
-          {/* Không tìm thấy */}
-          {search && filtered.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-2">Không tìm thấy tài liệu nào</p>
-          )}
-        </div>
+      {selectedDocId && (
+        <p className="text-[11px] text-[#F26739] mt-1.5 font-medium">
+          ✓ Đã chọn tài liệu
+        </p>
       )}
     </div>
   );
-}
+};
+
+export default DocSelector;

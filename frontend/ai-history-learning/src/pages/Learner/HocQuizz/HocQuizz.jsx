@@ -1,7 +1,7 @@
 // HocQuizz.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, AlertCircle, Loader2, Timer as TimerIcon } from "lucide-react";
+import { ArrowLeft, Send, AlertCircle, Loader2, LogOut } from "lucide-react";
 import api from "../../../lib/api";
 import QuizResult from "./QuizResult";
 
@@ -18,6 +18,7 @@ const HocQuizz = () => {
   const [isFinished,      setIsFinished]      = useState(false);
   const [scoreData,       setScoreData]       = useState(null);
   const [showConfirm,     setShowConfirm]     = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false); // 👈 THÊM MỚI
   const [animDir,         setAnimDir]         = useState(null);
   const timerRef     = useRef(null);
   const animRef      = useRef(null);
@@ -78,15 +79,11 @@ const HocQuizz = () => {
       const resSubmit = await api.post(`/quizzes/${id}/submit`, { userAnswers });
       const result    = resSubmit.data?.data || resSubmit.data;
       const rId       = result?.resultId || result?._id || result?.id;
-     const correct = result?.correctAnswersCount ?? result?.score ?? 0;
-    const total   = result?.totalQuestions ?? questions.length;
-const scoreOn10 = total > 0 ? parseFloat(((correct / total) * 10).toFixed(1)) : 0;
+      const correct   = result?.correctAnswersCount ?? result?.score ?? 0;
+      const total     = result?.totalQuestions ?? questions.length;
+      const scoreOn10 = total > 0 ? parseFloat(((correct / total) * 10).toFixed(1)) : 0;
 
-setScoreData({
-  resultId: rId,
-  score:    scoreOn10,   // ← giờ là thang 10
-  total:    total,
-});
+      setScoreData({ resultId: rId, score: scoreOn10, total });
       setIsFinished(true);
     } catch (err) {
       console.error(err);
@@ -106,6 +103,14 @@ setScoreData({
   const handleNext = () => goTo(currentIdx + 1, "left");
   const handlePrev = () => goTo(currentIdx - 1, "right");
   const handleJump = (i) => { if (i !== currentIdx) goTo(i, i > currentIdx ? "left" : "right"); };
+
+  // 👇 THÊM MỚI: handler thoát
+  const handleExit = () => setShowExitConfirm(true);
+  const handleConfirmExit = () => {
+    clearInterval(timerRef.current);
+    setShowExitConfirm(false);
+    navigate(-1);
+  };
 
   // ── Finished ────────────────────────────────────────────────────────────────
   if (isFinished) {
@@ -164,15 +169,10 @@ setScoreData({
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between shrink-0">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
+        {/* 👇 SỬA: onClick → handleExit, bỏ timer ở giữa */}
+        <button onClick={handleExit} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
           <ArrowLeft size={16} /> Rời khỏi
         </button>
-        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono font-black text-base border-2 transition-all ${
-          isLow ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-orange-50 border-orange-100 text-orange-600"
-        }`}>
-          <TimerIcon size={16} />
-          <span>{formatTime(timeLeft)}</span>
-        </div>
         <div className="text-right">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Đang thi</p>
           <p className="text-xs font-black text-gray-700 uppercase truncate max-w-[200px]">{quizInfo?.title || "..."}</p>
@@ -317,6 +317,38 @@ setScoreData({
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
                 style={{ background: "#f26739" }}>
                 Nộp bài
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 👇 THÊM MỚI: Popup xác nhận thoát ──────────────────────────────────── */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                <LogOut className="text-red-500" size={24} />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-800">Bạn muốn rời khỏi bài thi?</h3>
+              <p className="text-xs text-gray-500 leading-5">
+                Tiến trình làm bài sẽ <strong className="text-red-500">không được lưu</strong> nếu bạn thoát ngay bây giờ.
+                {answeredCount > 0 && (
+                  <span className="block mt-1 text-gray-400">Bạn đã trả lời {answeredCount}/{total} câu.</span>
+                )}
+              </p>
+            </div>
+            <div className="flex gap-2.5 mt-5">
+              <button onClick={() => setShowExitConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+                Tiếp tục làm bài
+              </button>
+              <button onClick={handleConfirmExit}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ background: "#ef4444" }}>
+                Rời khỏi
               </button>
             </div>
           </div>

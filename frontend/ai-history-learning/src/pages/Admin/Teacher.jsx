@@ -95,13 +95,12 @@ export default function TeacherDashboard() {
         setFlashcardCount(flashRes.data.count ?? flashRes.data.data?.length ?? 0);
         setQuizCount(quizRes.data.count ?? quizRes.data.data?.length ?? 0);
 
-        // Top 4 ranks
         const raw = statsRes.data?.data ?? [];
-       const top4 = [...raw]
-  .filter((q) => q.score != null)
-  .sort((a, b) => b.score - a.score)
-  .slice(0, 3) 
-  .map((q) => ({
+        const top4 = [...raw]
+          .filter((q) => q.score != null)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3)
+          .map((q) => ({
             name: q.learnerName ?? q.learnerEmail ?? "Ẩn danh",
             score: q.totalQuestions > 0
               ? parseFloat(((q.score / q.totalQuestions) * 10).toFixed(1))
@@ -115,7 +114,6 @@ export default function TeacherDashboard() {
           }));
         setTopRanks(top4);
 
-        // 4 hoạt động gần nhất
         const rawAct = actRes.data?.data ?? actRes.data ?? [];
         setActivities(rawAct.slice(0, 4));
       } catch (err) {
@@ -183,7 +181,6 @@ export default function TeacherDashboard() {
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <Zap size={16} color="#F26739" strokeWidth={2.5} /> Hoạt động gần đây
             </h2>
-            
           </div>
 
           <div className="flex flex-col gap-1">
@@ -239,7 +236,7 @@ export default function TeacherDashboard() {
 
           <div className="flex flex-col gap-3">
             {loading ? (
-             [1,2,3].map((i) => <div key={i} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />)
+              [1,2,3].map((i) => <div key={i} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />)
             ) : topRanks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 gap-2">
                 <Trophy size={28} className="text-gray-200" />
@@ -260,9 +257,10 @@ export default function TeacherDashboard() {
                     <p className="text-sm font-bold text-gray-900 truncate">{r.name}</p>
                     <p className="text-xs text-gray-400">{r.date}</p>
                   </div>
-                  <div className="text-right">
+                  {/* ✅ Score inline: 7/10 */}
+                  <div className="flex items-baseline gap-0.5 flex-shrink-0">
                     <span className="text-lg font-extrabold" style={{ color: RANK_COLORS[i] }}>{r.score}</span>
-                    <p className="text-xs text-gray-300">/10</p>
+                    <span className="text-xs font-medium text-gray-300">/10</span>
                   </div>
                 </div>
               ))

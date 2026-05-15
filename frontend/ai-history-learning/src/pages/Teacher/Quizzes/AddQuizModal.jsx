@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Select from "react-select";
 import { quizService } from "../../../services/quizService";
 import api from "../../../lib/api";
 
@@ -17,6 +18,68 @@ const Field = ({ label, required, error, children }) => (
     {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
   </div>
 );
+
+const docSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: "42px",
+    borderRadius: "12px",
+    borderColor: state.isFocused ? "#F26739" : "#E5E7EB",
+    boxShadow: state.isFocused ? "0 0 0 2px rgba(242,103,57,0.15)" : "none",
+    backgroundColor: "#FAFAFA",
+    fontSize: "14px",
+    cursor: "pointer",
+    transition: "border-color 0.15s",
+    "&:hover": { borderColor: "#F26739" },
+  }),
+  menu: (base) => ({
+    ...base,
+    borderRadius: "12px",
+    border: "1px solid #E5E7EB",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+    overflow: "hidden",
+    zIndex: 9999,
+  }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  menuList: (base) => ({
+    ...base,
+    padding: "4px",
+    maxHeight: "220px",
+  }),
+  option: (base, state) => ({
+    ...base,
+    borderRadius: "8px",
+    fontSize: "13px",
+    fontWeight: state.data.value === "" ? 600 : 400,
+    color: state.data.value === "" ? "#9CA3AF" : "#18181B",
+    backgroundColor: state.isSelected
+      ? "#FFF4EF"
+      : state.isFocused
+      ? "#F9FAFB"
+      : "transparent",
+    cursor: "pointer",
+    padding: "9px 12px",
+    "&:active": { backgroundColor: "#FFF4EF" },
+  }),
+  singleValue: (base, state) => ({
+    ...base,
+    color: state.data.value === "" ? "#9CA3AF" : "#18181B",
+    fontWeight: state.data.value === "" ? 500 : 400,
+    fontSize: "14px",
+  }),
+  placeholder: (base) => ({ ...base, color: "#9CA3AF", fontSize: "14px" }),
+  input: (base) => ({ ...base, color: "#18181B", fontSize: "14px" }),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base, state) => ({
+    ...base,
+    color: state.isFocused ? "#F26739" : "#9CA3AF",
+    transition: "color 0.15s, transform 0.2s",
+    transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : "rotate(0deg)",
+    "&:hover": { color: "#F26739" },
+  }),
+  loadingMessage: (base) => ({ ...base, fontSize: "13px", color: "#9CA3AF" }),
+  noOptionsMessage: (base) => ({ ...base, fontSize: "13px", color: "#9CA3AF" }),
+};
 
 function ThumbnailPicker({ preview, name, onChange, onRemove, error, maxMb }) {
   const ref = useRef(null);
@@ -61,14 +124,12 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   const [titleErr, setTitleErr] = useState("");
 
   const [questions, setQuestions] = useState(() => {
-    // Thử lấy từ sessionStorage trước (sống sót qua remount)
     if (cacheKey) {
       try {
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) return JSON.parse(cached);
       } catch {}
     }
-    // Lần đầu: parse từ editQuiz
     if (!editQuiz?.questions?.length) return [];
     return editQuiz.questions.map((q, i) => {
       const idx = q.correctAnswerIndex ?? q.options?.indexOf(q.correctAnswer) ?? 0;
@@ -95,29 +156,31 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
   const [docsLoading, setDocsLoading] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState("");
 
-  // Sync vào sessionStorage mỗi khi questions thay đổi
+  // Build react-select options
+  const docOptions = [
+    { value: "", label: "-- Không gắn tài liệu --" },
+    ...docs.map((d) => ({
+      value: String(d._id ?? d.id ?? ""),
+      label: d.title ?? d.name ?? "Không có tiêu đề",
+    })),
+  ];
+  const selectedDocOption = docOptions.find((o) => o.value === selectedDoc) ?? docOptions[0];
+
   useEffect(() => {
     if (cacheKey) {
       try { sessionStorage.setItem(cacheKey, JSON.stringify(questions)); } catch {}
     }
   }, [questions]);
 
-  const clearCache = () => {
-    if (cacheKey) sessionStorage.removeItem(cacheKey);
-  };
-
-  const handleClose = () => {
-    clearCache();
-    onClose();
-  };
+  const clearCache = () => { if (cacheKey) sessionStorage.removeItem(cacheKey); };
+  const handleClose = () => { clearCache(); onClose(); };
 
   useEffect(() => {
     (async () => {
       try {
         setDocsLoading(true);
         const res = await api.get("/documents");
-        const list = Array.isArray(res?.data?.data ?? res?.data)
-          ? (res?.data?.data ?? res?.data) : [];
+        const list = Array.isArray(res?.data?.data ?? res?.data) ? (res?.data?.data ?? res?.data) : [];
         setDocs(list);
         const rawDocId = editQuiz?.documentId ?? documentId ?? "";
         const docId = rawDocId?._id ?? rawDocId?.id ?? rawDocId ?? "";
@@ -190,22 +253,18 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
     setEditIdx(i);
   };
 
- const handleRemoveQ = (i) => {
-  setQuestions((p) => {
-    const updated = p.filter((_, j) => j !== i); // ← filter, không phải map
-    if (cacheKey) {
-      try { sessionStorage.setItem(cacheKey, JSON.stringify(updated)); } catch {}
-    }
-    return updated;
-  });
-  if (editIdx === i) {
-    setEditIdx(null);
-    setCurrentQ(EMPTY_Q);
-  } else if (editIdx !== null && i < editIdx) {
-    setEditIdx((idx) => idx - 1);
-  }
-  setListErr("");
-};
+  const handleRemoveQ = (i) => {
+    setQuestions((p) => {
+      const updated = p.filter((_, j) => j !== i);
+      if (cacheKey) {
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(updated)); } catch {}
+      }
+      return updated;
+    });
+    if (editIdx === i) { setEditIdx(null); setCurrentQ(EMPTY_Q); }
+    else if (editIdx !== null && i < editIdx) setEditIdx((idx) => idx - 1);
+    setListErr("");
+  };
 
   const handleFinish = async () => {
     if (questions.length < MIN_Q) { setListErr(`Cần ít nhất ${MIN_Q} câu hỏi`); return; }
@@ -270,13 +329,26 @@ export default function AddQuizModal({ onClose, onSave, documentId, editQuiz }) 
                 <textarea placeholder="Nhập mô tả quiz..." value={description} rows={2}
                   onChange={(e) => setDesc(e.target.value)} className={`${cls(false)} resize-none`} />
               </Field>
+
+              {/* react-select thay thế <select> cũ */}
               <Field label="Tài liệu gắn với Quiz (Tuỳ chọn)">
-                <select value={selectedDoc} onChange={(e) => setSelectedDoc(e.target.value)} disabled={docsLoading} className={cls(false)}>
-                  <option value="">-- Không gắn tài liệu --</option>
-                  {docs.map((d) => { const id = String(d._id ?? d.id); return <option key={id} value={id}>{d.title ?? d.name}</option>; })}
-                </select>
-                {docsLoading && <p className="text-xs text-gray-400 mt-1">Đang tải danh sách tài liệu...</p>}
+                <Select
+                  options={docOptions}
+                  value={selectedDocOption}
+                  onChange={(opt) => setSelectedDoc(opt?.value ?? "")}
+                  isLoading={docsLoading}
+                  isSearchable
+                  placeholder="-- Không gắn tài liệu --"
+                  loadingMessage={() => "Đang tải danh sách tài liệu..."}
+                  noOptionsMessage={({ inputValue }) =>
+                    inputValue ? `Không tìm thấy "${inputValue}"` : "Không có tài liệu"
+                  }
+                  styles={docSelectStyles}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                />
               </Field>
+
               <ThumbnailPicker preview={thumbPreview} name={thumb?.name} maxMb={MAX_MB}
                 onChange={handleThumbChange} onRemove={() => { setThumb(null); setThumbPrev(""); setThumbErr(""); }} error={thumbErr} />
               <div className="grid gap-3">

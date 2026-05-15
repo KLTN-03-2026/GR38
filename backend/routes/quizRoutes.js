@@ -16,6 +16,7 @@ import {
   getMyHistory,
   getTeacherStatistics,
   getQuizForPlay,
+  getAllQuizzesForLearner,
 } from "#controllers/Quiz/quizResultController.js";
 
 import protect, { authorize, USER_ROLES } from "#middleware/auth.js";
@@ -60,6 +61,13 @@ router.post(
   authorize(USER_ROLES.TEACHER, USER_ROLES.ADMIN),
   uploadQuizImage.single("thumbnail"),
   createQuizManual,
+);
+
+// 6. Lấy danh sách quiz cho learner
+router.get(
+  "/",
+  authorize(USER_ROLES.LEARNER, USER_ROLES.TEACHER, USER_ROLES.ADMIN),
+  getAllQuizzesForLearner,
 );
 
 // ==========================================

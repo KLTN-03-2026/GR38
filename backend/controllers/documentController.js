@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Document from "../models/Document.js";
 import Flashcard from "../models/Flashcard.js";
 import Quiz from "../models/Quiz.js";
+import User from "../models/User.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import { logActivity } from "../utils/activityLogger.js";
@@ -81,11 +82,14 @@ const processPDF = async (documentId, pdfUrl) => {
     );
 
     if (updatedDocument?.title) {
+      const creatorUser = await User.findById(updatedDocument.teacherId);
       await createNotification(
         "Tài liệu mới",
-        `Giáo viên vừa thêm tài liệu ${updatedDocument.title}`,
+        `${creatorUser?.fullName || "Giáo viên"} vừa thêm tài liệu ${updatedDocument.title}`,
         "DOCUMENT",
         updatedDocument._id,
+        updatedDocument.teacherId,
+        creatorUser?.fullName,
       );
     }
 

@@ -5,6 +5,7 @@ import Quiz from "../models/Quiz.js";
 import { extractTextFromPDF } from "../utils/pdfParser.js";
 import { chunkText } from "../utils/textChunker.js";
 import { logActivity } from "../utils/activityLogger.js";
+import { createNotification } from "../utils/notificationService.js";
 
 
 // @desc Tải lên tài liệu PDF mới
@@ -69,11 +70,24 @@ const processPDF = async (documentId, pdfUrl) => {
     const { text } = await extractTextFromPDF(pdfUrl);
     const chunks = chunkText(text, 500, 50);
 
-    await Document.findByIdAndUpdate(documentId, {
+    const updatedDocument = await Document.findByIdAndUpdate(
+      documentId,
+      {
       extractedText: text,
       chunks: chunks,
       status: "ready",
-    });
+      },
+      { new: true },
+    );
+
+    if (updatedDocument?.title) {
+      await createNotification(
+        "Tài liệu mới",
+        `Giáo viên vừa thêm tài liệu ${updatedDocument.title}`,
+        "DOCUMENT",
+        updatedDocument._id,
+      );
+    }
 
     console.log(`Tài liệu ${documentId} đã được xử lý và chia nhỏ thành công.`);
   } catch (error) {

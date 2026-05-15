@@ -1,7 +1,6 @@
 tags:
   - name: Activity
-    description: Activity log endpoints for teachers
-
+    description: Hoạt động của giáo viên như tạo, cập nhật, xóa tài liệu, quiz, flashcard.
 components:
   schemas:
     ActivityItem:
@@ -36,7 +35,7 @@ components:
 paths:
   /api/v1/activities:
     get:
-      summary: Get recent activities for teacher
+      summary: Lấy danh sách hoạt động gần đây của giáo viên
       description: Returns the latest 5 activity records for the authenticated teacher.
       tags: [Activity]
       security:

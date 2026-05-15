@@ -4,6 +4,8 @@ import Quiz from "../models/Quiz.js";
 import ChatHistory from "../models/ChatHistory.js";
 import * as geminiService from "../utils/geminiService.js";
 import { findRelevantChunks } from "../utils/textChunker.js";
+import { USER_ROLES } from "../models/User.js";
+import { createNotification } from "../utils/notificationService.js";
 
 // --- HÀM TRỢ GIÚP XỬ LÝ LỖI GEMINI ---
 const handleGeminiError = (error, res, next) => {
@@ -76,6 +78,15 @@ export const generateFlashcards = async (req, res, next) => {
       isAiGenerated: true, 
       tags: []
     });
+
+    if (req.user?.role === USER_ROLES.TEACHER) {
+      await createNotification(
+        "Flashcard mới",
+        `Giáo viên vừa thêm bộ flashcard ${flashcardSet.title}`,
+        "FLASHCARD",
+        flashcardSet._id,
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -160,6 +171,15 @@ export const generateQuiz = async (req, res, next) => {
       isAiGenerated: true,
       timeLimit: Number(timeLimit),     
     });
+
+    if (req.user?.role === USER_ROLES.TEACHER) {
+      await createNotification(
+        "Quiz mới",
+        `Giáo viên vừa thêm quiz ${quizSet.title}`,
+        "QUIZ",
+        quizSet._id,
+      );
+    }
 
     res.status(200).json({
       success: true,

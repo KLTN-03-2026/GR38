@@ -3,6 +3,7 @@ import FlashcardProgress from "#models/FlashcardProgress.js";
 import { USER_ROLES } from "#models/User.js";
 import Document from "#models/Document.js";
 import { logActivity } from "#utils/activityLogger.js";
+import { createNotification } from "#utils/notificationService.js";
 
 //@desc Tải tất cả bộ flashcard (Có thể lọc theo giáo viên)
 // @route GET /api/v1/flashcards
@@ -238,6 +239,12 @@ export const createManualFlashcardSet = async (req, res, next) => {
 
     if (req.user.role === USER_ROLES.TEACHER) {
       await logActivity(req.user._id, "CREATE", "FLASHCARD", newFlashcardSet.title);
+      await createNotification(
+        "Flashcard mới",
+        `Giáo viên vừa thêm bộ flashcard ${newFlashcardSet.title}`,
+        "FLASHCARD",
+        newFlashcardSet._id,
+      );
     }
 
     res.status(201).json({

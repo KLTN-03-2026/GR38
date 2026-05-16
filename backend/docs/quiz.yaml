@@ -418,3 +418,130 @@ paths:
           description: Chưa đăng nhập
         '404':
           description: Không tìm thấy bộ câu hỏi
+
+  /api/v1/quiz-session/save-progress:
+    post:
+      summary: Lưu tiến trình làm bài quiz (Auto-save)
+      description: Lưu hoặc cập nhật phiên làm bài hiện tại của người dùng. Nếu đã có session chưa hoàn thành thì cập nhật, nếu chưa có thì tạo mới.
+      tags: [Quiz]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quizId
+                - timeRemaining
+              properties:
+                quizId:
+                  type: string
+                  example: 66a1f2c9b8d4e01f12349999
+                timeRemaining:
+                  type: integer
+                  description: Thoi gian con lai (giay)
+                  example: 420
+                currentQuestionIndex:
+                  type: integer
+                  example: 3
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      questionId:
+                        type: string
+                        example: 66a1f2c9b8d4e01f12345678
+                      selectedOption:
+                        type: string
+                        nullable: true
+                        example: "1954"
+      responses:
+        '200':
+          description: Luu tien trinh thanh cong
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Lưu tiến trình làm bài quiz thành công!
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: 66a1f2c9b8d4e01f1234aaaa
+                      userId:
+                        type: string
+                        example: 66a1f2c9b8d4e01f12340000
+                      quizId:
+                        type: string
+                        example: 66a1f2c9b8d4e01f12349999
+                      timeRemaining:
+                        type: integer
+                        example: 420
+                      currentQuestionIndex:
+                        type: integer
+                        example: 3
+                      isCompleted:
+                        type: boolean
+                        example: false
+                      answers:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            questionId:
+                              type: string
+                              example: 66a1f2c9b8d4e01f12345678
+                            selectedOption:
+                              type: string
+                              nullable: true
+                              example: "1954"
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: Du lieu khong hop le
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Du lieu khong hop le.
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: field
+                        msg:
+                          type: string
+                          example: Invalid value
+                        path:
+                          type: string
+                          example: quizId
+                        location:
+                          type: string
+                          example: body
+        '401':
+          description: Chua dang nhap hoac token khong hop le
+        '500':
+          description: Loi server

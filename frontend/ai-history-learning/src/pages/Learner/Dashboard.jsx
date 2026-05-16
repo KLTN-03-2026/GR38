@@ -57,12 +57,13 @@ export default function LearnerDashboard() {
   const greeting = hour < 12 ? "Chào buổi sáng" : hour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
   const { name } = getUserInfo();
 
-  const [docs, setDocs]           = useState([]);
-  const [history, setHistory]     = useState([]);
+  const [docs, setDocs]             = useState([]);
+  const [history, setHistory]       = useState([]);
+  const [flashcards, setFlashcards] = useState([]);
   const [flashCount, setFlashCount] = useState(0);
-  const [quizCount, setQuizCount] = useState(0);
+  const [quizCount, setQuizCount]   = useState(0);
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -82,7 +83,12 @@ export default function LearnerDashboard() {
 
         if (flashRes.status === "fulfilled") {
           const all = flashRes.value.data?.data ?? flashRes.value.data ?? [];
-          setFlashCount(Array.isArray(all) ? all.length : (flashRes.value.data?.count ?? 0));
+          if (Array.isArray(all)) {
+            setFlashcards(all);
+            setFlashCount(all.length);
+          } else {
+            setFlashCount(flashRes.value.data?.count ?? 0);
+          }
         }
 
         if (quizRes.status === "fulfilled") {
@@ -112,7 +118,6 @@ export default function LearnerDashboard() {
           }));
         }
 
-        // Fetch notifications
         try {
           const notifRes = await api.get("/notifications");
           const notifs = notifRes.data?.data ?? notifRes.data ?? [];
@@ -143,9 +148,9 @@ export default function LearnerDashboard() {
   const unreadCount = notifications.filter(n => !n.isRead && !n.read).length;
 
   const stats = [
-    { label: "Tài liệu",     value: docs.length,     Icon: BookOpen,     color: "#1473E6", bg: "#EEF4FF" },
+    { label: "Tài liệu",     value: docs.length,  Icon: BookOpen,     color: "#1473E6", bg: "#EEF4FF" },
     { label: "Bài kiểm tra", value: quizCount,     Icon: ClipboardList, color: "#F26739", bg: "#FFF3EE" },
-    { label: "Bộ Flashcard", value: flashCount,       Icon: LayoutGrid,   color: "#8B5CF6", bg: "#F3F0FF" },
+    { label: "Bộ Flashcard", value: flashCount,    Icon: LayoutGrid,   color: "#8B5CF6", bg: "#F3F0FF" },
   ];
 
   const handleAttemptClick = (item) => {
@@ -205,7 +210,7 @@ export default function LearnerDashboard() {
         <div className="flex flex-col gap-8">
 
           {/* HÀNG 1: TÀI LIỆU & LỊCH SỬ */}
-          <div className="grid gap-8" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
+         <div className="grid gap-8" style={{ gridTemplateColumns: "1fr 1fr" }}>
 
             {/* Tài liệu gợi ý */}
             <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col border border-gray-100 max-h-[400px]">
@@ -294,10 +299,10 @@ export default function LearnerDashboard() {
           </div>
 
           {/* HÀNG 2: THÔNG BÁO & FLASHCARD */}
-          <div className="grid gap-8" style={{ gridTemplateColumns: "1.2fr 1fr" }}>
+          <div className="grid gap-8" style={{ gridTemplateColumns: "1fr 1fr" }}>
 
             {/* Thông báo */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 max-h-[320px] overflow-y-auto custom-scrollbar">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                   <Bell size={16} className="text-gray-500" /> Thông báo
@@ -324,14 +329,12 @@ export default function LearnerDashboard() {
                         className="notif-row flex items-start gap-3 py-3 first:pt-0 last:pb-0 cursor-pointer transition-colors rounded-lg px-2"
                         onClick={() => !isRead && handleMarkRead(notif._id)}
                       >
-                        {/* Dot unread */}
                         <div className="flex-shrink-0 mt-1.5">
                           {isRead
                             ? <div className="w-2 h-2 rounded-full bg-gray-200" />
                             : <div className="w-2 h-2 rounded-full bg-[#F26739]" />
                           }
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <p className={`text-[13px] leading-snug ${isRead ? "text-gray-400 font-normal" : "text-gray-800 font-semibold"}`}>
                             {notif.message ?? notif.content ?? notif.title ?? "Thông báo mới"}
@@ -340,7 +343,6 @@ export default function LearnerDashboard() {
                             {formatNotifTime(notif.createdAt)}
                           </p>
                         </div>
-
                         {!isRead && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleMarkRead(notif._id); }}
@@ -356,15 +358,49 @@ export default function LearnerDashboard() {
               )}
             </div>
 
-            {/* Flashcard CTA */}
-            <div className="rounded-2xl p-6 flex items-center justify-between shadow-md" style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
-              <div>
-                <p className="text-lg font-black text-white">Ôn tập Flashcard</p>
-                <p className="text-[12px] text-white/80 mt-1">{flashCount} bộ thẻ đang chờ bạn</p>
+            {/* Flashcard Grid */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col border border-gray-100 max-h-[320px]">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <LayoutGrid size={16} color="#8B5CF6" strokeWidth={2.5} /> Ôn tập Flashcard
+                </h2>
+                <span onClick={() => navigate("/learner/flashcards")} className="text-[12px] text-blue-600 font-bold cursor-pointer hover:underline">
+                  Tất cả →
+                </span>
               </div>
-              <button onClick={() => navigate("/learner/flashcards")} className="flex items-center gap-2 text-white text-[11px] font-bold px-4 py-2 rounded-xl border border-white/30 bg-white/10 hover:bg-white/20 transition">
-                Học ngay <ChevronRight size={14} />
-              </button>
+              {flashcards.length === 0 ? (
+                <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-2xl flex-1 flex flex-col justify-center">
+                  <LayoutGrid size={32} className="mx-auto text-gray-200 mb-2" />
+                  <p className="text-gray-400 text-xs mb-3">Chưa có bộ flashcard nào</p>
+                  <button onClick={() => navigate("/learner/flashcards")} className="px-4 py-1.5 bg-[#8B5CF6] text-white text-[10px] font-bold rounded-lg hover:opacity-90 transition mx-auto shadow-sm uppercase">
+                    Khám phá ngay
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 overflow-y-auto pr-1 custom-scrollbar flex-1">
+                  {flashcards.slice(0, 4).map((fc, idx) => (
+                    <div key={fc._id ?? idx} className="doc-card p-3 border border-gray-100 rounded-xl flex flex-col justify-between transition-all cursor-pointer bg-white" onClick={() => navigate("/learner/flashcards")}>
+                      <div className="mb-2">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                            <LayoutGrid size={16} className="text-purple-400" />
+                          </div>
+                          <ChevronRight size={14} className="text-gray-300" />
+                        </div>
+                        <p className="text-[13px] font-bold text-gray-800 line-clamp-2 leading-tight">
+                          {fc.title ?? fc.name ?? `Bộ Flashcard ${idx + 1}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate("/learner/flashcards"); }}
+                        className="w-full py-2 bg-[#8B5CF6] text-white text-[10px] font-bold rounded-lg hover:opacity-90 transition shadow-sm uppercase tracking-wider"
+                      >
+                        Học ngay
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>

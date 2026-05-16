@@ -1,9 +1,11 @@
 // HocQuizz.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, AlertCircle, Loader2, LogOut } from "lucide-react";
+import { useNavigate, useParams, useBeforeUnload } from "react-router-dom";
+import { ArrowLeft, Send, AlertCircle, Loader2, LogOut, Save, CheckCircle2 } from "lucide-react";
 import api from "../../../lib/api";
 import QuizResult from "./QuizResult";
+
+const STORAGE_KEY = (id) => `quiz_answers_${id}`;
 
 const HocQuizz = () => {
   const navigate = useNavigate();
@@ -18,11 +20,45 @@ const HocQuizz = () => {
   const [isFinished,      setIsFinished]      = useState(false);
   const [scoreData,       setScoreData]       = useState(null);
   const [showConfirm,     setShowConfirm]     = useState(false);
-  const [showExitConfirm, setShowExitConfirm] = useState(false); // 👈 THÊM MỚI
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [animDir,         setAnimDir]         = useState(null);
-  const timerRef     = useRef(null);
-  const animRef      = useRef(null);
-  const timeLimitRef = useRef(600);
+  const [saveStatus,      setSaveStatus]      = useState(null); // null | "saving" | "saved"
+
+  const timerRef         = useRef(null);
+  const animRef          = useRef(null);
+  const timeLimitRef     = useRef(600);
+  const pendingNavTarget = useRef(null);
+
+  // ── Chặn reload/đóng tab ────────────────────────────────────────────────────
+  useBeforeUnload(
+    React.useCallback((e) => {
+      if (!isFinished) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }, [isFinished])
+  );
+
+  // ── Chặn click sidebar/nav bên ngoài component ──────────────────────────────
+  useEffect(() => {
+    if (isFinished) return;
+
+    const handleClick = (e) => {
+      const target = e.target.closest("a, button");
+      if (!target) return;
+
+      const quizRoot = document.getElementById("hoc-quizz-root");
+      if (quizRoot && quizRoot.contains(target)) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      pendingNavTarget.current = target;
+      setShowExitConfirm(true);
+    };
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isFinished]);
 
   // ── Fetch quiz ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -41,6 +77,18 @@ const HocQuizz = () => {
           const secs = mins * 60;
           timeLimitRef.current = secs;
           setTimeLeft(secs);
+
+          // ── Khôi phục câu trả lời đã lưu ──
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY(id));
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed?.answers) setSelectedAnswers(parsed.answers);
+              if (parsed?.timeLeft) setTimeLeft(parsed.timeLeft);
+            }
+          } catch {
+            // silent
+          }
         }
       } catch (err) {
         console.error(err);
@@ -67,9 +115,27 @@ const HocQuizz = () => {
   const formatTime = (sec) =>
     `${Math.floor(sec / 60).toString().padStart(2, "0")}:${(sec % 60).toString().padStart(2, "0")}`;
 
+  // ── Lưu câu trả lời ─────────────────────────────────────────────────────────
+  const handleSave = () => {
+    try {
+      setSaveStatus("saving");
+      localStorage.setItem(STORAGE_KEY(id), JSON.stringify({
+        answers:  selectedAnswers,
+        timeLeft: timeLeft,
+        savedAt:  new Date().toISOString(),
+      }));
+      setTimeout(() => setSaveStatus("saved"), 400);
+      setTimeout(() => setSaveStatus(null), 2500);
+    } catch {
+      setSaveStatus(null);
+    }
+  };
+
   // ── Submit ──────────────────────────────────────────────────────────────────
   const doSubmit = async (auto = false) => {
     clearInterval(timerRef.current);
+    // Xóa bản lưu sau khi nộp
+    localStorage.removeItem(STORAGE_KEY(id));
     try {
       if (!auto) setLoading(true);
       const userAnswers = questions.map(q => ({
@@ -104,12 +170,25 @@ const HocQuizz = () => {
   const handlePrev = () => goTo(currentIdx - 1, "right");
   const handleJump = (i) => { if (i !== currentIdx) goTo(i, i > currentIdx ? "left" : "right"); };
 
-  // 👇 THÊM MỚI: handler thoát
+  // ── Exit handlers ───────────────────────────────────────────────────────────
   const handleExit = () => setShowExitConfirm(true);
+
   const handleConfirmExit = () => {
     clearInterval(timerRef.current);
     setShowExitConfirm(false);
-    navigate(-1);
+
+    if (pendingNavTarget.current) {
+      const t = pendingNavTarget.current;
+      pendingNavTarget.current = null;
+      setTimeout(() => t.click(), 50);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleCancelExit = () => {
+    pendingNavTarget.current = null;
+    setShowExitConfirm(false);
   };
 
   // ── Finished ────────────────────────────────────────────────────────────────
@@ -135,16 +214,25 @@ const HocQuizz = () => {
     return "unanswered";
   };
 
+  // Kiểm tra có bản lưu không
+  const hasSavedData = (() => {
+    try {
+      return !!localStorage.getItem(STORAGE_KEY(id));
+    } catch { return false; }
+  })();
+
   return (
-    <div className="h-full flex flex-col bg-gray-50 overflow-hidden" style={{ fontFamily: "inherit" }}>
+    <div id="hoc-quizz-root" className="h-full flex flex-col bg-gray-50 overflow-hidden" style={{ fontFamily: "inherit" }}>
       <style>{`
         @keyframes slideLeft  { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(-24px); } }
         @keyframes slideRight { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(24px);  } }
         @keyframes slideIn    { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0);     } }
+        @keyframes fadeIn     { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0);     } }
 
         .anim-slide-left  { animation: slideLeft  0.18s ease forwards; }
         .anim-slide-right { animation: slideRight 0.18s ease forwards; }
-        .slide-in         { animation: slideIn    0.2s ease forwards;  }
+        .slide-in         { animation: slideIn    0.2s  ease forwards; }
+        .fade-in          { animation: fadeIn     0.2s  ease forwards; }
 
         .option-btn { transition: all 0.15s ease; border: 2px solid #e5e7eb; background: white; }
         .option-btn:hover:not(.selected) { border-color: #93c5fd; background: #eff6ff; }
@@ -165,14 +253,44 @@ const HocQuizz = () => {
         .submit-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
         .back-btn { transition: color 0.15s; }
         .back-btn:hover { color: #f26739; }
+        .save-btn { transition: all 0.15s; }
+        .save-btn:hover { filter: brightness(0.95); transform: translateY(-1px); }
       `}</style>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between shrink-0">
-        {/* 👇 SỬA: onClick → handleExit, bỏ timer ở giữa */}
         <button onClick={handleExit} className="flex items-center gap-2 text-sm text-gray-500 back-btn">
           <ArrowLeft size={16} /> Rời khỏi
         </button>
+
+        {/* Save button + status */}
+        <div className="flex items-center gap-2">
+          {saveStatus === "saved" ? (
+            <span className="flex items-center gap-1.5 text-xs text-green-600 font-semibold fade-in">
+              <CheckCircle2 size={14} /> Đã lưu
+            </span>
+          ) : saveStatus === "saving" ? (
+            <span className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <Loader2 size={13} className="animate-spin" /> Đang lưu...
+            </span>
+          ) : hasSavedData ? (
+            <span className="text-[11px] text-blue-400 font-medium">● Có bản lưu</span>
+          ) : null}
+
+          <button
+            onClick={handleSave}
+            disabled={answeredCount === 0}
+            className="save-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: saveStatus === "saved" ? "#f0fdf4" : "#f0f9ff",
+              borderColor: saveStatus === "saved" ? "#86efac" : "#bae6fd",
+              color: saveStatus === "saved" ? "#16a34a" : "#0284c7",
+            }}
+          >
+            <Save size={13} /> Lưu câu trả lời
+          </button>
+        </div>
+
         <div className="text-right">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Đang thi</p>
           <p className="text-xs font-black text-gray-700 uppercase truncate max-w-[200px]">{quizInfo?.title || "..."}</p>
@@ -279,8 +397,26 @@ const HocQuizz = () => {
                     </button>
                   ))}
                 </div>
+
+                {/* Nút lưu trong panel */}
+                <button
+                  onClick={handleSave}
+                  disabled={answeredCount === 0}
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-40 disabled:cursor-not-allowed save-btn"
+                  style={{
+                    background: saveStatus === "saved" ? "#f0fdf4" : "#f0f9ff",
+                    borderColor: saveStatus === "saved" ? "#86efac" : "#bae6fd",
+                    color: saveStatus === "saved" ? "#16a34a" : "#0284c7",
+                  }}
+                >
+                  {saveStatus === "saved"
+                    ? <><CheckCircle2 size={12} /> Đã lưu</>
+                    : <><Save size={12} /> Lưu tiến trình</>
+                  }
+                </button>
+
                 <button onClick={() => setShowConfirm(true)}
-                  className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black text-white submit-btn"
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black text-white submit-btn"
                   style={{ background: "linear-gradient(135deg,#F26739,#FF8059)" }}>
                   <Send size={13} /> Nộp bài
                 </button>
@@ -323,7 +459,7 @@ const HocQuizz = () => {
         </div>
       )}
 
-      {/* 👇 THÊM MỚI: Popup xác nhận thoát ──────────────────────────────────── */}
+      {/* ── Popup xác nhận thoát ───────────────────────────────────────────── */}
       {showExitConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
@@ -339,9 +475,18 @@ const HocQuizz = () => {
                   <span className="block mt-1 text-gray-400">Bạn đã trả lời {answeredCount}/{total} câu.</span>
                 )}
               </p>
+              {/* Gợi ý lưu trước khi thoát */}
+              {answeredCount > 0 && (
+                <button
+                  onClick={() => { handleSave(); }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+                >
+                  <Save size={12} /> Lưu câu trả lời trước khi thoát
+                </button>
+              )}
             </div>
             <div className="flex gap-2.5 mt-5">
-              <button onClick={() => setShowExitConfirm(false)}
+              <button onClick={handleCancelExit}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">
                 Tiếp tục làm bài
               </button>

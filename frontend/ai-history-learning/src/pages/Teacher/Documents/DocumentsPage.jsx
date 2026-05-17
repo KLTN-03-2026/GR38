@@ -77,10 +77,10 @@ const ConfirmDeleteModal = ({ title, onConfirm, onCancel }) => (
 function DocCard({ doc, idx, onDelete, onCardClick, onTagClick, tags }) {
   const status = STATUS_MAP[doc.status] ?? { label: "Lỗi", cls: "bg-red-100 text-red-500" };
   return (
-    <div className="doc-card bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer"
+    <div className="doc-card bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer flex flex-col h-full"
       onClick={() => onCardClick(doc)}>
       {/* Cover image */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden shrink-0">
         <img src={getCover(doc, idx)} alt={doc.title} className="card-img w-full h-36 object-cover bg-gray-100" />
         <button onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
           className="delete-btn absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow">
@@ -89,21 +89,21 @@ function DocCard({ doc, idx, onDelete, onCardClick, onTagClick, tags }) {
         <span className={`absolute top-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>
       </div>
 
-      <div className="p-3">
-      {/* Info */}
-      <p className="text-sm font-medium text-gray-800 mb-1.5 line-clamp-2">{doc.title}</p>
-      <p className="text-xs text-gray-400 mb-1.5 truncate">📄 {doc.fileName}</p>
-      <p className="text-xs text-gray-400 mb-3">{doc.flashcardCount ?? 0} flashcard · {doc.quizCount ?? 0} quiz</p>
+      <div className="p-3 flex flex-col flex-1">
+        {/* Info */}
+        <p className="text-sm font-medium text-gray-800 mb-1.5 line-clamp-2 min-h-[40px]">{doc.title}</p>
+        <p className="text-xs text-gray-400 mb-1.5 truncate">📄 {doc.fileName}</p>
+        <p className="text-xs text-gray-400 mb-3">{doc.flashcardCount ?? 0} flashcard · {doc.quizCount ?? 0} quiz</p>
 
-      {/* Tags */}
-    <div className="flex flex-wrap gap-1.5">
-        {tags.map(({ label, cls, route }) => (
-    <span key={label} onClick={(e) => { e.stopPropagation(); onTagClick(route(doc._id)); }}
-      className={`tag-chip text-xs px-2.5 py-0.5 rounded-full font-medium cursor-pointer ${cls}`}>
-      {label}
-    </span>
-  ))}
-</div>
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1.5 mt-auto">
+          {tags.map(({ label, cls, route }) => (
+            <span key={label} onClick={(e) => { e.stopPropagation(); onTagClick(route(doc._id)); }}
+              className={`tag-chip text-xs px-2.5 py-0.5 rounded-full font-medium cursor-pointer ${cls}`}>
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -260,7 +260,7 @@ export default function DocumentsPage() {
         {loading ? (
           <div className="grid grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-2">
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-2 h-[260px]">
                 <div className="h-4 bg-gray-200 rounded w-1/3" />
                 <div className="h-4 bg-gray-200 rounded w-3/4" />
                 <div className="h-3 bg-gray-200 rounded w-1/2" />
@@ -274,12 +274,12 @@ export default function DocumentsPage() {
         ) : (
           <div key={gridKey} className="grid grid-cols-3 gap-4">
             {pageDocs.map((doc, i) => (
-              <div key={doc._id} style={{ animationDelay: `${i * 0.05}s` }}>
+              <div key={doc._id} className="h-full" style={{ animationDelay: `${i * 0.05}s` }}>
                 <DocCard doc={doc} idx={(safePage - 1) * ITEMS_PER_PAGE + i}
                   onDelete={(d) => setDeleteTarget({ id: d._id, title: d.title })}
                   onCardClick={(d) => navigate(`${rolePrefix}/documents/${d._id}`, { state: { doc: d, activeTab: "Thông tin" } })}
                   onTagClick={(route) => navigate(route, { state: { doc } })}
-                    tags={getTags(rolePrefix)}
+                  tags={getTags(rolePrefix)}
                 />
               </div>
             ))}

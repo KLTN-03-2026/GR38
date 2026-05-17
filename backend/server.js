@@ -51,6 +51,13 @@ app.use(
 );
 
 // Routes
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server luôn sẵn sàng phục vụ!",
+    timestamp: new Date().toISOString()
+  });
+});
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/documents", documentRoutes);

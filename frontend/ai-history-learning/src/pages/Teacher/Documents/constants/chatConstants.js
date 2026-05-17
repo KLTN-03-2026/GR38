@@ -3,6 +3,7 @@ import {
   IconCardStack, IconQuizCheck, IconSummary, IconLightbulb,
 } from "../icons";
 
+
 // ── Theme tokens ──────────────────────────────────────────────────────────────
 export const THEME = {
   light: {
@@ -120,11 +121,6 @@ export const QUICK_ACTIONS = [
     label: "Tóm tắt tài liệu", Icon: IconAlignLeft, cmd: "tóm tắt", grad: GRAD.emerald,
     pill:     { color: "#065f46", bg: "#ecfdf5",               border: "#a7f3d0" },
     pillDark: { color: "#34d399", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.3)" },
-  },
-  {
-    label: "Giải thích khái niệm", Icon: IconBookOpen, cmd: "giải thích khái niệm", grad: GRAD.pink,
-    pill:     { color: "#9d174d", bg: "#fdf2f8",               border: "#fbcfe8" },
-    pillDark: { color: "#f472b6", bg: "rgba(236,72,153,0.15)", border: "rgba(236,72,153,0.3)" },
   },
 ];
 

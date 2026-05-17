@@ -120,14 +120,18 @@ export const findRelevantChunks = (chunks, query, maxChunks = 3) => {
   // Các từ dừng (stop words) phổ biến cần loại trừ
   const stopWords = new Set([
     'và', 'hoặc', 'nhưng', 'của', 'là', 'các', 'những', 'một', 'thì', 'mà',
-    'để', 'với', 'cho', 'trong', 'trên', 'dưới', 'tại', 'bởi', 'này', 'kia','năm', 'tháng', 'ngày', 'sự', 'việc'
+    'để', 'với', 'cho', 'trong', 'trên', 'dưới', 'tại', 'bởi', 'này', 'kia'
   ]);
 
   // Trích xuất và làm sạch các từ trong câu truy vấn
-  const queryWords = query
+  const safeQuery = query
     .toLowerCase()
-    .split(/\s+/)
-    .filter(w => w.length > 2 && !stopWords.has(w));
+    .replace(/[.,!?()[\]{}"'*+^$|\\-]/g, ' '); 
+
+  const queryWords = safeQuery
+    .split(/\s+/) // Tách theo khoảng trắng
+    // Chỉ cần từ có nghĩa (length > 0) và không nằm trong stopWords
+    .filter(w => w.trim().length > 0 && !stopWords.has(w));
 
   if (queryWords.length === 0) {
     // Trả về các đối tượng chunk sạch không chứa siêu dữ liệu (metadata) của Mongoose
@@ -144,10 +148,16 @@ export const findRelevantChunks = (chunks, query, maxChunks = 3) => {
     const contentWords = content.split(/\s+/).length;
     let score = 0;
 
+    // Nếu toàn bộ câu truy vấn (đã lower case) xuất hiện y hệt trong chunk
+    const cleanQuery = query.toLowerCase().trim();
+    if (content.includes(cleanQuery) && cleanQuery.split(/\s+/).length > 1) {
+      score += 20; 
+    }
+
     // Tính điểm cho mỗi từ trong câu truy vấn
     for (const word of queryWords) {
       // Khớp chính xác từ (điểm cao hơn)
-      const exactMatches = (content.match(new RegExp(`\\b${word}\\b`, 'g')) || []).length;
+      const exactMatches = (content.match(new RegExp(`(^|\\s|[.,!?:])${word}((?=\\s|[.,!?:]|$))`, 'gi')) || []).length;
       score += exactMatches * 3;
 
       // Khớp một phần (điểm thấp hơn)

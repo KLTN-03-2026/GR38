@@ -111,25 +111,26 @@ const Documents = () => {
   return (
     <div className="flex flex-col w-full min-h-screen bg-[#F8F8F8]">
 
-     {/* BANNER COVER */}
-<div className="relative rounded-md w-full h-[320px] md:h-[400px] overflow-hidden">
-  <img
-    src={BannerImg}
-    alt="Chiến Thắng Điện Biên Phủ"
-    className="w-full h-full object-cover object-center"
-  />
-  {/* Overlay gradient */}
-  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-  {/* Text overlay */}
-  <div className="absolute bottom-6 left-8">
-    <h1 className="text-white text-2xl md:text-3xl font-black uppercase tracking-wide drop-shadow-lg">
-      Tài liệu học tập
-    </h1>
-    <p className="text-white/80 text-sm mt-1 drop-shadow">
-      Khám phá lịch sử Việt Nam qua các bài học
-    </p>
-  </div>
-</div>
+      {/* BANNER COVER */}
+      <div className="relative rounded-md w-full h-[320px] md:h-[400px] overflow-hidden">
+        <img
+          src={BannerImg}
+          alt="Chiến Thắng Điện Biên Phủ"
+          className="w-full h-full object-cover object-center"
+        />
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+        {/* Text overlay */}
+        <div className="absolute bottom-6 left-8">
+          <h1 className="text-white text-2xl md:text-3xl font-black uppercase tracking-wide drop-shadow-lg">
+            Tài liệu học tập
+          </h1>
+          <p className="text-white/80 text-sm mt-1 drop-shadow">
+            Khám phá lịch sử Việt Nam qua các bài học
+          </p>
+        </div>
+      </div>
+
       {/* NỘI DUNG */}
       <div className="bg-white flex flex-col gap-[15px] w-full max-w-[1400px] min-h-[600px] mx-auto p-[12px] md:p-[20px]">
 
@@ -170,7 +171,8 @@ const Documents = () => {
             currentItems.map((doc) => (
               <div
                 key={doc._id}
-                className="bg-white rounded-[8px] flex flex-col p-[10px] gap-[10px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 group h-fit relative"
+                // Thay đổi: Từ h-fit thành h-full để card giãn bằng nhau
+                className="bg-white rounded-[8px] flex flex-col p-[10px] gap-[10px] shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 group h-full relative"
                 onClick={() => {
                   const basePath = role === "ADMIN" ? "/admin" : "/learner";
                   navigate(`${basePath}/documents/${doc._id}`);
@@ -201,7 +203,7 @@ const Documents = () => {
                   </button>
                 )}
 
-                <div className="w-full h-[120px] rounded-[6px] bg-gray-100 overflow-hidden flex items-center justify-center">
+                <div className="w-full h-[120px] shrink-0 rounded-[6px] bg-gray-100 overflow-hidden flex items-center justify-center">
                   {doc.thumbnail || doc.image ? (
                     <img
                       src={doc.thumbnail || doc.image}
@@ -218,11 +220,15 @@ const Documents = () => {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <h3 className="font-bold text-[15px] text-gray-800 line-clamp-1 group-hover:text-orange-500 transition-colors">
+                {/* Thay đổi: Thêm flex-1 ở div bọc ngoài này */}
+                <div className="flex flex-col gap-1.5 flex-1">
+                  {/* Thay đổi: Bỏ class line-clamp-1 */}
+                  <h3 className="font-bold text-[15px] text-gray-800 group-hover:text-orange-500 transition-colors">
                     {doc.title}
                   </h3>
-                  <div className="flex flex-wrap justify-between items-center gap-2">
+                  
+                  {/* Thay đổi: Thêm mt-auto để luôn đẩy khối thông tin này xuống dưới cùng */}
+                  <div className="flex flex-wrap justify-between items-center gap-2 mt-auto pt-2">
                     <div className="px-2 py-0.5 bg-blue-500 rounded-full text-white text-[9px] font-bold uppercase">
                       Bài học
                     </div>

@@ -1,10 +1,12 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { IconArrowRight } from "./icons";
 
 const DEFAULT_COVERS = ["/anh1.jpg", "/anh2.jpg", "/anh3.jpg", "/anh6.jpg"];
 
 export default function TabThongTin({ doc, id, setActiveTab }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/teacher";
 
   const coverImg = (() => {
     if (doc?.thumbnail && doc.thumbnail.trim() !== "" && doc.thumbnail !== "null") return doc.thumbnail;
@@ -68,7 +70,7 @@ export default function TabThongTin({ doc, id, setActiveTab }) {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => navigate(`/teacher/baigiang/${id}`, { state: { doc } })}
+        <button onClick={() => navigate(`${basePath}/baigiang/${id}`, { state: { doc } })}
           className="group relative bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg rounded-xl p-5 text-left transition-all duration-200 overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-start justify-between mb-3">

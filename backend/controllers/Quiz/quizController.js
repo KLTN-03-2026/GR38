@@ -178,7 +178,7 @@ export const updateQuiz = async (req, res, next) => {
     if (tags !== undefined)
       quiz.tags = typeof tags === "string" ? JSON.parse(tags) : tags;
 
-    // ← CHỈ THÊM ĐOẠN NÀY
+  
     if (req.body.questions !== undefined) {
       let questions = req.body.questions;
       if (typeof questions === "string") questions = JSON.parse(questions);

@@ -31,29 +31,33 @@ const executeWithKeyRotation = async (apiAction) => {
       return await apiAction(aiClient);
 
     } catch (error) {
-      // Nếu là lỗi quá tải (429)
-      if (error.status === 429 || error?.message?.includes("429") || error?.message?.includes("RESOURCE_EXHAUSTED")) {
-        console.warn(`⚠️ [Cảnh báo] Key thứ ${currentKeyIndex + 1} đã hết hạn mức. Đang chuyển key...`);
-        
-        // Đổi sang key tiếp theo
-        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        attempts++;
+        // Cập nhật: Bắt cả lỗi 429 (hết quota) VÀ lỗi 503 (Google quá tải)
+        const isRateLimit = error.status === 429 || error?.message?.includes("RESOURCE_EXHAUSTED");
+        const isServerOverload = error.status === 503 || error?.message?.includes("UNAVAILABLE");
 
-        // Nếu đã thử hết sạch các key
-        if (attempts >= maxAttempts) {
-          const finalError = new Error("Hệ thống AI đang quá tải do vượt giới hạn sử dụng. Bạn vui lòng đợi khoảng 1 phút rồi thử lại nhé!");
-          finalError.status = 429;
-          throw finalError;
+        if (isRateLimit || isServerOverload) {
+          console.warn(` [Cảnh báo] Key thứ ${currentKeyIndex + 1} gặp lỗi ${error.status}. Đang xử lý...`);
+          
+          if (isRateLimit) {
+             // Đổi sang key tiếp theo nếu hết quota
+             currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+          }
+          
+          attempts++;
+
+          // Nếu đã thử quá số lần cho phép
+          if (attempts >= maxAttempts) {
+            const finalError = new Error("Hệ thống AI của Google đang quá tải. Vui lòng đợi khoảng 1 phút rồi thử lại nhé!");
+            finalError.status = error.status;
+            throw finalError;
+          }
+          
+          // Nghỉ 2 giây trước khi thử lại để server Google kịp phục hồi
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
         }
-        
-        // Nghỉ 1 giây trước khi thử key mới
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
+        throw error;
       }
-      
-      // Nếu là các lỗi khác (không phải 429), ném lỗi ra ngay
-      throw error;
-    }
   }
 };
 

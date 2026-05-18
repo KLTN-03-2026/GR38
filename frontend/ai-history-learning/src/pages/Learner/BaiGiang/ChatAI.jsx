@@ -339,8 +339,29 @@ const ChatAI = ({ documentId }) => {
         res = await api.post("/ai/generate-summary", { documentId });
         aiText = language === 'vi' ? `📋 **Tóm tắt tài liệu:**\n\n${res.data.data.summary}` : `📋 **Document Summary:**\n\n${res.data.data.summary}`;
       } else if (command === "giải thích") {
-        res = await api.post("/ai/explain-concept", { documentId, concept: payload });
-        aiText = language === 'vi' ? `🔍 **Giải thích cho "${payload}":**\n\n${res.data.data.explanation}` : `🔍 **Explanation for "${payload}":**\n\n${res.data.data.explanation}`;
+        try {
+          // Gửi đồng thời cả 'concept' và 'keyword' để tương thích tối đa với cấu trúc tham số của Backend
+          res = await api.post("/ai/explain-concept", { documentId, concept: payload, keyword: payload });
+          
+          const explanationData = res.data?.data?.explanation || res.data?.data?.answer || res.data?.explanation || res.data?.answer;
+          
+          if (explanationData) {
+            aiText = language === 'vi' ? `🔍 **Giải thích cho "${payload}":**\n\n${explanationData}` : `🔍 **Explanation for "${payload}":**\n\n${explanationData}`;
+          } else {
+            // Dự phòng 1: Nếu không tìm thấy trường giải thích phù hợp, tự động chuyển sang fallback chat thường
+            const fallbackRes = await api.post("/ai/chat", { documentId, question: userText });
+            aiText = fallbackRes.data?.data?.answer || fallbackRes.data?.data?.explanation || (language === 'vi' ? "Không thể tự động giải thích khái niệm này." : "Cannot automatically explain this concept.");
+          }
+        } catch (innerErr) {
+          console.error("Lỗi API giải thích khái niệm riêng, đang kích hoạt fallback sang chat tổng quát:", innerErr);
+          try {
+            // Dự phòng 2: Tự động fallback sang API chat tổng quát để đảm bảo người học luôn nhận được phản hồi từ AI
+            const fallbackRes = await api.post("/ai/chat", { documentId, question: userText });
+            aiText = fallbackRes.data?.data?.answer || fallbackRes.data?.data?.explanation || (language === 'vi' ? "Không thể kết nối hệ thống giải thích khái niệm." : "Cannot connect to explain this concept.");
+          } catch (finalErr) {
+            throw finalErr; // Đẩy ra ngoài catch tổng nếu cả hệ thống chat cũng sập hoàn toàn
+          }
+        }
       } else {
         res = await api.post("/ai/chat", { documentId, question: userText });
         aiText = res.data.data.answer;

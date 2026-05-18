@@ -210,7 +210,7 @@ export default function LearnerDashboard() {
         <div className="flex flex-col gap-8">
 
           {/* HÀNG 1: TÀI LIỆU & LỊCH SỬ */}
-         <div className="grid gap-8" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div className="grid gap-8" style={{ gridTemplateColumns: "1fr 1fr" }}>
 
             {/* Tài liệu gợi ý */}
             <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col border border-gray-100 max-h-[400px]">
@@ -379,7 +379,11 @@ export default function LearnerDashboard() {
               ) : (
                 <div className="grid grid-cols-2 gap-3 overflow-y-auto pr-1 custom-scrollbar flex-1">
                   {flashcards.slice(0, 4).map((fc, idx) => (
-                    <div key={fc._id ?? idx} className="doc-card p-3 border border-gray-100 rounded-xl flex flex-col justify-between transition-all cursor-pointer bg-white" onClick={() => navigate("/learner/flashcards")}>
+                    <div 
+                      key={fc._id ?? idx} 
+                      className="doc-card p-3 border border-gray-100 rounded-xl flex flex-col justify-between transition-all cursor-pointer bg-white" 
+                      onClick={() => navigate(`/learner/flashcards/${fc._id}`)}
+                    >
                       <div className="mb-2">
                         <div className="flex justify-between items-start mb-2">
                           <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -392,7 +396,7 @@ export default function LearnerDashboard() {
                         </p>
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); navigate("/learner/flashcards"); }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/learner/flashcards/${fc._id}`); }}
                         className="w-full py-2 bg-[#8B5CF6] text-white text-[10px] font-bold rounded-lg hover:opacity-90 transition shadow-sm uppercase tracking-wider"
                       >
                         Học ngay

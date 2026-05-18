@@ -13,12 +13,12 @@ const MIN_CARDS = 5;
 const AddFlashcard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-const { id } = useParams();
-const basePath = (() => {
-  try { return (JSON.parse(localStorage.getItem("user") || "{}").role || "").toUpperCase() === "ADMIN" ? "/admin" : "/teacher"; }
-  catch { return "/teacher"; }
-})();
-const isEdit = Boolean(id);
+  const { id } = useParams();
+  const basePath = (() => {
+    try { return (JSON.parse(localStorage.getItem("user") || "{}").role || "").toUpperCase() === "ADMIN" ? "/admin" : "/teacher"; }
+    catch { return "/teacher"; }
+  })();
+  const isEdit = Boolean(id);
 
   const [selectedDocId, setSelectedDocId] = useState(
     location.state?.documentId ?? ""
@@ -27,7 +27,7 @@ const isEdit = Boolean(id);
   const [docsLoading, setDocsLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [imagePreview, setImagePreview] = useState("");
-const [cards, setCards] = useState([{ front: "", back: "", difficulty: "" }]);
+  const [cards, setCards] = useState([{ front: "", back: "", difficulty: "" }]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
@@ -55,8 +55,9 @@ const [cards, setCards] = useState([{ front: "", back: "", difficulty: "" }]);
           ? source.cards.map((card) => ({
               front: card.front ?? "",
               back: card.back ?? "",
+              difficulty: card.difficulty ?? "", // ✅ Fix: thêm difficulty
             }))
-          : [{ front: "", back: "" }];
+          : [{ front: "", back: "", difficulty: "" }];
         setCards(nextCards);
       } catch {
         if (!fallbackItem) return;
@@ -73,8 +74,9 @@ const [cards, setCards] = useState([{ front: "", back: "", difficulty: "" }]);
             ? fallbackItem.cards.map((card) => ({
                 front: card.front ?? "",
                 back: card.back ?? "",
+                difficulty: card.difficulty ?? "", // ✅ Fix: thêm difficulty
               }))
-            : [{ front: "", back: "" }],
+            : [{ front: "", back: "", difficulty: "" }],
         );
       }
     };
@@ -97,7 +99,7 @@ const [cards, setCards] = useState([{ front: "", back: "", difficulty: "" }]);
     })();
   }, []);
 
-const addCard = () => setCards((p) => [...p, { front: "", back: "", difficulty: "" }]);
+  const addCard = () => setCards((p) => [...p, { front: "", back: "", difficulty: "" }]);
   const removeCard = (i) => {
     if (cards.length > 1) setCards((p) => p.filter((_, idx) => idx !== i));
   };
@@ -117,11 +119,11 @@ const addCard = () => setCards((p) => [...p, { front: "", back: "", difficulty: 
     if (!title.trim()) errs.title = "Vui lòng nhập tên bộ thẻ";
     if (cards.length < MIN_CARDS)
       errs.minCards = `Cần ít nhất ${MIN_CARDS} thẻ (hiện có ${cards.length})`;
-   cards.forEach((c, i) => {
-  if (!c.front.trim()) errs[`card_${i}_front`] = "Chưa nhập câu hỏi";
-  if (!c.back.trim()) errs[`card_${i}_back`] = "Chưa nhập đáp án";
-  if (!c.difficulty) errs[`card_${i}_difficulty`] = "Chưa chọn độ khó"; 
-});
+    cards.forEach((c, i) => {
+      if (!c.front.trim()) errs[`card_${i}_front`] = "Chưa nhập câu hỏi";
+      if (!c.back.trim()) errs[`card_${i}_back`] = "Chưa nhập đáp án";
+      if (!c.difficulty) errs[`card_${i}_difficulty`] = "Chưa chọn độ khó";
+    });
     return errs;
   };
 
@@ -138,17 +140,16 @@ const addCard = () => setCards((p) => [...p, { front: "", back: "", difficulty: 
       const formData = new FormData();
       formData.append("title", title.trim());
       
-      // Bổ sung: Gửi documentId lên Backend (để BE biết mà lấy ảnh document nếu không upload ảnh mới)
       if (selectedDocId) {
         formData.append("documentId", selectedDocId);
       }
-formData.append(
-  "cards",
-  JSON.stringify(
-    cards.map((c) => ({ front: c.front.trim(), back: c.back.trim(), difficulty: c.difficulty ?? "Trung bình" }))
-  )
-);
-      // Xử lý ảnh: Chuyển URL preview thành Blob để gửi đi
+      formData.append(
+        "cards",
+        JSON.stringify(
+          cards.map((c) => ({ front: c.front.trim(), back: c.back.trim(), difficulty: c.difficulty ?? "Trung bình" }))
+        )
+      );
+
       if (imagePreview) {
         const fetchRes = await fetch(imagePreview); 
         const blob = await fetchRes.blob();
@@ -161,8 +162,6 @@ formData.append(
       } else {
         res = await flashcardService.create(formData);
       }
-      const saved = res?.data ?? res;
-      const newId = saved?._id;
 
       navigate(`${basePath}/flashcards`);
     } catch (err) {
@@ -227,7 +226,6 @@ formData.append(
           )}
         </div>
 
-        {/* Chọn Document (Giả sử bạn có DocSelector, mình thêm vào để selectedDocId có ý nghĩa) */}
         <DocSelector 
           documents={documents} 
           selectedDocId={selectedDocId} 
